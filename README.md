@@ -1,3 +1,4 @@
+```
 main (production-ready)
 │
 ├── develop (integration branch)
@@ -20,8 +21,6 @@ main (production-ready)
 ├── hotfix/* (แก้บัคด่วน)
 └── release/* (เตรียม deploy)
 ```
-
----
 
 ## 📋 รายละเอียด Branch Strategy
 
@@ -92,3 +91,4 @@ feature/code-runner           # ระบบรันโค้ด
 feature/file-storage-api      # API คลังไฟล์
 feature/report-api            # API รายงาน
 feature/ip-restriction        # IP Whitelist
+```
