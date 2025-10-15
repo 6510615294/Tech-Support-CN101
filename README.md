@@ -1,3 +1,26 @@
+## Developer notes - login feature
+
+To enable a local mock login (no backend required) set localStorage.MOCK_AUTH to '1' in your browser devtools. The frontend will accept any non-empty email/password and return a mock token.
+
+- Files added/updated for the feature:
+	- `src/services/auth.js` (mock fallback + real fetch)
+	- `src/context/AuthContext.jsx` (auth provider, token/user state)
+	- `src/pages/auth/Login.jsx` (login form)
+	- `src/routes/PrivateRoute.jsx` (protect routes)
+	- `src/__tests__/Login.test.jsx` (basic test scaffold)
+
+Run tests (if project uses npm/yarn):
+
+```bash
+# npm
+npm install
+npm test
+
+# or yarn
+yarn install
+yarn test
+```
+
 ```
 main (production-ready)
 │
