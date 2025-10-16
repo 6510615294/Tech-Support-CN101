@@ -1,9 +1,7 @@
 package auth
 
 import (
-	"encoding/json"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
@@ -13,15 +11,27 @@ import (
 	"gorm.io/gorm"
 )
 
+type TUAPIResponse struct {
+	Status		bool	`json:"status"`
+	Username	string	`json:"username"`
+	Type 		string	`json:"type"`
+	Email		string	`json:"email"`
+}
+
 // AuthenticateUser verifies user credentials.
 func AuthenticateUser(inputUsername, password string) (*models.User, error) {
 	var user models.User
     apiKey := config.GetEnv("TU_API")
     client := resty.New()
+	var res TUAPIResponse
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
-        SetHeader("Application-Key", apiKey).
-		SetBody(map[string]string{"UserName": inputUsername, "PassWord": password}).
+		SetHeader("Application-Key", apiKey).
+		SetBody(map[string]string{
+			"UserName": inputUsername,
+			"PassWord": password,
+		}).
+		SetResult(&res).
 		Post("https://restapi.tu.ac.th/api/v1/auth/Ad/verify")
 
 	if err != nil {
@@ -30,73 +40,34 @@ func AuthenticateUser(inputUsername, password string) (*models.User, error) {
         return  nil, errors.New("unexpected status code from TU API")
     }
 
-    var data map[string]interface{}
-	if err := json.Unmarshal(resp.Body(), &data); err != nil {
-		log.Fatal(err)
-        return nil, err
-	}
-
-    username := toString(data["username"])
-
-	err = database.DB.Where("username = ?", username).First(&user).Error
+	err = database.DB.Where("username = ?", res.Username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// Username does NOT exist
-        var extra string
-        var role models.Role
+		var role models.Role
+		if res.Type == "student" {
+			role = models.RoleStudent
+		} else {
+			role = models.RoleTeacher
+		}
 
-        if val, ok := data["faculty"].(string); ok {
-            extra = val
-            role = models.RoleStudent
+		user := &models.User{
+			Username: res.Username,
+			UserType: res.Type,
+			Role: role,
+			Email: res.Email,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
 
-        } else if val, ok := data["organization"].(string); ok {
-            extra = val
-            role = models.RoleTeacher
-        } else {
-            extra = "None"
-            role = models.RoleStudent
-        }
+		if err := database.DB.Create(user).Error; err != nil {
+			return nil, err
+		}
 
-        return CreateUser(
-            username,
-            toString(data["displayname_th"]),
-            toString(data["displayname_en"]),
-            toString(data["email"]),
-            toString(data["department"]),
-            extra,
-            role,
-        )
+        return user, nil
 	} else if err != nil {
 		// Some other DB error
 		return nil, err
 	}
 
 	return &user, nil
-}
-
-func CreateUser(username, thaiName, engName, email, department, extra string, role models.Role) (*models.User, error) {
-	user := &models.User{
-		Username:   username,
-		ThaiName:   thaiName,
-		EngName:    engName,
-		Email:      email,
-		Department: department,
-		Extra:      extra,
-		Role:       role,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
-
-	// Insert into database
-	if err := database.DB.Create(user).Error; err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
-func toString(v interface{}) string {
-	if str, ok := v.(string); ok {
-		return str
-	}
-	return ""
 }
