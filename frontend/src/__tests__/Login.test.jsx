@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import LoginPage from '../pages/auth/Login';
-import { AuthProvider } from '../context/AuthContext';
+import LoginPage from '../features/auth/Login';
+import { AuthProvider } from '../features/auth/AuthContext';
 
 describe('Login page', () => {
   test('renders login form and submits', async () => {
