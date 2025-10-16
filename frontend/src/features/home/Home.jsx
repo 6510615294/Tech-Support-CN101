@@ -10,7 +10,7 @@ export default function Home() {
             <main>
                 <section>
                     <h2>Welcome</h2>
-                    <p>This is a lightweight landing page for the mock project.</p>
+                    <p>This is a lightweight landing page for the project.</p>
                     <p>
                         <Link to="/login">Login</Link>
                     </p>

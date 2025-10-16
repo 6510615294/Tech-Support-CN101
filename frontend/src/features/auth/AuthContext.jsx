@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { loginApi } from '../auth/authService';
+import { loginApi } from './authService';
 
 const AuthContext = createContext();
 
@@ -25,18 +25,20 @@ export function AuthProvider({ children }) {
         // optional: could validate token here with backend
     }, []);
 
-    const login = async ({ email, password }) => {
+    const login = async ({ username, password }) => {
         setLoading(true);
         try {
-            const res = await loginApi({ email, password });
+            const res = await loginApi({ username, password });
             try {
                 localStorage.setItem('token', res.token);
-                localStorage.setItem('user', JSON.stringify(res.user || { email }));
+                if (res.user) {
+                    localStorage.setItem('user', JSON.stringify(res.user));
+                }
             } catch (e) {
                 // ignore storage errors
             }
             setToken(res.token);
-            setUser(res.user || { email });
+            if (res.user) setUser(res.user);
             return res;
         } finally {
             setLoading(false);
@@ -52,7 +54,8 @@ export function AuthProvider({ children }) {
         setUser(null);
     };
 
-    const value = useMemo(() => ({ token, user, login, logout, loading }), [token, user, loading]);
+    const isAuthenticated = !!token;
+    const value = useMemo(() => ({ token, user, isAuthenticated, login, logout, loading }), [token, user, loading]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

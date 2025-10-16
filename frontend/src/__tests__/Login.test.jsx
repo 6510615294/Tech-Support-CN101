@@ -19,7 +19,6 @@ describe('Login page', () => {
     fireEvent.change(pass, { target: { value: 'password' } });
     fireEvent.click(btn);
 
-    // form submission will call mocked loginApi (if MOCK_AUTH=1 in localStorage)
     // We just assert no crash and button exists.
     expect(btn).toBeInTheDocument();
   });

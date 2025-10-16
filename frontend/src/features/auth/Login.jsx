@@ -13,8 +13,8 @@ export default function LoginPage() {
         e.preventDefault();
         setError(null);
         try {
-            await login({ email, password }); // login should store token and resolve
-            navigate('/dashboard'); // redirect after login
+            await login({ username: email, password });
+            navigate('/dashboard');
         } catch (err) {
             setError(err.message || 'Login failed');
         }
