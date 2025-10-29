@@ -49,3 +49,36 @@ type Enrollment struct {
 	UpdatedAt  	time.Time      	`json:"updated_at"`
 	DeletedAt  	gorm.DeletedAt 	`gorm:"index" json:"-"`
 }
+
+type Attachment struct {
+	ID          string         	`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	URL         string         	`gorm:"not null" json:"url"`
+	FileName    string         	`json:"file_name"`
+	FileType    string         	`json:"file_type"`
+	CreatedAt   time.Time      	`json:"created_at"`
+	DeletedAt   gorm.DeletedAt 	`gorm:"index" json:"-"`
+}
+
+type Tag struct {
+	ID        	string         	`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	Name      	string         	`gorm:"unique;not null" json:"name"`
+	CreatedAt 	time.Time      	`json:"created_at"`
+	DeletedAt 	gorm.DeletedAt 	`gorm:"index" json:"-"`
+}
+
+type Assignment struct {
+	ID          string			`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	CourseID	string			`gorm:"not null" json:"course_id"`
+	Course		Course			`gorm:"foreignKey:CourseID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Title       string         	`gorm:"not null" json:"title"`
+	Description string         	`json:"description"`
+	Point       int16        	`json:"point"`
+	StartDate   time.Time      	`json:"start_date"`
+	DueDate     time.Time      	`json:"due_date"`
+	CloseDate   time.Time      	`json:"close_date"`
+	Attachments []Attachment   	`gorm:"foreignKey:AssignmentID" json:"attachments"`
+	Tags        []Tag          	`gorm:"many2many:assignment_tags;" json:"tags"`
+	CreatedAt   time.Time      	`json:"created_at"`
+	CreatedBy   string         	`json:"created_by"`
+	DeletedAt	gorm.DeletedAt 	`gorm:"index" json:"-"`
+}
