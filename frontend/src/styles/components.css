@@ -273,8 +273,9 @@ header {
   flex: 1 1 auto;
   padding: 28px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  /* stack page header and page body vertically */
+  align-items: stretch;
 }
 
 /* Password field with eye button */
