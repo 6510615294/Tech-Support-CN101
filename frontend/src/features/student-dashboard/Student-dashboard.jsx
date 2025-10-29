@@ -89,6 +89,9 @@ export default function Dashboard() {
 
                             <dt>Type</dt>
                             <dd>{me.type}</dd>
+
+                            <dt>userRole</dt>
+                            <dd>{me.userRole}</dd>
                         </dl>
                     </div>
                 )}

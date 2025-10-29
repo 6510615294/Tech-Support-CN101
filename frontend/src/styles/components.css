@@ -176,28 +176,35 @@ header {
   gap: 8px;
 }
 
-/* Logged-in user block in the top-nav */
 .nav-user {
+  /* Logged-in user block in the top-nav */
   display: flex;
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background 150ms ease, box-shadow 150ms ease;
+  position: relative;
 }
 
-.nav-user {
-  position: relative;
+.nav-user:hover {
+  background: rgba(37, 99, 235, 0.06);
+  /* subtle primary tint */
+  box-shadow: var(--shadow-sm);
 }
 
 .user-dropdown {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
-  width: 280px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+  width: 320px;
+  background: var(--Color-bg, var(--color-bg));
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(11, 22, 40, 0.12);
   overflow: hidden;
   z-index: 200;
+  border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .user-dropdown .profile-top {
@@ -211,7 +218,7 @@ header {
   height: 72px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(0, 0, 0, 0.06);
+  border: 3px solid rgba(11, 99, 235, 0.08);
   margin-bottom: 8px;
 }
 
@@ -267,10 +274,11 @@ header {
   align-items: flex-end;
   text-align: right;
   line-height: 1.05;
+  color: var(--color-text);
 }
 
 .user-line1 {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
 }
 
@@ -284,7 +292,7 @@ header {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(0, 0, 0, 0.06);
+  border: 2px solid rgba(11, 99, 235, 0.12);
 }
 
 .lang-select {
@@ -442,11 +450,12 @@ header {
 }
 
 .profile-card {
-  background: #fff;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border-radius: 10px;
   padding: 18px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-sm);
   margin-top: 12px;
+  border: 1px solid rgba(11, 99, 235, 0.04);
 }
 
 .profile-card dl {
@@ -457,7 +466,7 @@ header {
 }
 
 .profile-card dt {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-muted);
 }
 
