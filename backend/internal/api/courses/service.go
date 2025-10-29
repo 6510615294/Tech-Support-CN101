@@ -56,21 +56,13 @@ func GetACourse(userID, courseID string) (*models.Course, error) {
 	var course models.Course
 	switch user.Role {
 	case "student":
-		var enrollment models.Enrollment
-		err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error
-		if err != nil {
-			return nil, err
-		}
-
 		if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
 			return nil, err
 		}
-
-		return &course, err
+		return &course, nil
 
 	case "teacher":
-		err := database.DB.Where("teacher_id = ?", userID).Find(&course).Error
-		if err != nil {
+		if err := database.DB.Where("teacher_id = ?", userID).First(&course).Error; err != nil {
 			return nil, err
 		}
 		return  &course, nil
@@ -98,17 +90,7 @@ func CreateCourse(userID string, input models.Course) (*models.Course, error) {
 	return &input, nil
 }
 
-func UpdateCourse(userID, courseID string, input map[string]interface{}) (*models.Course, error) {
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
-		return nil, err
-	}
-
-	var course models.Course
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
-		return nil, err
-	}
-
+func UpdateCourse(course models.Course, input map[string]interface{}) (*models.Course, error) {
 	allowedFields := map[string]bool{
 		"name":        true,
 		"course_date": true,
@@ -157,30 +139,8 @@ func JoinCourse(userID string, course *models.Course) (*models.Enrollment, error
 	}
 }
 
-func GetStudent(userID, courseID string) ([]models.User, error) {
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
-		return nil, err
-	}
-
+func GetStudent(courseID string) ([]models.User, error) {
 	var students []models.User
-	switch user.Role {
-	case "student":
-		var enrollment models.Enrollment
-		if err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error; err != nil {
-			return nil, err
-		}
-
-	case "teacher":
-		var course models.Course
-		if err := database.DB.Where("teacher_id = ?", userID).First(&course).Error; err != nil {
-			return nil, err
-		}
-
-	default:
-		return nil, fmt.Errorf("unsupported role: %s", user.Role)
-	}
-
 	err := database.DB.
 		Joins("JOIN enrollments ON enrollments.student_id = users.id").
 		Where("enrollments.course_id = ?", courseID).

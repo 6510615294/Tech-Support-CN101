@@ -28,15 +28,44 @@ func RegisterRoutes(app fiber.Router) {
 	// app.Put("/courses/:course_id/resources", updateResourse)
 }
 
+func isInCourse(userID, courseID string) bool {
+	var user models.User
+	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return false
+	}
+
+	switch user.Role {
+	case "student":
+		var enrollment models.Enrollment
+		if err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error; err != nil {
+			return false
+		}
+
+	case "teacher":
+		var course models.Course
+		if err := database.DB.Where("teacher_id = ?", userID).First(&course).Error; err != nil {
+			return false
+		}
+
+	default:
+		return false
+	}
+
+	return true
+}
+
+func getRole(userID string) string {
+	var user models.User
+	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return ""
+	}
+
+	return string(user.Role)
+}
+
 func getCourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
-	idStr, ok := userID.(string)
-	
-    if !ok {
-        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
-        })
-    }
+	idStr, _ := userID.(string)
 
 	courses, err := GetCourse(idStr)
 	if err != nil {
@@ -50,14 +79,14 @@ func getCourse(c *fiber.Ctx) error {
 
 func getACourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
-	idStr, ok := userID.(string)
+	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
 
-    if !ok {
-        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
+	if !isInCourse(idStr, courseID) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "error": "no access",
         })
-    }
+	}
 
 	course, err := GetACourse(idStr, courseID)
 	if err != nil {
@@ -71,17 +100,9 @@ func getACourse(c *fiber.Ctx) error {
 
 func createCourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
-	idStr, ok := userID.(string)
+	idStr, _ := userID.(string)
 
-	var user models.User
-
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil || !ok{
-        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
-        })
-    }
-
-	if user.Role != "teacher" {
+	if getRole(idStr) != "teacher" {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
             "error": "no access",
         })
@@ -104,21 +125,17 @@ func createCourse(c *fiber.Ctx) error {
 
 func updateCourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
-	idStr, ok := userID.(string)
+	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
 
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
+	var course models.Course
+	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "internal server error",
         })
 	}
 
-	var course models.Course
-	err := database.DB.
-		Where("id = ? AND teacher_id = ?", courseID, userID).
-		First(&course).Error
-
-	if err != nil {
+	if getRole(idStr) != "admin" && course.TeacherID != idStr {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
             "error": "no access",
         })
@@ -129,7 +146,7 @@ func updateCourse(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid input"})
 	}
 
-	data, err := UpdateCourse(idStr, courseID, input)
+	data, err := UpdateCourse(course, input)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -141,23 +158,17 @@ func updateCourse(c *fiber.Ctx) error {
 
 func deleteCourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
+	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
-	var user models.User
-	var course models.Course
-	
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil{
-        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
-        })
-    }
 
+	var course models.Course
 	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil{
         return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
             "error": "invalid course id",
         })
     }
 
-	if user.Role != "admin" && course.TeacherID != user.ID {
+	if getRole(idStr) != "admin" && course.TeacherID != idStr {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
             "error": "no access",
         })
@@ -176,14 +187,8 @@ func deleteCourse(c *fiber.Ctx) error {
 
 func joinCourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
-	idStr, ok := userID.(string)
+	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
-
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
-        })
-	}
 
 	var course models.Course
 	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
@@ -204,16 +209,16 @@ func joinCourse(c *fiber.Ctx) error {
 
 func getStudent(c *fiber.Ctx) error  {
 	userID := c.Locals("user_id")
-	idStr, ok := userID.(string)
+	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
-	
-    if !ok {
-        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-            "error": "invalid user id in token",
-        })
-    }
 
-	students, err := GetStudent(idStr, courseID)
+	if !isInCourse(idStr, courseID) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "error": "no access",
+        })
+	}
+
+	students, err := GetStudent(courseID)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -225,11 +230,18 @@ func getStudent(c *fiber.Ctx) error  {
 
 func changeStudentStatus(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
+	idStr, _ := userID.(string) 
 	courseID := c.Params("course_id")
 	studentID := c.Params("student_id")
 
 	var course models.Course
-	if err := database.DB.First(&course, "id = ? AND teacher_id = ?", courseID, userID).Error; err != nil {
+	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil{
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+            "error": "invalid course id",
+        })
+    }
+
+	if getRole(idStr) != "admin" && course.TeacherID != idStr {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
             "error": "no access",
         })
@@ -249,3 +261,15 @@ func changeStudentStatus(c *fiber.Ctx) error {
 
     return c.JSON(enrollment)
 }
+
+// func getAssignment(c *fiber.Ctx) error {
+// 	userID := c.Locals("user_id")
+// 	idStr, _ := userID.(string)
+// 	courseID := c.Params("course_id")
+
+// 	if !isInCourse(idStr, courseID) {
+// 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+//             "error": "no access",
+//         })
+// 	}
+// }
