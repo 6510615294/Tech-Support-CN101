@@ -49,5 +49,7 @@ func GetUserData(userID string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	data["userRole"] = user.Role
+
 	return data, nil
 }
