@@ -47,6 +47,37 @@ func GetCourse(userID string) ([]models.Course, error) {
 	return courses, nil
 }
 
+func GetACourse(userID, courseID string) (*models.Course, error) {
+	var user models.User
+	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+
+	var course models.Course
+	switch user.Role {
+	case "student":
+		var enrollment models.Enrollment
+		err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error
+		if err != nil {
+			return nil, err
+		}
+
+		if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
+			return nil, err
+		}
+
+		return &course, err
+
+	case "teacher":
+		err := database.DB.Where("teacher_id = ?", userID).Find(&course).Error
+		if err != nil {
+			return nil, err
+		}
+		return  &course, nil
+	default:
+		return nil, fmt.Errorf("unsupported role: %s", user.Role)
+	}
+}
 
 func CreateCourse(userID string, input models.Course) (*models.Course, error) {
 	var user models.User

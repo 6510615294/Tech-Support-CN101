@@ -12,6 +12,20 @@ func RegisterRoutes(app fiber.Router) {
     app.Put("/courses/:course_id", updateCourse)
     app.Delete("/courses/:course_id", deleteCourse)
 	app.Get("/courses/join/:course_id", joinCourse)
+	app.Get("/courses/:course_id", getACourse)
+	// app.Get("/courses/:course_id/students", getStudent)
+	// app.Post("/courses/:course_id/students", changeStudentStatus)
+	// app.Get("/courses/:course_id/assignments", getAssignment)
+	// app.Post("/courses/:course_id/assignments", createAssignment)
+	// app.Get("/courses/:course_id/assignments/:assignment_id", getAAssignment)
+	// app.Put("/courses/:course_id/assignments/:assignment_id", updateAssignment)
+	// app.Delete("/courses/:course_id/assignments/:assignment_id", deleteAssignment)
+	// app.Post("/courses/:course_id/assignments/:assignment_id/upload", uploadAssignment)
+	// app.Post("/courses/:course_id/assignments/:assignment_id/submit", submitAssignment)
+	// Grade
+	// app.Get("/courses/:course_id/resources", getResourse)
+	// app.Post("/courses/:course_id/resources", addResourse)
+	// app.Put("/courses/:course_id/resources", updateResourse)
 }
 
 func getCourse(c *fiber.Ctx) error {
@@ -32,6 +46,27 @@ func getCourse(c *fiber.Ctx) error {
     }
 
     return c.JSON(courses)
+}
+
+func getACourse(c *fiber.Ctx) error {
+	userID := c.Locals("user_id")
+	idStr, ok := userID.(string)
+	courseID := c.Params("course_id")
+
+    if !ok {
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+            "error": "invalid user id in token",
+        })
+    }
+
+	course, err := GetACourse(idStr, courseID)
+	if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": err.Error(),
+        })
+    }
+
+    return c.JSON(course)
 }
 
 func createCourse(c *fiber.Ctx) error {
