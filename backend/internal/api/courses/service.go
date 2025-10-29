@@ -156,3 +156,39 @@ func JoinCourse(userID string, course *models.Course) (*models.Enrollment, error
 		return nil, fmt.Errorf("unsupported role: %s", user.Role)
 	}
 }
+
+func GetStudent(userID, courseID string) ([]models.User, error) {
+	var user models.User
+	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+
+	var students []models.User
+	switch user.Role {
+	case "student":
+		var enrollment models.Enrollment
+		if err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error; err != nil {
+			return nil, err
+		}
+
+	case "teacher":
+		var course models.Course
+		if err := database.DB.Where("teacher_id = ?", userID).First(&course).Error; err != nil {
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported role: %s", user.Role)
+	}
+
+	err := database.DB.
+		Joins("JOIN enrollments ON enrollments.student_id = users.id").
+		Where("enrollments.course_id = ?", courseID).
+		Find(&students).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return students, nil
+}
