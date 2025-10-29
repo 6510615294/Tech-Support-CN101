@@ -1,11 +1,21 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import logo from '../assets/images/tse_logo.png'
+import userIcon from '../assets/icons/user-icon.jpg'
+import { useAuth } from '../features/auth/AuthContext'
 
 export default function Layout({ children }) {
     const [collapsed, setCollapsed] = useState(false)
     const [isDark, setIsDark] = useState(false)
     const navigate = useNavigate()
+    const { user, isAuthenticated } = useAuth()
+
+    // debug: show auth state in console to help diagnose missing user-block
+    // remove or guard behind env check if you don't want console output in production
+    try {
+        // eslint-disable-next-line no-console
+        console.log('Layout auth:', { isAuthenticated, user })
+    } catch (e) { }
 
     const toggleTheme = () => {
         const next = !isDark
@@ -25,7 +35,25 @@ export default function Layout({ children }) {
                         <option value="en">EN</option>
                     </select>
                     <button className="icon-btn theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">{isDark ? '☾' : '☀'}</button>
-                    <button className="nav-login" onClick={() => navigate('/login')}>Login</button>
+
+                    {isAuthenticated && user ? (
+                        <div
+                            className="nav-user"
+                            onClick={() => navigate('/dashboard')}
+                            role="button"
+                            tabIndex={0}
+                            title={user && (user.userName || user.username) ? `${user.userName || user.username}` : 'Account'}
+                            data-username={user && (user.userName || user.username) ? (user.userName || user.username) : ''}
+                        >
+                            <div className="user-block">
+                                <div className="user-line1">{user.userName || user.username}{user.displayname_en ? ` | ${user.displayname_en}` : ''}</div>
+                                <div className="user-line2">{user.type || ''}</div>
+                            </div>
+                            <img src={userIcon} alt="Avatar" className="avatar" />
+                        </div>
+                    ) : (
+                        <button className="nav-login" onClick={() => navigate('/login')}>Login</button>
+                    )}
                 </div>
             </nav>
 

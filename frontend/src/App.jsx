@@ -3,7 +3,7 @@ import { Routes, Route, Link } from 'react-router-dom'
 import LoginPage from './features/auth/Login'
 import PrivateRoute from './routes/PrivateRoute'
 import Home from './pages/Home'
-import Dashboard from './pages/Dashboard'
+import Dashboard from './pages/Student-dashboard'
 
 export default function App() {
     return (
