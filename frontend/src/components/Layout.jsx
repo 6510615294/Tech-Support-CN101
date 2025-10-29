@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import logo from '../assets/images/tse_logo.png'
 import userIcon from '../assets/icons/user-icon.jpg'
@@ -8,7 +8,9 @@ export default function Layout({ children }) {
     const [collapsed, setCollapsed] = useState(false)
     const [isDark, setIsDark] = useState(false)
     const navigate = useNavigate()
-    const { user, isAuthenticated } = useAuth()
+    const { user, isAuthenticated, logout } = useAuth()
+    const [showProfileMenu, setShowProfileMenu] = useState(false)
+    const navUserRef = useRef(null)
 
     // debug: show auth state in console to help diagnose missing user-block
     // remove or guard behind env check if you don't want console output in production
@@ -25,6 +27,30 @@ export default function Layout({ children }) {
         } catch (e) { }
     }
 
+    useEffect(() => {
+        const onDocClick = (e) => {
+            if (!navUserRef.current) return
+            if (!navUserRef.current.contains(e.target)) {
+                setShowProfileMenu(false)
+            }
+        }
+
+        document.addEventListener('mousedown', onDocClick)
+        return () => document.removeEventListener('mousedown', onDocClick)
+    }, [])
+
+    const handleProfileClick = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowProfileMenu(s => !s)
+    }
+
+    const handleLogout = () => {
+        try { logout() } catch (e) { }
+        setShowProfileMenu(false)
+        navigate('/login')
+    }
+
     return (
         <div className="app-layout" style={{ ['--sidebar-width']: collapsed ? '64px' : '220px' }}>
             <nav className="top-nav">
@@ -39,7 +65,8 @@ export default function Layout({ children }) {
                     {isAuthenticated && user ? (
                         <div
                             className="nav-user"
-                            onClick={() => navigate('/dashboard')}
+                            ref={navUserRef}
+                            onClick={handleProfileClick}
                             role="button"
                             tabIndex={0}
                             title={user && (user.userName || user.username) ? `${user.userName || user.username}` : 'Account'}
@@ -50,6 +77,23 @@ export default function Layout({ children }) {
                                 <div className="user-line2">{user.type || ''}</div>
                             </div>
                             <img src={userIcon} alt="Avatar" className="avatar" />
+
+                            {showProfileMenu && (
+                                <div className="user-dropdown" role="menu">
+                                    <div className="profile-top">
+                                        <img src={userIcon} alt="Avatar" className="big-avatar" />
+                                        <div className="profile-name">{user.displayname_en || user.userName || user.username}</div>
+                                        <div className="profile-type">{user.type || ''}</div>
+                                    </div>
+                                    <div className="profile-info">
+                                        {user.userName && <div className="info-row"><strong>ID</strong><span>{user.userName}</span></div>}
+                                        {user.email && <div className="info-row"><strong>Email</strong><span>{user.email}</span></div>}
+                                    </div>
+                                    <div className="profile-actions">
+                                        <button className="btn-logout" onClick={handleLogout} type="button">ออกจากระบบ</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <button className="nav-login" onClick={() => navigate('/login')}>Login</button>

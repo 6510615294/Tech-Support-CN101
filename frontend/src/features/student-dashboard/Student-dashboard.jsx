@@ -33,7 +33,7 @@ export default function Dashboard() {
                 const data = await resp.json()
                 setMe(data)
                 // also update AuthContext so Layout and other components see the profile
-                try { if (setProfile) setProfile(data) } catch (e) {}
+                try { if (setProfile) setProfile(data) } catch (e) { }
             } catch (err) {
                 if (err.name !== 'AbortError') {
                     console.error('Failed to fetch /api/me', err)

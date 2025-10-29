@@ -184,6 +184,83 @@ header {
   cursor: pointer;
 }
 
+.nav-user {
+  position: relative;
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 280px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  z-index: 200;
+}
+
+.user-dropdown .profile-top {
+  padding: 18px 16px 12px 16px;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.big-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 8px;
+}
+
+.profile-name {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.profile-type {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.profile-info {
+  padding: 12px 14px;
+}
+
+.info-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.03);
+}
+
+.info-row strong {
+  width: 68px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.info-row span {
+  flex: 1;
+  text-align: left;
+}
+
+.profile-actions {
+  padding: 12px 14px 16px 14px;
+  text-align: center;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
 .user-block {
   display: flex;
   flex-direction: column;

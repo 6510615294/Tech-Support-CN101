@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
                 console.log('AuthProvider: profile loaded', data)
                 if (mounted) {
                     setUser(data)
-                    try { localStorage.setItem('user', JSON.stringify(data)) } catch (e) {}
+                    try { localStorage.setItem('user', JSON.stringify(data)) } catch (e) { }
                 }
             } catch (e) {
                 // log profile fetch errors for easier debugging
