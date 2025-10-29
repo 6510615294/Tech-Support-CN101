@@ -110,8 +110,18 @@ export default function Layout({ children }) {
                         </button>
                     </div>
                     <ul className="sidebar-menu">
-                        <li className="sidebar-item"><Link to="/">Home</Link></li>
-                        <li className="sidebar-item"><Link to="/login">Login</Link></li>
+                        {!isAuthenticated && (
+                            <>
+                                <li className="sidebar-item"><Link to="/">Home</Link></li>
+                                <li className="sidebar-item"><Link to="/login">Login</Link></li>
+                            </>
+                        )}
+
+                        {isAuthenticated && (
+                            <>
+                                <li className="sidebar-item"><Link to="/courses">Courses</Link></li>
+                            </>
+                        )}
                     </ul>
                 </aside>
 

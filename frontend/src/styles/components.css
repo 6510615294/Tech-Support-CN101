@@ -320,17 +320,26 @@ header {
 }
 
 .layout-body {
-  display: flex;
+  display: block;
+  /* main content is pushed to the right when sidebar is fixed */
   min-height: calc(100vh - 56px);
+  /* leave visual space for the fixed sidebar using the same token */
+  padding-left: calc(var(--sidebar-width, 220px) + 24px);
 }
 
 .side-bar {
+  /* fixed at the left edge and full height between top and footer margins */
   width: var(--sidebar-width, 220px);
   background: var(--color-surface);
   border-right: 1px solid rgba(0, 0, 0, 0.04);
   padding: 0 12px 24px 12px;
-  transition: width 180ms ease;
-  position: relative;
+  transition: width 180ms ease, left 180ms ease;
+  position: fixed;
+  left: 16px;
+  /* aligns with top-nav margin */
+  top: 16px;
+  bottom: 16px;
+  z-index: 80;
 }
 
 .side-bar.collapsed {
@@ -389,12 +398,13 @@ header {
 }
 
 .main-content {
-  flex: 1 1 auto;
   padding: 28px;
   display: flex;
   flex-direction: column;
   /* stack page header and page body vertically */
   align-items: stretch;
+  /* push main content away from the fixed sidebar */
+  margin-left: calc(var(--sidebar-width, 220px) + 24px);
 }
 
 /* Password field with eye button */
@@ -517,9 +527,14 @@ header {
 
   .layout-body {
     min-height: calc(100vh - 56px);
+    padding-left: 24px;
   }
 
   .top-nav {
     padding-left: 24px;
+  }
+
+  .main-content {
+    margin-left: 0;
   }
 }
