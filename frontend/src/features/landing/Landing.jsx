@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 
-export default function Home() {
+export default function Landing() {
     return (
         <div>
             <header>
@@ -9,8 +9,8 @@ export default function Home() {
             </header>
             <main>
                 <section>
-                    <h2>Welcome</h2>
-                    <p>This is a lightweight landing page for the project.</p>
+                    <h2>Landing</h2>
+                    <p>This is the landing page for the project.</p>
                     <p>
                         <Link to="/login">Login</Link>
                     </p>
