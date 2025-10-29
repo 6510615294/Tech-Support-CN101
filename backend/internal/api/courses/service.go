@@ -192,3 +192,27 @@ func GetStudent(userID, courseID string) ([]models.User, error) {
 
 	return students, nil
 }
+
+func ChangeStudentStatus(courseID, studentID string, input map[string]interface{}) (*models.Enrollment, error) {
+	allowedFields := map[string]bool{
+		"status": 		true,
+	}
+
+	updates := make(map[string]interface{})
+	for key, value := range input {
+		if allowedFields[key] {
+			updates[key] = value
+		}
+	}
+
+	var enrollment models.Enrollment
+	if err := database.DB.First(&enrollment, "course_id = ? AND student_id = ?", courseID, studentID).Error; err != nil {
+		return nil, err
+	}
+
+	if err := database.DB.Model(&enrollment).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+
+	return &enrollment, nil
+}

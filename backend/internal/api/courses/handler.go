@@ -8,13 +8,13 @@ import (
 
 func RegisterRoutes(app fiber.Router) {
     app.Get("/courses", getCourse)
+	app.Get("/courses/:course_id", getACourse)
     app.Post("/courses", createCourse)
     app.Put("/courses/:course_id", updateCourse)
     app.Delete("/courses/:course_id", deleteCourse)
 	app.Get("/courses/join/:course_id", joinCourse)
-	app.Get("/courses/:course_id", getACourse)
 	app.Get("/courses/:course_id/students", getStudent)
-	// app.Post("/courses/:course_id/students", changeStudentStatus)
+	app.Post("/courses/:course_id/students/:student_id", changeStudentStatus)
 	// app.Get("/courses/:course_id/assignments", getAssignment)
 	// app.Post("/courses/:course_id/assignments", createAssignment)
 	// app.Get("/courses/:course_id/assignments/:assignment_id", getAAssignment)
@@ -221,4 +221,31 @@ func getStudent(c *fiber.Ctx) error  {
     }
 
     return c.JSON(students)
+}
+
+func changeStudentStatus(c *fiber.Ctx) error {
+	userID := c.Locals("user_id")
+	courseID := c.Params("course_id")
+	studentID := c.Params("student_id")
+
+	var course models.Course
+	if err := database.DB.First(&course, "id = ? AND teacher_id = ?", courseID, userID).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "error": "no access",
+        })
+	}
+
+	var input map[string]interface{}
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid input"})
+	}
+
+	enrollment, err := ChangeStudentStatus(courseID, studentID, input)
+	if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": err.Error(),
+        })
+    }
+
+    return c.JSON(enrollment)
 }
