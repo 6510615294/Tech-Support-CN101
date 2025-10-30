@@ -28,6 +28,7 @@ func Connect() {
 		&models.User{},
 		&models.Course{},
 		&models.Enrollment{},
+		&models.Attachment{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

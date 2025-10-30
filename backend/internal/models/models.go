@@ -55,6 +55,8 @@ type Attachment struct {
 	URL         string         	`gorm:"not null" json:"url"`
 	FileName    string         	`json:"file_name"`
 	FileType    string         	`json:"file_type"`
+	UserID  	string         	`gorm:"not null" json:"user_id"`
+	Uploader 	User 			`gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	CreatedAt   time.Time      	`json:"created_at"`
 	DeletedAt   gorm.DeletedAt 	`gorm:"index" json:"-"`
 }
