@@ -16,7 +16,7 @@ func RegisterRoutes(app fiber.Router) {
 	app.Get("/courses/:course_id/students", getStudent)
 	app.Post("/courses/:course_id/students/:student_id", changeStudentStatus)
 	// app.Get("/courses/:course_id/assignments", getAssignment)
-	// app.Post("/courses/:course_id/assignments", createAssignment)
+	app.Post("/courses/:course_id/assignments", createAssignment)
 	// app.Get("/courses/:course_id/assignments/:assignment_id", getAAssignment)
 	// app.Put("/courses/:course_id/assignments/:assignment_id", updateAssignment)
 	// app.Delete("/courses/:course_id/assignments/:assignment_id", deleteAssignment)
@@ -262,14 +262,31 @@ func changeStudentStatus(c *fiber.Ctx) error {
     return c.JSON(enrollment)
 }
 
-// func getAssignment(c *fiber.Ctx) error {
-// 	userID := c.Locals("user_id")
-// 	idStr, _ := userID.(string)
-// 	courseID := c.Params("course_id")
+func createAssignment(c *fiber.Ctx) error {
+	userID := c.Locals("user_id")
+	idStr, _ := userID.(string)
+	courseID := c.Params("course_id")
 
-// 	if !isInCourse(idStr, courseID) {
-// 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-//             "error": "no access",
-//         })
-// 	}
-// }
+	var course models.Course
+	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "invalid course id"})
+	}
+
+	if getRole(idStr) != "admin" && course.TeacherID != idStr {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no access"})
+	}
+
+	file, _ := c.FormFile("file")
+
+	var input models.AssignmentInput
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid input"})
+	}
+
+	assignment, err := CreateAssignment(courseID, idStr, &input, file)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(assignment)
+}

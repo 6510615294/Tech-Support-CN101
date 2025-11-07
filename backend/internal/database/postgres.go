@@ -23,12 +23,13 @@ func Connect() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Run migrations for all models
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Course{},
 		&models.Enrollment{},
 		&models.Attachment{},
+		&models.Tag{},
+		&models.Assignment{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

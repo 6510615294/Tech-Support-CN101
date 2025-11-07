@@ -1,7 +1,7 @@
 package auth
 
 import (
-    "time"
+    // "time"
 
     "github.com/golang-jwt/jwt/v5"
     "github.com/6510615294/Tech-Support-CN101/backend/internal/config"
@@ -13,7 +13,7 @@ func GenerateToken(userID string) (string, error) {
 
     claims := jwt.MapClaims{
         "user_id": userID,
-        "exp":     time.Now().Add(14 * 24 * time.Hour).Unix(), // 1-day expiry
+        // "exp":     time.Now().Add(14 * 24 * time.Hour).Unix(),
     }
 
     token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
