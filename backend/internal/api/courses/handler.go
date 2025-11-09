@@ -15,9 +15,9 @@ func RegisterRoutes(app fiber.Router) {
 	app.Get("/courses/join/:course_id", joinCourse)
 	app.Get("/courses/:course_id/students", getStudent)
 	app.Post("/courses/:course_id/students/:student_id", changeStudentStatus)
-	// app.Get("/courses/:course_id/assignments", getAssignment)
+	app.Get("/courses/:course_id/assignments", getAssignment)
 	app.Post("/courses/:course_id/assignments", createAssignment)
-	// app.Get("/courses/:course_id/assignments/:assignment_id", getAAssignment)
+	app.Get("/courses/:course_id/assignments/:assignment_id", getAAssignment)
 	// app.Put("/courses/:course_id/assignments/:assignment_id", updateAssignment)
 	// app.Delete("/courses/:course_id/assignments/:assignment_id", deleteAssignment)
 	// app.Post("/courses/:course_id/assignments/:assignment_id/upload", uploadAssignment)
@@ -88,7 +88,7 @@ func getACourse(c *fiber.Ctx) error {
         })
 	}
 
-	course, err := GetACourse(idStr, courseID)
+	course, err := GetACourse(courseID)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -289,4 +289,47 @@ func createAssignment(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(assignment)
+}
+
+func getAssignment(c *fiber.Ctx) error  {
+	userID := c.Locals("user_id")
+	idStr, _ := userID.(string)
+	courseID := c.Params("course_id")
+
+	if !isInCourse(idStr, courseID) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "error": "no access",
+        })
+	}
+
+	assignments, err := GetAssignment(courseID)
+	if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": err.Error(),
+        })
+    }
+
+    return c.JSON(assignments)
+}
+
+func getAAssignment(c *fiber.Ctx) error  {
+	userID := c.Locals("user_id")
+	idStr, _ := userID.(string)
+	courseID := c.Params("course_id")
+	assignmentID := c.Params("assignment_id")
+
+	if !isInCourse(idStr, courseID) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "error": "no access",
+        })
+	}
+
+	assignments, err := GetAAssignment(assignmentID)
+	if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": err.Error(),
+        })
+    }
+
+    return c.JSON(assignments)
 }

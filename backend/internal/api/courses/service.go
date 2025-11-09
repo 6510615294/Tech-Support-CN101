@@ -51,28 +51,14 @@ func GetCourse(userID string) ([]models.Course, error) {
 	return courses, nil
 }
 
-func GetACourse(userID, courseID string) (*models.Course, error) {
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+func GetACourse(courseID string) (*models.Course, error) {
+	var course models.Course
+	
+	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
 		return nil, err
 	}
 
-	var course models.Course
-	switch user.Role {
-	case "student":
-		if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
-			return nil, err
-		}
-		return &course, nil
-
-	case "teacher":
-		if err := database.DB.Where("teacher_id = ?", userID).First(&course).Error; err != nil {
-			return nil, err
-		}
-		return  &course, nil
-	default:
-		return nil, fmt.Errorf("unsupported role: %s", user.Role)
-	}
+	return &course, nil
 }
 
 func CreateCourse(userID string, input models.Course) (*models.Course, error) {
@@ -294,4 +280,24 @@ func CreateAssignment(courseID, userID string, input *models.AssignmentInput, fi
 	}
 
 	return &assignment, nil
+}
+
+func GetAssignment(courseID string) ([]models.Assignment, error) {
+    var assignments []models.Assignment
+
+    if err := database.DB.Preload("Tags").Find(&assignments, "course_id = ?", courseID).Error; err != nil {
+        return nil, err
+    }
+
+    return assignments, nil
+}
+
+func GetAAssignment(assignmentID string) (*models.Assignment, error) {
+    var assignment models.Assignment
+
+    if err := database.DB.Preload("Tags").First(&assignment, "id = ?", assignmentID).Error; err != nil {
+        return nil, err
+    }
+
+    return &assignment, nil
 }
