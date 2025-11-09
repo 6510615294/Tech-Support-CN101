@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -26,6 +28,13 @@ func AuthMiddleware(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Invalid or expired token",
+		})
+	}
+
+	var user models.User
+	if err := database.DB.First(&user, "id = ?", claims["user_id"]).Error; err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user",
 		})
 	}
 
