@@ -10,7 +10,7 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-func GetUserData(userID string) (map[string]interface{}, error) {
+func GetUserData(userID string) (*models.ResponseUserData, error) {
 	studentURL := "https://restapi.tu.ac.th/api/v2/profile/std/info/?id="
 	teacherURL := "https://restapi.tu.ac.th/api/v2/profile/Instructors/info/?Email="
 	var url string
@@ -37,19 +37,52 @@ func GetUserData(userID string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	var result map[string]interface{}
-	if err := json.Unmarshal(resp.Body(), &result); err != nil {
-		log.Fatal("Error decoding JSON:", err)
+	var root struct {
+		Data json.RawMessage `json:"data"`
+	}
+
+	if err := json.Unmarshal(resp.Body(), &root); err != nil {
 		return nil, err
 	}
 
-	data, ok := result["data"].(map[string]interface{})
-	if !ok {
-		log.Fatal("Invalid or missing 'data' field")
-		return nil, err
+	type StudentData struct {
+		ThName 		string `json:"displayname_th"`
+		EnName 		string `json:"displayname_en"`
+		Email       string `json:"email"`
+		Faculty     string `json:"faculty"`
 	}
 
-	data["userRole"] = user.Role
+	type InstructorData struct {
+		FirstNameTh string `json:"First_Name_Th"`
+		LastNameTh  string `json:"Last_Name_Th"`
+		FirstNameEn string `json:"First_Name_En"`
+		LastNameEn  string `json:"Last_Name_En"`
+		Email       string `json:"Email"`
+		Faculty     string `json:"Faculty_Name_Th"`
+	}
 
-	return data, nil
+	var response models.ResponseUserData
+	response.Username = user.Username
+	response.Role = string(user.Role)
+
+	if user.UserType == "student" {
+		var student StudentData
+		if err := json.Unmarshal(root.Data, &student); err != nil {
+			return nil, err
+		}
+		response.Name = student.ThName
+		response.Email = student.Email
+		response.Faculty = student.Faculty
+
+	} else {
+		var instructor InstructorData
+		if err := json.Unmarshal(root.Data, &instructor); err != nil {
+			return nil, err
+		}
+		response.Name = instructor.FirstNameTh + " " + instructor.LastNameTh
+		response.Email = instructor.Email
+		response.Faculty = instructor.Faculty
+	}
+
+	return &response, nil
 }

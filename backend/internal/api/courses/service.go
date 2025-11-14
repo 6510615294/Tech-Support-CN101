@@ -21,53 +21,49 @@ func generateCourseID() string {
 	return string(id)
 }
 
-func GetCourse(userID string) ([]models.Course, error) {
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+func GetCourses(userID, userRole string) (*[]models.ResponseCourse, error) {
+	var courses []models.Course
+	var err error
+
+	switch userRole {
+	case "student":
+		err = database.DB.Joins("JOIN enrollments ON enrollments.course_id = courses.id").
+			Where("enrollments.student_id = ?", userID).
+			Preload("Teacher").
+			Find(&courses).Error
+
+	case "teacher":
+		err = database.DB.Where("teacher_id = ?", userID).
+			Preload("Teacher").
+			Find(&courses).Error
+
+	default:
+		return nil, fmt.Errorf("unsupported role: %s", userRole)
+	}
+
+	if err != nil {
 		return nil, err
 	}
 
-	var courses []models.Course
+	response := models.ConvertCoursesToResponse(courses)
 
-	switch user.Role {
-	case "student":
-		err := database.DB.Joins("JOIN enrollments ON enrollments.course_id = courses.id").
-			Where("enrollments.student_id = ?", userID).
-			Find(&courses).Error
-		if err != nil {
-			return nil, err
-		}
-
-	case "teacher":
-		err := database.DB.Where("teacher_id = ?", userID).Find(&courses).Error
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		return nil, fmt.Errorf("unsupported role: %s", user.Role)
-	}
-
-	return courses, nil
+	return &response, nil
 }
 
-func GetACourse(courseID string) (*models.Course, error) {
+func GetCourse(courseID string) (*models.ResponseCourse, error) {
 	var course models.Course
-	
+
 	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
 		return nil, err
 	}
 
-	return &course, nil
+	response := models.ConvertCourseToResponse(course)
+
+	return &response, nil
 }
 
-func CreateCourse(userID string, input models.Course) (*models.Course, error) {
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
-		return nil, err
-	}
-
-	input.TeacherID = user.ID
+func CreateCourse(userID string, input models.Course) (*models.ResponseCourse, error) {
+	input.TeacherID = userID
 
 	if input.ID == "" {
 		input.ID = generateCourseID()
@@ -77,10 +73,12 @@ func CreateCourse(userID string, input models.Course) (*models.Course, error) {
 		return nil, err
 	}
 
-	return &input, nil
+	response := models.ConvertCourseToResponse(input)
+
+	return &response, nil
 }
 
-func UpdateCourse(course models.Course, input map[string]interface{}) (*models.Course, error) {
+func UpdateCourse(course models.Course, input map[string]interface{}) (*models.ResponseCourse, error) {
 	allowedFields := map[string]bool{
 		"name":        true,
 		"course_date": true,
@@ -99,10 +97,12 @@ func UpdateCourse(course models.Course, input map[string]interface{}) (*models.C
 		return nil, err
 	}
 
-	return &course, nil
+	response := models.ConvertCourseToResponse(course)
+
+	return &response, nil
 }
 
-func JoinCourse(userID string, course *models.Course) (*models.Enrollment, error) {
+func JoinCourse(userID string, course *models.Course) (*models.ResponseEnrollment, error) {
 	var user models.User
 	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
 		return nil, err
@@ -122,14 +122,17 @@ func JoinCourse(userID string, course *models.Course) (*models.Enrollment, error
 			return nil, err
 		}
 
-		return &enrollment, nil
+		response := models.ConvertEnrollmentToResponse(enrollment)
+
+		return &response, nil
 		
 	default:
 		return nil, fmt.Errorf("unsupported role: %s", user.Role)
 	}
 }
 
-func GetStudent(courseID string) ([]models.StudentWithEnrollment, error) {
+// TODO : change response
+func GetStudents(courseID string) ([]models.StudentWithEnrollment, error) {
     var results []models.StudentWithEnrollment
     
     err := database.DB.
@@ -146,6 +149,7 @@ func GetStudent(courseID string) ([]models.StudentWithEnrollment, error) {
     return results, nil
 }
 
+// TODO : change response
 func ChangeStudentStatus(courseID, studentID string, input map[string]interface{}) (*models.Enrollment, error) {
 	allowedFields := map[string]bool{
 		"status": 		true,
@@ -170,7 +174,7 @@ func ChangeStudentStatus(courseID, studentID string, input map[string]interface{
 	return &enrollment, nil
 }
 
-func CreateAssignment(courseID, userID string, input *models.AssignmentInput, file *multipart.FileHeader) (*models.Assignment, error) {
+func CreateAssignment(courseID, userID string, input *models.AssignmentInput, file *multipart.FileHeader) (*models.ResponseAssignment, error) {
 	var fileKey, fileURL string
 	var user models.User
 	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
@@ -279,25 +283,31 @@ func CreateAssignment(courseID, userID string, input *models.AssignmentInput, fi
 		return nil, err
 	}
 
-	return &assignment, nil
+	response := models.ConvertAssignmentToResponse(assignment)
+
+	return &response, nil
 }
 
-func GetAssignment(courseID string) ([]models.Assignment, error) {
+func GetAssignments(courseID string) (*[]models.ResponseAssignment, error) {
     var assignments []models.Assignment
 
     if err := database.DB.Preload("Tags").Find(&assignments, "course_id = ?", courseID).Error; err != nil {
         return nil, err
     }
 
-    return assignments, nil
+	response := models.ConvertAssignmentsToResponse(assignments)
+
+    return &response, nil
 }
 
-func GetAAssignment(assignmentID string) (*models.Assignment, error) {
+func GetAssignment(assignmentID string) (*models.ResponseAssignment, error) {
     var assignment models.Assignment
 
     if err := database.DB.Preload("Tags").First(&assignment, "id = ?", assignmentID).Error; err != nil {
         return nil, err
     }
 
-    return &assignment, nil
+	response := models.ConvertAssignmentToResponse(assignment)
+
+    return &response, nil
 }

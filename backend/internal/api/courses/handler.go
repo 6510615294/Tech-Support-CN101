@@ -7,17 +7,17 @@ import (
 )
 
 func RegisterRoutes(app fiber.Router) {
-    app.Get("/courses", getCourse)
-	app.Get("/courses/:course_id", getACourse)
+    app.Get("/courses", getCourses)
+	app.Get("/courses/:course_id", getCourse)
     app.Post("/courses", createCourse)
     app.Put("/courses/:course_id", updateCourse)
     app.Delete("/courses/:course_id", deleteCourse)
 	app.Get("/courses/join/:course_id", joinCourse)
-	app.Get("/courses/:course_id/students", getStudent)
+	app.Get("/courses/:course_id/students", getStudents)
 	app.Post("/courses/:course_id/students/:student_id", changeStudentStatus)
-	app.Get("/courses/:course_id/assignments", getAssignment)
+	app.Get("/courses/:course_id/assignments", getAssignments)
 	app.Post("/courses/:course_id/assignments", createAssignment)
-	app.Get("/courses/:course_id/assignments/:assignment_id", getAAssignment)
+	app.Get("/courses/:course_id/assignments/:assignment_id", getAssignment)
 	// app.Put("/courses/:course_id/assignments/:assignment_id", updateAssignment)
 	// app.Delete("/courses/:course_id/assignments/:assignment_id", deleteAssignment)
 	// app.Post("/courses/:course_id/assignments/:assignment_id/upload", uploadAssignment)
@@ -63,11 +63,11 @@ func getRole(userID string) string {
 	return string(user.Role)
 }
 
-func getCourse(c *fiber.Ctx) error {
+func getCourses(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	idStr, _ := userID.(string)
 
-	courses, err := GetCourse(idStr)
+	courses, err := GetCourses(idStr, getRole(idStr))
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -77,7 +77,7 @@ func getCourse(c *fiber.Ctx) error {
     return c.JSON(courses)
 }
 
-func getACourse(c *fiber.Ctx) error {
+func getCourse(c *fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
@@ -88,7 +88,7 @@ func getACourse(c *fiber.Ctx) error {
         })
 	}
 
-	course, err := GetACourse(courseID)
+	course, err := GetCourse(courseID)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -207,7 +207,7 @@ func joinCourse(c *fiber.Ctx) error {
     return c.JSON(data)
 }
 
-func getStudent(c *fiber.Ctx) error  {
+func getStudents(c *fiber.Ctx) error  {
 	userID := c.Locals("user_id")
 	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
@@ -218,7 +218,7 @@ func getStudent(c *fiber.Ctx) error  {
         })
 	}
 
-	students, err := GetStudent(courseID)
+	students, err := GetStudents(courseID)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -291,7 +291,7 @@ func createAssignment(c *fiber.Ctx) error {
 	return c.JSON(assignment)
 }
 
-func getAssignment(c *fiber.Ctx) error  {
+func getAssignments(c *fiber.Ctx) error  {
 	userID := c.Locals("user_id")
 	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
@@ -302,7 +302,7 @@ func getAssignment(c *fiber.Ctx) error  {
         })
 	}
 
-	assignments, err := GetAssignment(courseID)
+	assignments, err := GetAssignments(courseID)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
@@ -312,7 +312,7 @@ func getAssignment(c *fiber.Ctx) error  {
     return c.JSON(assignments)
 }
 
-func getAAssignment(c *fiber.Ctx) error  {
+func getAssignment(c *fiber.Ctx) error  {
 	userID := c.Locals("user_id")
 	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
@@ -324,7 +324,7 @@ func getAAssignment(c *fiber.Ctx) error  {
         })
 	}
 
-	assignments, err := GetAAssignment(assignmentID)
+	assignments, err := GetAssignment(assignmentID)
 	if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
             "error": err.Error(),
