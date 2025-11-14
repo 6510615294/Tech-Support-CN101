@@ -53,20 +53,40 @@ export default function CourseForm() {
 
   const form = useForm < z.infer < typeof formSchema >> ({
     resolver: zodResolver(formSchema),
-
   })
 
-  function onSubmit(values: z.infer < typeof formSchema > ) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      console.log(values);
-      toast(
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(values, null, 2)}</code>
-        </pre>
-      );
-    } catch (error) {
-      console.error("Form submission error", error);
-      toast.error("Failed to submit the form. Please try again.");
+      const token = localStorage.getItem("token");
+
+      const payload = {
+        name: values.courseName,
+        course_date: `${values.course_day} ${values.course_time}`,
+        section: values.section,
+        semester: `${values.semester}/${values.year}`,
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        console.error(e);
+        alert("Failed to create course");
+        return;
+      }
+
+      window.location.href = "/courses";
+      alert("Course created successfully!");
+    } catch (err) {
+      console.error("Error creating course", err);
+      alert("Something went wrong.");
     }
   }
 
@@ -85,7 +105,9 @@ export default function CourseForm() {
                 placeholder="Introduction to Computer Programming"
                 
                 type="text"
-                {...field} />
+                {...field} 
+                value={field.value ?? ""}
+              />
               </FormControl>
               <FormDescription>This is course display name.</FormDescription>
               <FormMessage />
@@ -166,7 +188,9 @@ export default function CourseForm() {
                 placeholder="80051"
                 
                 type="text"
-                {...field} />
+                {...field}
+                value={field.value ?? ""}
+              />
               </FormControl>
               <FormDescription>This is course section</FormDescription>
               <FormMessage />
@@ -189,7 +213,12 @@ export default function CourseForm() {
                 placeholder="1"
                 
                 type="number"
-                {...field} />
+                {...field} 
+                value={field.value ?? ""}
+                onChange={e =>
+                  field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                }
+              />
               </FormControl>
               <FormDescription>This is semester</FormDescription>
               <FormMessage />
@@ -211,7 +240,12 @@ export default function CourseForm() {
                 placeholder="2025"
                 
                 type="number"
-                {...field} />
+                {...field} 
+                value={field.value ?? ""}
+                onChange={e =>
+                  field.onChange(e.target.value === "" ? undefined : Number(e.target.value))
+                }
+              />
               </FormControl>
               <FormDescription>This is academic year</FormDescription>
               <FormMessage />

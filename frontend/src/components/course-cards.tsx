@@ -19,10 +19,10 @@ export function CourseCards({
   course: {
     id: string
     name: string
-    course_date: string
+    schedule: string
     section: string
     semester: string
-    teacher_name: string
+    teacher: string
   }
 }
 ) {
@@ -38,7 +38,7 @@ export function CourseCards({
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-xl h-[3.5rem] overflow-hidden line-clamp-2">
             {course.name}
           </CardTitle>
-          <CardDescription>{course.teacher_name}</CardDescription>
+          <CardDescription>{course.teacher}</CardDescription>
         </CardHeader>
         <Separator></Separator>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
@@ -51,7 +51,7 @@ export function CourseCards({
           <div className="">
             <Badge>
               <Calendar />
-              <span>{course.course_date}</span>
+              <span>{course.schedule}</span>
             </Badge>
           </div>
         </CardFooter>

@@ -304,7 +304,9 @@ export const FileUploaderItem = forwardRef<
           'absolute',
           direction === 'rtl' ? 'top-1 left-1' : 'top-1 right-1',
         )}
-        onClick={() => removeFileFromSet(index)}
+        onClick={() => {
+          removeFileFromSet(index);
+        }}
       >
         <span className="sr-only">remove item {index}</span>
         <RemoveIcon className="w-4 h-4 hover:stroke-destructive duration-200 ease-in-out" />
@@ -320,14 +322,12 @@ export const FileInput = forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
   const { dropzoneState, isFileTooBig, isLOF } = useFileUpload()
-  const rootProps = isLOF ? {} : dropzoneState.getRootProps()
+  const rootProps = dropzoneState.getRootProps()
   return (
     <div
       ref={ref}
       {...props}
-      className={`relative w-full ${
-        isLOF ? 'opacity-50 cursor-not-allowed ' : 'cursor-pointer '
-      }`}
+      className={`relative w-full`}
     >
       <div
         className={cn(
@@ -347,7 +347,6 @@ export const FileInput = forwardRef<
       </div>
       <Input
         ref={dropzoneState.inputRef}
-        disabled={isLOF}
         {...dropzoneState.getInputProps()}
         className={`${isLOF ? 'cursor-not-allowed' : ''}`}
       />
