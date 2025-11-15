@@ -15,15 +15,7 @@ type Course = {
   teacher: string;
 };
 
-type User = {
-  username: string;
-  name: string;
-  email: string;
-  role: string;
-  faculty: string;
-};
-
-export default function Page({ user }: { user: User }) {
+export default function Page() {
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -64,17 +56,15 @@ export default function Page({ user }: { user: User }) {
 
   return (
     <div className="w-full relative">
-      { user.role === "teacher" && (
-        <div className="flex justify-end px-4 lg:px-6 mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleClick}
-          >
-            <Plus /> New Course
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-end px-4 lg:px-6 mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleClick}
+        >
+          <Plus /> New Course
+        </Button>
+      </div>
       <div className="
         grid grid-cols-1 gap-4 px-4 
         lg:px-6 
