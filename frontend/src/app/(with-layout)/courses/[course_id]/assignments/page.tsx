@@ -18,7 +18,15 @@ type Assignment = {
   tags: string[]
 }
 
-export default function Page() {
+type User = {
+  username: string;
+  name: string;
+  email: string;
+  role: string;
+  faculty: string;
+};
+
+export default function Page({ user }: { user: User }) {
   const [assignment, setCourses] = useState<Assignment[] | null>(null);
   const [loading, setLoading] = useState(true);
   const { course_id } = useParams()
@@ -60,14 +68,16 @@ export default function Page() {
 
   return (
     <div className="relative flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute top-4 right-4 md:top-6 md:right-6"
-        onClick={handleClick}
-      >
-        <Plus /> New Assignment
-      </Button>
+      { user.role === "teacher" && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="absolute top-4 right-4 md:top-6 md:right-6"
+          onClick={handleClick}
+        >
+          <Plus /> New Assignment
+        </Button>
+      )}
 
       <div className="pt-10">
         {assignment.map((assignment, index) => (

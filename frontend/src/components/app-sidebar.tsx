@@ -157,9 +157,20 @@ const data = {
   ],
 }
 
-const isTeacher = true;
+type User = {
+  username: string;
+  name: string;
+  email: string;
+  role: string;
+  faculty: string;
+};
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  user: User;
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const isTeacher = user.role === "teacher"
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

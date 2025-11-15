@@ -12,54 +12,54 @@ type User = {
   faculty: string;
 };
 
-export function SiteHeader() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+export function SiteHeader({ user }: { user: User }) {
+  // const [user, setUser] = useState<User | null>(null);
+  // const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const token = localStorage.getItem("token");
+  // useEffect(() => {
+  //   async function fetchUser() {
+  //     try {
+  //       const token = localStorage.getItem("token");
 
-        if (!token) {
-          window.location.href = "/login";
-          throw new Error("Not have token");
-        }
+  //       if (!token) {
+  //         window.location.href = "/login";
+  //         throw new Error("Not have token");
+  //       }
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+  //       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/me`, {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       });
 
-        if (!res.ok) {
-          window.location.href = "/login";
-          throw new Error("Failed to fetch user");
-        }
+  //       if (!res.ok) {
+  //         window.location.href = "/login";
+  //         throw new Error("Failed to fetch user");
+  //       }
 
-        const data = await res.json();
-        setUser(data);
-      } catch (error) {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    }
+  //       const data = await res.json();
+  //       setUser(data);
+  //     } catch (error) {
+  //       setUser(null);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
 
-    fetchUser();
-  }, []);
+  //   fetchUser();
+  // }, []);
 
-  if (loading) {
-    return (
-      <header className="flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b px-4 lg:px-6">
-        <div>Loading...</div>
-      </header>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <header className="flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b px-4 lg:px-6">
+  //       <div>Loading...</div>
+  //     </header>
+  //   );
+  // }
 
-  if (!user) {
-    return window.location.href = "/login";
-  }
+  // if (!user) {
+  //   return window.location.href = "/login";
+  // }
 
   return (
     <header className="flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b px-4 lg:px-6">
