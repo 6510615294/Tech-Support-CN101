@@ -52,7 +52,15 @@ export default function Page() {
   if (loading) return <div>Loading...</div>;
 
   if (!courses || courses.length === 0)
-    return <div>No courses found or you are not logged in.</div>;
+    return <div><div className="flex justify-end px-4 lg:px-6 mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleClick}
+        >
+          <Plus /> New Course
+        </Button>
+      </div>No courses found or you are not logged in.</div>;
 
   return (
     <div className="w-full relative">

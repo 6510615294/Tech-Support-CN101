@@ -56,7 +56,14 @@ export default function Page() {
   if (loading) return <div>Loading...</div>;
 
   if (!assignment || assignment.length === 0)
-    return <div>No assignment found or you are not logged in.</div>;
+    return <div><Button
+        variant="outline"
+        size="sm"
+        className="absolute top-4 right-4 md:top-6 md:right-6"
+        onClick={handleClick}
+      >
+        <Plus /> New Assignment
+      </Button>No assignment found or you are not logged in.</div>;
 
   return (
     <div className="relative flex flex-col gap-4 py-4 md:gap-6 md:py-6">
