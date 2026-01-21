@@ -81,6 +81,7 @@ export default function Page() {
           <AssignmentCards key={assignment.id} assignment={assignment} />
         ))}
       </div>
+      <div className="h-1"></div>
     </div>
   )
 }
