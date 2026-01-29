@@ -30,6 +30,8 @@ func Connect() {
 		&models.Attachment{},
 		&models.Tag{},
 		&models.Assignment{},
+		&models.Comment{},
+		&models.Submission{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

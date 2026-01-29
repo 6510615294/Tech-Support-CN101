@@ -27,13 +27,13 @@ func GetCourses(userID, userRole string) (*[]models.ResponseCourse, error) {
 
 	switch userRole {
 	case "student":
-		err = database.DB.Joins("JOIN enrollments ON enrollments.course_id = courses.id").
+		err = db.Joins("JOIN enrollments ON enrollments.course_id = courses.id").
 			Where("enrollments.student_id = ?", userID).
 			Preload("Teacher").
 			Find(&courses).Error
 
 	case "teacher":
-		err = database.DB.Where("teacher_id = ?", userID).
+		err = db.Where("teacher_id = ?", userID).
 			Preload("Teacher").
 			Find(&courses).Error
 
@@ -53,7 +53,7 @@ func GetCourses(userID, userRole string) (*[]models.ResponseCourse, error) {
 func GetCourse(courseID string) (*models.ResponseCourse, error) {
 	var course models.Course
 
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
+	if err := db.First(&course, "id = ?", courseID).Error; err != nil {
 		return nil, err
 	}
 
@@ -62,49 +62,66 @@ func GetCourse(courseID string) (*models.ResponseCourse, error) {
 	return &response, nil
 }
 
-func CreateCourse(userID string, input models.Course) (*models.ResponseCourse, error) {
-	input.TeacherID = userID
-
-	if input.ID == "" {
-		input.ID = generateCourseID()
+func CreateCourse(userID string, form models.CourseForm) (*models.ResponseCourse, error) {
+	course := models.Course{
+		ID: generateCourseID(),
+		Name: form.Name,
+		CourseDate: form.CourseDate,
+		Section: form.Section,
+		Semester: form.Semester,
+		TeacherID: userID,
 	}
 
-	if err := database.DB.Create(&input).Error; err != nil {
+	if err := db.Create(&course).Error; err != nil {
 		return nil, err
 	}
 
-	response := models.ConvertCourseToResponse(input)
+	response := models.ConvertCourseToResponse(course)
 
 	return &response, nil
 }
 
-func UpdateCourse(course models.Course, input map[string]interface{}) (*models.ResponseCourse, error) {
-	allowedFields := map[string]bool{
-		"name":        true,
-		"course_date": true,
-		"semester":    true,
-		"section":     true,
-	}
+func UpdateCourse(
+	course models.Course,
+	form models.CourseForm,
+) (*models.ResponseCourse, error) {
 
 	updates := make(map[string]interface{})
-	for key, value := range input {
-		if allowedFields[key] {
-			updates[key] = value
+
+	if form.Name != "" {
+		updates["name"] = form.Name
+	}
+
+	if form.CourseDate != "" {
+		updates["course_date"] = form.CourseDate
+	}
+
+	if form.Section != "" {
+		updates["section"] = form.Section
+	}
+
+	if form.Semester != "" {
+		updates["semester"] = form.Semester
+	}
+
+	if len(updates) > 0 {
+		if err := db.Model(&course).Updates(updates).Error; err != nil {
+			return nil, err
 		}
 	}
 
-	if err := database.DB.Model(&course).Updates(updates).Error; err != nil {
+	if err := db.First(&course, "id = ?", course.ID).Error; err != nil {
 		return nil, err
 	}
 
 	response := models.ConvertCourseToResponse(course)
-
 	return &response, nil
 }
 
+
 func JoinCourse(userID string, course *models.Course) (*models.ResponseEnrollment, error) {
 	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+	if err := db.First(&user, "id = ?", userID).Error; err != nil {
 		return nil, err
 	}
 
@@ -118,7 +135,7 @@ func JoinCourse(userID string, course *models.Course) (*models.ResponseEnrollmen
 			Course: *course,
 		}
 
-		if err := database.DB.Create(&enrollment).Error; err != nil {
+		if err := db.Create(&enrollment).Error; err != nil {
 			return nil, err
 		}
 
@@ -133,9 +150,9 @@ func JoinCourse(userID string, course *models.Course) (*models.ResponseEnrollmen
 
 // TODO : change response
 func GetStudents(courseID string) ([]models.StudentWithEnrollment, error) {
-    var results []models.StudentWithEnrollment
+	var results []models.StudentWithEnrollment
     
-    err := database.DB.
+    err := db.
         Model(&models.User{}).
         Select("users.*, enrollments.status as status").
         Joins("JOIN enrollments ON enrollments.student_id = users.id").
@@ -163,80 +180,98 @@ func ChangeStudentStatus(courseID, studentID string, input map[string]interface{
 	}
 
 	var enrollment models.Enrollment
-	if err := database.DB.First(&enrollment, "course_id = ? AND student_id = ?", courseID, studentID).Error; err != nil {
+	if err := db.First(&enrollment, "course_id = ? AND student_id = ?", courseID, studentID).Error; err != nil {
 		return nil, err
 	}
 
-	if err := database.DB.Model(&enrollment).Updates(updates).Error; err != nil {
+	if err := db.Model(&enrollment).Updates(updates).Error; err != nil {
 		return nil, err
 	}
 
 	return &enrollment, nil
 }
 
-func CreateAssignment(courseID, userID string, input *models.AssignmentInput, file *multipart.FileHeader) (*models.ResponseAssignment, error) {
-	var fileKey, fileURL string
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
-		return nil, err
+func CreateAssignment(
+	courseID, 
+	userID string, 
+	form *models.AssignmentForm, 
+	file *multipart.FileHeader,
+) (*models.ResponseAssignment, error) {
+	var attachment *models.Attachment
+
+	switch {
+		// CASE 1: use existing attachment
+		case form.Attachment != "":
+			var existing models.Attachment
+			if err := db.
+				Where("id = ? AND user_id = ?", form.Attachment, userID).
+				First(&existing).
+				Error; err != nil {
+
+				return nil, errors.New("invalid attachment id")
+			}
+			attachment = &existing
+
+		// CASE 2: upload new file
+		case file != nil:
+			src, err := file.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer src.Close()
+
+			data, err := io.ReadAll(src)
+			if err != nil {
+				return nil, err
+			}
+
+			fileKey, err := database.UploadFileToS3(data, file.Filename)
+			if err != nil {
+				return nil, fmt.Errorf("upload failed: %v", err)
+			}
+
+			fileURL := fmt.Sprintf(
+				"https://%s.s3.amazonaws.com/%s",
+				database.BucketName,
+				fileKey,
+			)
+
+			newAttachment := models.Attachment{
+				FileName: file.Filename,
+				FileKey:  fileKey,
+				URL:      fileURL,
+				UserID:   userID,
+			}
+
+			if err := db.Create(&newAttachment).Error; err != nil {
+				return nil, err
+			}
+
+			attachment = &newAttachment
+
+		// CASE 3: no attachment at all (VALID)
+		default:
+			attachment = nil
 	}
 
-	var attachment models.Attachment
-
-	if input.Attachment != "" {
-		if err := database.DB.First(&attachment, "id = ?", input.Attachment).Error; err != nil {
-			return nil, errors.New("invalid existing file id")
-		}
-
-	} else {
-		if file == nil {
-			return nil, errors.New("file is required or existing_file_id must be provided")
-		}
-
-		src, err := file.Open()
-		if err != nil {
-			return nil, err
-		}
-		defer src.Close()
-
-		fileBytes, err := io.ReadAll(src)
-		if err != nil {
-			return nil, err
-		}
-
-		fileKey, err = database.UploadFileToS3(fileBytes, file.Filename)
-		if err != nil {
-			return nil, fmt.Errorf("upload failed: %v", err)
-		}
-
-		fileURL = fmt.Sprintf("https://%s.s3.amazonaws.com/%s", database.BucketName, fileKey)
-		attachment = models.Attachment{
-			FileName: 	file.Filename,
-			FileKey:  	fileKey,
-			URL:  		fileURL,
-			UserID:   	userID,
-			Uploader: 	user,
-		}
-		if err := database.DB.Create(&attachment).Error; err != nil {
-			return nil, err
-		}
-	}
 
 	assignment := models.Assignment{
-		CourseID:    courseID,
-		Title:       input.Title,
-		Description: input.Description,
-		Point:       input.Point,
-		StartDate:   input.StartDate,
-		DueDate:     input.DueDate,
-		CloseDate:   input.CloseDate,
-		AttachmentID: attachment.ID,
-		Attachment:  attachment,
-		CreatedBy:   userID,
+		CourseID:     courseID,
+		Title:        form.Title,
+		Description:  form.Description,
+		Point:        form.Point,
+		StartDate:    form.StartDate,
+		DueDate:      form.DueDate,
+		CloseDate:    form.CloseDate,
+		CreatedBy:    userID,
 	}
 
-	if len(input.Tags) > 0 {
-		tagNames := input.Tags
+	if attachment != nil {
+		assignment.AttachmentID = &attachment.ID
+	}
+
+	if len(form.Tags) > 0 {
+		tagNames := form.Tags
 		if len(tagNames) > 5 {
 			tagNames = tagNames[:5]
 		}
@@ -252,7 +287,7 @@ func CreateAssignment(courseID, userID string, input *models.AssignmentInput, fi
 		if len(cleanedNames) > 0 {
 			var existingTags []models.Tag
 
-			if err := database.DB.Where("name IN ?", cleanedNames).Find(&existingTags).Error; err != nil {
+			if err := db.Where("name IN ?", cleanedNames).Find(&existingTags).Error; err != nil {
 				return nil, err
 			}
 
@@ -268,7 +303,7 @@ func CreateAssignment(courseID, userID string, input *models.AssignmentInput, fi
 					assignmentTags = append(assignmentTags, existingTag)
 				} else {
 					newTag := models.Tag{Name: name}
-					if err := database.DB.Create(&newTag).Error; err != nil {
+					if err := db.Create(&newTag).Error; err != nil {
 						return nil, err
 					}
 					assignmentTags = append(assignmentTags, newTag)
@@ -279,7 +314,7 @@ func CreateAssignment(courseID, userID string, input *models.AssignmentInput, fi
 		}
 	}
 
-	if err := database.DB.Create(&assignment).Error; err != nil {
+	if err := db.Create(&assignment).Error; err != nil {
 		return nil, err
 	}
 
@@ -289,9 +324,9 @@ func CreateAssignment(courseID, userID string, input *models.AssignmentInput, fi
 }
 
 func GetAssignments(courseID string) (*[]models.ResponseAssignment, error) {
-    var assignments []models.Assignment
+	var assignments []models.Assignment
 
-    if err := database.DB.Preload("Tags").Find(&assignments, "course_id = ?", courseID).Error; err != nil {
+    if err := db.Preload("Tags").Find(&assignments, "course_id = ?", courseID).Error; err != nil {
         return nil, err
     }
 
@@ -300,14 +335,463 @@ func GetAssignments(courseID string) (*[]models.ResponseAssignment, error) {
     return &response, nil
 }
 
-func GetAssignment(assignmentID string) (*models.ResponseAssignment, error) {
-    var assignment models.Assignment
+func GetAssignment(idStr, role, assignmentID string) (*models.ResponseDetailedAssignment, error) {
+	var assignment models.Assignment
+	var submissions []models.Submission
 
-    if err := database.DB.Preload("Tags").First(&assignment, "id = ?", assignmentID).Error; err != nil {
-        return nil, err
-    }
+	assignmentQuery := db.
+		Preload("Tags").
+		Preload("Attachment")
+
+	if role == "student" {
+		assignmentQuery = assignmentQuery.Where("visible = ?", true)
+	}
+
+	if err := assignmentQuery.
+		First(&assignment, "id = ?", assignmentID).
+		Error; err != nil {
+		return nil, err
+	}
+
+	submissionQuery := db.
+		Where("assignment_id = ?", assignmentID).
+		Preload("Attachment")
+
+	if role == "student" {
+		submissionQuery = submissionQuery.Preload("Comments", "visible = ?", true)
+	} else {
+		submissionQuery = submissionQuery.Preload("Comments")
+	}
+
+	if role == "student" {
+		if err := submissionQuery.
+			Where("created_by = ?", idStr).
+			Find(&submissions).
+			Error; err != nil {
+			return nil, err
+		}
+	} else {
+		if err := submissionQuery.
+			Find(&submissions).
+			Error; err != nil {
+			return nil, err
+		}
+	}
+
+	response := models.ConvertDetailedAssignmentToResponse(assignment, &submissions)
+
+	return &response, nil
+}
+
+func UpdateAssignment(
+	assignment models.Assignment,
+	form models.AssignmentForm,
+	file *multipart.FileHeader,
+	userID string,
+) (*models.ResponseAssignment, error) {
+
+	updates := map[string]interface{}{}
+
+	if form.Title != "" {
+		updates["title"] = form.Title
+	}
+	if form.Description != "" {
+		updates["description"] = form.Description
+	}
+	if form.Point > 0 {
+		updates["point"] = form.Point
+	}
+	if !form.StartDate.IsZero() {
+		updates["start_date"] = form.StartDate
+	}
+	if !form.DueDate.IsZero() {
+		updates["due_date"] = form.DueDate
+	}
+	if !form.CloseDate.IsZero() {
+		updates["close_date"] = form.CloseDate
+	}
+	if form.Visible != nil {
+		updates["visible"] = *form.Visible
+	}
+
+	if len(updates) > 0 {
+		if err := db.Model(&assignment).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	switch {
+	// CASE 1: remove attachment
+	case form.Attachment == "null" && file == nil:
+		if err := db.Model(&assignment).
+			Update("attachment_id", nil).Error; err != nil {
+			return nil, err
+		}
+
+	// CASE 2: use existing attachment
+	case form.Attachment != "" && form.Attachment != "null" && file == nil:
+		var attachment models.Attachment
+		if err := db.
+			Where("id = ? AND user_id = ?", form.Attachment, userID).
+			First(&attachment).
+			Error; err != nil {
+
+			return nil, errors.New("invalid attachment id")
+		}
+
+		if err := db.Model(&assignment).
+			Update("attachment_id", attachment.ID).Error; err != nil {
+			return nil, err
+		}
+
+	// CASE 3: upload new file (highest priority)
+	case file != nil:
+		src, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer src.Close()
+
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return nil, err
+		}
+
+		fileKey, err := database.UploadFileToS3(data, file.Filename)
+		if err != nil {
+			return nil, err
+		}
+
+		fileURL := fmt.Sprintf(
+			"https://%s.s3.amazonaws.com/%s",
+			database.BucketName,
+			fileKey,
+		)
+
+		newAttachment := models.Attachment{
+			FileName: file.Filename,
+			FileKey:  fileKey,
+			URL:      fileURL,
+			UserID:   userID,
+		}
+
+		if err := db.Create(&newAttachment).Error; err != nil {
+			return nil, err
+		}
+
+		if err := db.Model(&assignment).
+			Update("attachment_id", newAttachment.ID).Error; err != nil {
+			return nil, err
+		}
+	// CASE 4: empty string → do nothing
+	default:
+		// no change
+	}
+
+	if form.Tags != nil {
+		if len(form.Tags) > 5 {
+			form.Tags = form.Tags[:5]
+		}
+
+		var cleaned []string
+		for _, t := range form.Tags {
+			if name := strings.TrimSpace(t); name != "" {
+				cleaned = append(cleaned, name)
+			}
+		}
+
+		var tags []models.Tag
+		if len(cleaned) > 0 {
+			var existing []models.Tag
+			if err := db.Where("name IN ?", cleaned).
+				Find(&existing).Error; err != nil {
+				return nil, err
+			}
+
+			existingMap := map[string]models.Tag{}
+			for _, t := range existing {
+				existingMap[t.Name] = t
+			}
+
+			for _, name := range cleaned {
+				if t, ok := existingMap[name]; ok {
+					tags = append(tags, t)
+				} else {
+					newTag := models.Tag{Name: name}
+					if err := db.Create(&newTag).Error; err != nil {
+						return nil, err
+					}
+					tags = append(tags, newTag)
+				}
+			}
+		}
+
+		if err := db.Model(&assignment).
+			Association("Tags").
+			Replace(tags); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := db.
+		Preload("Tags").
+		Preload("Attachment").
+		First(&assignment, "id = ?", assignment.ID).
+		Error; err != nil {
+		return nil, err
+	}
 
 	response := models.ConvertAssignmentToResponse(assignment)
+	return &response, nil
+}
 
-    return &response, nil
+func CreateSubmission(
+	assignmentID, 
+	userID string, 
+	form *models.SubmissionForm, 
+	file *multipart.FileHeader,
+) (*models.ResponseSubmission, error) {
+	var attachment *models.Attachment
+
+	switch {
+		// CASE 1: use existing attachment
+		case form.Attachment != "":
+			var existing models.Attachment
+			if err := db.
+				Where("id = ? AND user_id = ?", form.Attachment, userID).
+				First(&existing).
+				Error; err != nil {
+
+				return nil, errors.New("invalid attachment id")
+			}
+			attachment = &existing
+
+		// CASE 2: upload new file
+		case file != nil:
+			src, err := file.Open()
+			if err != nil {
+				return nil, err
+			}
+			defer src.Close()
+
+			data, err := io.ReadAll(src)
+			if err != nil {
+				return nil, err
+			}
+
+			fileKey, err := database.UploadFileToS3(data, file.Filename)
+			if err != nil {
+				return nil, fmt.Errorf("upload failed: %v", err)
+			}
+
+			fileURL := fmt.Sprintf(
+				"https://%s.s3.amazonaws.com/%s",
+				database.BucketName,
+				fileKey,
+			)
+
+			newAttachment := models.Attachment{
+				FileName: file.Filename,
+				FileKey:  fileKey,
+				URL:      fileURL,
+				UserID:   userID,
+			}
+
+			if err := db.Create(&newAttachment).Error; err != nil {
+				return nil, err
+			}
+
+			attachment = &newAttachment
+
+		// CASE 3: no attachment at all (VALID)
+		default:
+			attachment = nil
+	}
+
+
+	submission := models.Submission{
+		AssignmentID:	assignmentID,
+		Answer:        	form.Answer,
+		CreatedBy:  	userID,
+	}
+
+	if attachment != nil {
+		submission.AttachmentID = &attachment.ID
+	}
+
+	if err := db.Create(&submission).Error; err != nil {
+		return nil, err
+	}
+
+	response := models.ConvertSubmissionToResponse(submission)
+
+	return &response, nil
+}
+
+func UpdateSubmission(
+	submission models.Submission,
+	form models.SubmissionForm,
+	file *multipart.FileHeader,
+	userID string,
+) (*models.ResponseSubmission, error) {
+
+	updates := map[string]interface{}{}
+
+	if form.Answer != "" {
+		updates["answer"] = form.Answer
+	}
+
+	if len(updates) > 0 {
+		if err := db.Model(&submission).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	switch {
+	// CASE 1: remove attachment
+	case form.Attachment == "null" && file == nil:
+		if err := db.Model(&submission).
+			Update("attachment_id", nil).Error; err != nil {
+			return nil, err
+		}
+
+	// CASE 2: use existing attachment
+	case form.Attachment != "" && form.Attachment != "null" && file == nil:
+		var attachment models.Attachment
+		if err := db.
+			Where("id = ? AND user_id = ?", form.Attachment, userID).
+			First(&attachment).
+			Error; err != nil {
+
+			return nil, errors.New("invalid attachment id")
+		}
+
+		if err := db.Model(&submission).
+			Update("attachment_id", attachment.ID).Error; err != nil {
+			return nil, err
+		}
+
+	// CASE 3: upload new file (highest priority)
+	case file != nil:
+		src, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer src.Close()
+
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return nil, err
+		}
+
+		fileKey, err := database.UploadFileToS3(data, file.Filename)
+		if err != nil {
+			return nil, err
+		}
+
+		fileURL := fmt.Sprintf(
+			"https://%s.s3.amazonaws.com/%s",
+			database.BucketName,
+			fileKey,
+		)
+
+		newAttachment := models.Attachment{
+			FileName: file.Filename,
+			FileKey:  fileKey,
+			URL:      fileURL,
+			UserID:   userID,
+		}
+
+		if err := db.Create(&newAttachment).Error; err != nil {
+			return nil, err
+		}
+
+		if err := db.Model(&submission).
+			Update("attachment_id", newAttachment.ID).Error; err != nil {
+			return nil, err
+		}
+	// CASE 4: empty string → do nothing
+	default:
+		// no change
+	}
+
+	if err := db.
+		Preload("Attachment").
+		First(&submission, "id = ?", submission.ID).
+		Error; err != nil {
+		return nil, err
+	}
+
+	response := models.ConvertSubmissionToResponse(submission)
+	return &response, nil
+}
+
+func CreateComment(
+	submission models.Submission, 
+	userID,
+	role string,
+	form *models.CommentForm, 
+) (*models.ResponseComment, error) {
+	var comment *models.Comment
+
+	comment = &models.Comment{
+		Comment: 		form.Comment,
+		CreatedByRole: 	models.Role(role),
+		CreatedBy: 		userID,
+	}
+
+
+	if err := db.Create(&comment).Error; err != nil {
+		return nil, err
+	}
+
+	if err := db.
+		Model(&submission).
+		Association("Comments").
+		Append(&comment); err != nil {
+
+		return nil, err
+	}
+
+	response := models.ResponseComment{
+		ID: 		comment.ID,
+		Comment: 	comment.Comment,
+		CreatedBy:	comment.CreatedBy,
+	}
+
+	return &response, nil
+}
+
+func UpdateComment(
+	comment models.Comment, 
+	userID,
+	role string,
+	form *models.CommentForm, 
+) (*models.ResponseComment, error) {
+	updates := map[string]interface{}{}
+
+	if form.Comment != "" {
+		updates["comment"] = form.Comment
+	}
+	if form.Visible != nil {
+		updates["visible"] = *form.Visible
+	}
+
+	if len(updates) > 0 {
+		if err := db.Model(&comment).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+
+		if err := db.First(&comment, "id = ?", comment.ID).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	response := models.ResponseComment{
+		ID: 		comment.ID,
+		Comment: 	comment.Comment,
+		CreatedBy:	comment.CreatedBy,
+	}
+
+	return &response, nil
 }

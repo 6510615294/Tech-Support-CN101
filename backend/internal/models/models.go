@@ -10,8 +10,9 @@ type Role string
 const (
 	RoleTeacher             Role = "teacher"
 	RoleStudent             Role = "student"
-	RoleTeacherAssistance   Role = "teacher assistance"
+	RoleTeacherAssistance   Role = "ta"
 	RoleAdmin               Role = "admin"
+	RoleAI               	Role = "ai"
 )
 
 type User struct {
@@ -84,21 +85,36 @@ type Assignment struct {
 	StartDate   	time.Time      	`json:"start_date"`
 	DueDate     	time.Time      	`json:"due_date"`
 	CloseDate   	time.Time      	`json:"close_date"`
-	AttachmentID	string         	`gorm:"not null" json:"attachment_id"`
-	Attachment    	Attachment      `gorm:"foreignKey:AttachmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	AttachmentID 	*string     	`gorm:"null" json:"attachment_id,omitempty"`
+	Attachment   	*Attachment 	`gorm:"foreignKey:AttachmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
 	Tags        	[]Tag          	`gorm:"many2many:assignment_tags;" json:"tags"`
 	CreatedAt   	time.Time      	`json:"created_at"`
 	CreatedBy   	string         	`json:"created_by"`
 	DeletedAt		gorm.DeletedAt 	`gorm:"index" json:"-"`
+	Visible			bool			`gorm:"default:true" json:"visible"`
 }
 
-type AssignmentInput struct {
-	Title		string		`form:"title"`
-	Description	string		`form:"description"`
-	Point 		int16		`form:"point"`
-	StartDate 	time.Time	`form:"start"`
-	DueDate		time.Time	`form:"due"`
-	CloseDate 	time.Time	`form:"close"`
-	Tags		[]string	`form:"tags"`
-	Attachment	string		`form:"attachment"`
+type Comment struct {
+	ID        		string         	`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	Comment     	string         	`gorm:"unique;not null" json:"comment"`
+	CreatedByRole 	Role			`gorm:"type:VARCHAR(20);not null" json:"created_by_role"`
+	CreatedBy   	string         	`json:"created_by"`
+	CreatedAt 		time.Time      	`json:"created_at"`
+	DeletedAt 		gorm.DeletedAt 	`gorm:"index" json:"-"`
+	Visible			bool			`gorm:"default:true" json:"visible"`
+}
+
+type Submission struct {
+	ID          	string			`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	AssignmentID	string			`gorm:"not null" json:"assignment_id"`
+	Assignment		Assignment		`gorm:"foreignKey:AssignmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Answer 			string         	`json:"answer"`
+	Point         	*int16         	`gorm:"null" json:"point,omitempty"`
+	GradedBy      	*string         `gorm:"type:VARCHAR(20);null" json:"graded_by,omitempty"`
+	AttachmentID 	*string     	`gorm:"null" json:"attachment_id,omitempty"`
+	Attachment   	*Attachment 	`gorm:"foreignKey:AttachmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Comments		[]Comment		`gorm:"many2many:submission_comment;" json:"comment"`
+	CreatedBy   	string         	`json:"created_by"`
+	CreatedAt   	time.Time      	`json:"created_at"`
+	DeletedAt		gorm.DeletedAt 	`gorm:"index" json:"-"`
 }

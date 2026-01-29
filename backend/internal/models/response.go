@@ -39,7 +39,28 @@ type ResponseAssignment struct {
 	StartDate    	string     		`json:"start_date"`
 	DueDate      	string     		`json:"due_date"`
 	CloseDate    	string     		`json:"close_date"`
-	AttachmentID 	string         	`json:"attachment_id"`
-	FileName   		string     		`json:"file_name"`
+	AttachmentID 	*string         `json:"attachment_id"`
+	FileName   		*string     	`json:"file_name"`
 	Tags         	[]string		`json:"tags"`
+}
+
+type ResponseComment struct {
+	ID				string         	`json:"id"`
+	Comment			string			`json:"comment"`
+	CreatedBy		string			`json:"commentator"`
+}
+
+type ResponseSubmission struct {
+	ID				string         		`json:"id"`
+	Answer  		string         		`json:"answer"`
+	Point        	*int16          	`json:"point"`
+	GradedBy		*string				`json:"gradedby"`
+	AttachmentID 	*string         	`json:"attachment_id"`
+	FileName   		*string     		`json:"file_name"`
+	Comments        []ResponseComment	`json:"comments"`
+}
+
+type ResponseDetailedAssignment struct {
+	Assignment		ResponseAssignment		`json:"assignment"`
+	Submissions		[]ResponseSubmission	`json:"submissions"`
 }
