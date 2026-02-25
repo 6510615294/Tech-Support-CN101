@@ -116,6 +116,7 @@ func ConvertDetailedAssignmentToResponse(
 				ID:        c.ID,
 				Comment:   c.Comment,
 				CreatedBy: string(c.CreatedByRole),
+				Visible:   c.Visible,
 			}
 		}
 
@@ -127,6 +128,7 @@ func ConvertDetailedAssignmentToResponse(
 
 		submissionResponses[i] = ResponseSubmission{
 			ID:           sub.ID,
+			Submitter:    sub.Submitter.Username + "|" + sub.Submitter.EnName + "|" + sub.Submitter.ThName,
 			Answer:       sub.Answer,
 			Point:        sub.Point,
 			AttachmentID: sub.AttachmentID,

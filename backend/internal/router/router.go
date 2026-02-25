@@ -3,7 +3,9 @@ package router
 import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/auth"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/courses"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/files"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/me"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/run"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/upload"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
@@ -19,4 +21,6 @@ func SetupRoutes(app *fiber.App) {
     me.RegisterRoutes(protected)
     course.RegisterRoutes(protected)
     upload.RegisterRoutes(protected)
+    file.RegisterRoutes(protected)
+    run.RegisterRoutes(protected)
 }

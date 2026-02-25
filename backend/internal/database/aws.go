@@ -73,3 +73,53 @@ func (r *BytesReader) Seek(offset int64, whence int) (int64, error) {
 	}
 	return int64(r.pos), nil
 }
+
+func ReadPythonFileFromS3ByKey(fileKey string) (string, error) {
+	ctx := context.TODO()
+	
+	// Validate that the file is a .py file
+	if len(fileKey) < 3 || fileKey[len(fileKey)-3:] != ".py" {
+		return "", fmt.Errorf("invalid file: only .py files are allowed")
+	}
+	
+	result, err := S3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(BucketName),
+		Key:    aws.String(fileKey),
+	})
+	if err != nil {
+		fmt.Printf("Error getting object from S3: %v\n", err)
+		return "", err
+	}
+	defer result.Body.Close()
+	
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(result.Body)
+	if err != nil {
+		fmt.Printf("Error reading file content: %v\n", err)
+		return "", err
+	}
+	
+	// Convert bytes to string
+	fileContent := buf.String()
+	
+	// Validate that the content is valid UTF-8 text
+	if !isValidUTF8(fileContent) {
+		return "", fmt.Errorf("invalid file content: file is not valid text")
+	}
+	
+	return fileContent, nil
+}
+
+// isValidUTF8 checks if the string contains only valid UTF-8 characters
+func isValidUTF8(s string) bool {
+	// In Go, strings are always valid UTF-8 by design
+	// If the bytes were not valid UTF-8, they would be converted with replacement runes
+	// We can check if any replacement runes exist
+	for _, r := range s {
+		if r == 0xfffd {
+			// Unicode replacement character indicates invalid UTF-8
+			return false
+		}
+	}
+	return true
+}

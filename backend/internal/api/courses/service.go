@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"mime/multipart"
 	"strings"
+	"gorm.io/gorm"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
@@ -27,13 +28,13 @@ func GetCourses(userID, userRole string) (*[]models.ResponseCourse, error) {
 
 	switch userRole {
 	case "student":
-		err = db.Joins("JOIN enrollments ON enrollments.course_id = courses.id").
+		err = database.DB.Joins("JOIN enrollments ON enrollments.course_id = courses.id").
 			Where("enrollments.student_id = ?", userID).
 			Preload("Teacher").
 			Find(&courses).Error
 
 	case "teacher":
-		err = db.Where("teacher_id = ?", userID).
+		err = database.DB.Where("teacher_id = ?", userID).
 			Preload("Teacher").
 			Find(&courses).Error
 
@@ -53,7 +54,7 @@ func GetCourses(userID, userRole string) (*[]models.ResponseCourse, error) {
 func GetCourse(courseID string) (*models.ResponseCourse, error) {
 	var course models.Course
 
-	if err := db.First(&course, "id = ?", courseID).Error; err != nil {
+	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
 		return nil, err
 	}
 
@@ -64,15 +65,15 @@ func GetCourse(courseID string) (*models.ResponseCourse, error) {
 
 func CreateCourse(userID string, form models.CourseForm) (*models.ResponseCourse, error) {
 	course := models.Course{
-		ID: generateCourseID(),
-		Name: form.Name,
+		ID:         generateCourseID(),
+		Name:       form.Name,
 		CourseDate: form.CourseDate,
-		Section: form.Section,
-		Semester: form.Semester,
-		TeacherID: userID,
+		Section:    form.Section,
+		Semester:   form.Semester,
+		TeacherID:  userID,
 	}
 
-	if err := db.Create(&course).Error; err != nil {
+	if err := database.DB.Create(&course).Error; err != nil {
 		return nil, err
 	}
 
@@ -105,12 +106,12 @@ func UpdateCourse(
 	}
 
 	if len(updates) > 0 {
-		if err := db.Model(&course).Updates(updates).Error; err != nil {
+		if err := database.DB.Model(&course).Updates(updates).Error; err != nil {
 			return nil, err
 		}
 	}
 
-	if err := db.First(&course, "id = ?", course.ID).Error; err != nil {
+	if err := database.DB.First(&course, "id = ?", course.ID).Error; err != nil {
 		return nil, err
 	}
 
@@ -118,31 +119,30 @@ func UpdateCourse(
 	return &response, nil
 }
 
-
 func JoinCourse(userID string, course *models.Course) (*models.ResponseEnrollment, error) {
 	var user models.User
-	if err := db.First(&user, "id = ?", userID).Error; err != nil {
+	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
 		return nil, err
 	}
 
 	switch user.Role {
 	case "student":
 		enrollment := models.Enrollment{
-			Status: "joined",
+			Status:    "joined",
 			StudentID: userID,
-			Student: user,
+			Student:   user,
 			CourseID:  course.ID,
-			Course: *course,
+			Course:    *course,
 		}
 
-		if err := db.Create(&enrollment).Error; err != nil {
+		if err := database.DB.Create(&enrollment).Error; err != nil {
 			return nil, err
 		}
 
 		response := models.ConvertEnrollmentToResponse(enrollment)
 
 		return &response, nil
-		
+
 	default:
 		return nil, fmt.Errorf("unsupported role: %s", user.Role)
 	}
@@ -151,25 +151,25 @@ func JoinCourse(userID string, course *models.Course) (*models.ResponseEnrollmen
 // TODO : change response
 func GetStudents(courseID string) ([]models.StudentWithEnrollment, error) {
 	var results []models.StudentWithEnrollment
-    
-    err := db.
-        Model(&models.User{}).
-        Select("users.*, enrollments.status as status").
-        Joins("JOIN enrollments ON enrollments.student_id = users.id").
-        Where("enrollments.course_id = ?", courseID).
-        Find(&results).Error
 
-    if err != nil {
-        return nil, err
-    }
+	err := database.DB.
+		Model(&models.User{}).
+		Select("users.*, enrollments.status as status").
+		Joins("JOIN enrollments ON enrollments.student_id = users.id").
+		Where("enrollments.course_id = ?", courseID).
+		Find(&results).Error
 
-    return results, nil
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 // TODO : change response
 func ChangeStudentStatus(courseID, studentID string, input map[string]interface{}) (*models.Enrollment, error) {
 	allowedFields := map[string]bool{
-		"status": 		true,
+		"status": true,
 	}
 
 	updates := make(map[string]interface{})
@@ -180,11 +180,11 @@ func ChangeStudentStatus(courseID, studentID string, input map[string]interface{
 	}
 
 	var enrollment models.Enrollment
-	if err := db.First(&enrollment, "course_id = ? AND student_id = ?", courseID, studentID).Error; err != nil {
+	if err := database.DB.First(&enrollment, "course_id = ? AND student_id = ?", courseID, studentID).Error; err != nil {
 		return nil, err
 	}
 
-	if err := db.Model(&enrollment).Updates(updates).Error; err != nil {
+	if err := database.DB.Model(&enrollment).Updates(updates).Error; err != nil {
 		return nil, err
 	}
 
@@ -192,78 +192,77 @@ func ChangeStudentStatus(courseID, studentID string, input map[string]interface{
 }
 
 func CreateAssignment(
-	courseID, 
-	userID string, 
-	form *models.AssignmentForm, 
+	courseID,
+	userID string,
+	form *models.AssignmentForm,
 	file *multipart.FileHeader,
 ) (*models.ResponseAssignment, error) {
 	var attachment *models.Attachment
 
 	switch {
-		// CASE 1: use existing attachment
-		case form.Attachment != "":
-			var existing models.Attachment
-			if err := db.
-				Where("id = ? AND user_id = ?", form.Attachment, userID).
-				First(&existing).
-				Error; err != nil {
+	// CASE 1: use existing attachment
+	case form.Attachment != "":
+		var existing models.Attachment
+		if err := database.DB.
+			Where("id = ? AND user_id = ?", form.Attachment, userID).
+			First(&existing).
+			Error; err != nil {
 
-				return nil, errors.New("invalid attachment id")
-			}
-			attachment = &existing
+			return nil, errors.New("invalid attachment id")
+		}
+		attachment = &existing
 
-		// CASE 2: upload new file
-		case file != nil:
-			src, err := file.Open()
-			if err != nil {
-				return nil, err
-			}
-			defer src.Close()
+	// CASE 2: upload new file
+	case file != nil:
+		src, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer src.Close()
 
-			data, err := io.ReadAll(src)
-			if err != nil {
-				return nil, err
-			}
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return nil, err
+		}
 
-			fileKey, err := database.UploadFileToS3(data, file.Filename)
-			if err != nil {
-				return nil, fmt.Errorf("upload failed: %v", err)
-			}
+		fileKey, err := database.UploadFileToS3(data, file.Filename)
+		if err != nil {
+			return nil, fmt.Errorf("upload failed: %v", err)
+		}
 
-			fileURL := fmt.Sprintf(
-				"https://%s.s3.amazonaws.com/%s",
-				database.BucketName,
-				fileKey,
-			)
+		fileURL := fmt.Sprintf(
+			"https://%s.s3.amazonaws.com/%s",
+			database.BucketName,
+			fileKey,
+		)
 
-			newAttachment := models.Attachment{
-				FileName: file.Filename,
-				FileKey:  fileKey,
-				URL:      fileURL,
-				UserID:   userID,
-			}
+		newAttachment := models.Attachment{
+			FileName: file.Filename,
+			FileKey:  fileKey,
+			URL:      fileURL,
+			UserID:   userID,
+		}
 
-			if err := db.Create(&newAttachment).Error; err != nil {
-				return nil, err
-			}
+		if err := database.DB.Create(&newAttachment).Error; err != nil {
+			return nil, err
+		}
 
-			attachment = &newAttachment
+		attachment = &newAttachment
 
-		// CASE 3: no attachment at all (VALID)
-		default:
-			attachment = nil
+	// CASE 3: no attachment at all (VALID)
+	default:
+		attachment = nil
 	}
 
-
 	assignment := models.Assignment{
-		CourseID:     courseID,
-		Title:        form.Title,
-		Description:  form.Description,
-		Point:        form.Point,
-		StartDate:    form.StartDate,
-		DueDate:      form.DueDate,
-		CloseDate:    form.CloseDate,
-		CreatedBy:    userID,
+		CourseID:    courseID,
+		Title:       form.Title,
+		Description: form.Description,
+		Point:       form.Point,
+		StartDate:   form.StartDate,
+		DueDate:     form.DueDate,
+		CloseDate:   form.CloseDate,
+		CreatedBy:   userID,
 	}
 
 	if attachment != nil {
@@ -287,7 +286,7 @@ func CreateAssignment(
 		if len(cleanedNames) > 0 {
 			var existingTags []models.Tag
 
-			if err := db.Where("name IN ?", cleanedNames).Find(&existingTags).Error; err != nil {
+			if err := database.DB.Where("name IN ?", cleanedNames).Find(&existingTags).Error; err != nil {
 				return nil, err
 			}
 
@@ -303,7 +302,7 @@ func CreateAssignment(
 					assignmentTags = append(assignmentTags, existingTag)
 				} else {
 					newTag := models.Tag{Name: name}
-					if err := db.Create(&newTag).Error; err != nil {
+					if err := database.DB.Create(&newTag).Error; err != nil {
 						return nil, err
 					}
 					assignmentTags = append(assignmentTags, newTag)
@@ -314,7 +313,7 @@ func CreateAssignment(
 		}
 	}
 
-	if err := db.Create(&assignment).Error; err != nil {
+	if err := database.DB.Create(&assignment).Error; err != nil {
 		return nil, err
 	}
 
@@ -326,20 +325,20 @@ func CreateAssignment(
 func GetAssignments(courseID string) (*[]models.ResponseAssignment, error) {
 	var assignments []models.Assignment
 
-    if err := db.Preload("Tags").Find(&assignments, "course_id = ?", courseID).Error; err != nil {
-        return nil, err
-    }
+	if err := database.DB.Preload("Tags").Find(&assignments, "course_id = ?", courseID).Error; err != nil {
+		return nil, err
+	}
 
 	response := models.ConvertAssignmentsToResponse(assignments)
 
-    return &response, nil
+	return &response, nil
 }
 
 func GetAssignment(idStr, role, assignmentID string) (*models.ResponseDetailedAssignment, error) {
 	var assignment models.Assignment
 	var submissions []models.Submission
 
-	assignmentQuery := db.
+	assignmentQuery := database.DB.
 		Preload("Tags").
 		Preload("Attachment")
 
@@ -353,9 +352,10 @@ func GetAssignment(idStr, role, assignmentID string) (*models.ResponseDetailedAs
 		return nil, err
 	}
 
-	submissionQuery := db.
+	submissionQuery := database.DB.
 		Where("assignment_id = ?", assignmentID).
-		Preload("Attachment")
+		Preload("Attachment").
+		Preload("Submitter")
 
 	if role == "student" {
 		submissionQuery = submissionQuery.Preload("Comments", "visible = ?", true)
@@ -415,7 +415,7 @@ func UpdateAssignment(
 	}
 
 	if len(updates) > 0 {
-		if err := db.Model(&assignment).Updates(updates).Error; err != nil {
+		if err := database.DB.Model(&assignment).Updates(updates).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -423,7 +423,7 @@ func UpdateAssignment(
 	switch {
 	// CASE 1: remove attachment
 	case form.Attachment == "null" && file == nil:
-		if err := db.Model(&assignment).
+		if err := database.DB.Model(&assignment).
 			Update("attachment_id", nil).Error; err != nil {
 			return nil, err
 		}
@@ -431,7 +431,7 @@ func UpdateAssignment(
 	// CASE 2: use existing attachment
 	case form.Attachment != "" && form.Attachment != "null" && file == nil:
 		var attachment models.Attachment
-		if err := db.
+		if err := database.DB.
 			Where("id = ? AND user_id = ?", form.Attachment, userID).
 			First(&attachment).
 			Error; err != nil {
@@ -439,7 +439,7 @@ func UpdateAssignment(
 			return nil, errors.New("invalid attachment id")
 		}
 
-		if err := db.Model(&assignment).
+		if err := database.DB.Model(&assignment).
 			Update("attachment_id", attachment.ID).Error; err != nil {
 			return nil, err
 		}
@@ -475,11 +475,11 @@ func UpdateAssignment(
 			UserID:   userID,
 		}
 
-		if err := db.Create(&newAttachment).Error; err != nil {
+		if err := database.DB.Create(&newAttachment).Error; err != nil {
 			return nil, err
 		}
 
-		if err := db.Model(&assignment).
+		if err := database.DB.Model(&assignment).
 			Update("attachment_id", newAttachment.ID).Error; err != nil {
 			return nil, err
 		}
@@ -503,7 +503,7 @@ func UpdateAssignment(
 		var tags []models.Tag
 		if len(cleaned) > 0 {
 			var existing []models.Tag
-			if err := db.Where("name IN ?", cleaned).
+			if err := database.DB.Where("name IN ?", cleaned).
 				Find(&existing).Error; err != nil {
 				return nil, err
 			}
@@ -518,7 +518,7 @@ func UpdateAssignment(
 					tags = append(tags, t)
 				} else {
 					newTag := models.Tag{Name: name}
-					if err := db.Create(&newTag).Error; err != nil {
+					if err := database.DB.Create(&newTag).Error; err != nil {
 						return nil, err
 					}
 					tags = append(tags, newTag)
@@ -526,14 +526,14 @@ func UpdateAssignment(
 			}
 		}
 
-		if err := db.Model(&assignment).
+		if err := database.DB.Model(&assignment).
 			Association("Tags").
 			Replace(tags); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := db.
+	if err := database.DB.
 		Preload("Tags").
 		Preload("Attachment").
 		First(&assignment, "id = ?", assignment.ID).
@@ -546,80 +546,79 @@ func UpdateAssignment(
 }
 
 func CreateSubmission(
-	assignmentID, 
-	userID string, 
-	form *models.SubmissionForm, 
+	assignmentID,
+	userID string,
+	form *models.SubmissionForm,
 	file *multipart.FileHeader,
 ) (*models.ResponseSubmission, error) {
 	var attachment *models.Attachment
 
 	switch {
-		// CASE 1: use existing attachment
-		case form.Attachment != "":
-			var existing models.Attachment
-			if err := db.
-				Where("id = ? AND user_id = ?", form.Attachment, userID).
-				First(&existing).
-				Error; err != nil {
+	// CASE 1: use existing attachment
+	case form.Attachment != "":
+		var existing models.Attachment
+		if err := database.DB.
+			Where("id = ? AND user_id = ?", form.Attachment, userID).
+			First(&existing).
+			Error; err != nil {
 
-				return nil, errors.New("invalid attachment id")
-			}
-			attachment = &existing
+			return nil, errors.New("invalid attachment id")
+		}
+		attachment = &existing
 
-		// CASE 2: upload new file
-		case file != nil:
-			src, err := file.Open()
-			if err != nil {
-				return nil, err
-			}
-			defer src.Close()
+	// CASE 2: upload new file
+	case file != nil:
+		src, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer src.Close()
 
-			data, err := io.ReadAll(src)
-			if err != nil {
-				return nil, err
-			}
+		data, err := io.ReadAll(src)
+		if err != nil {
+			return nil, err
+		}
 
-			fileKey, err := database.UploadFileToS3(data, file.Filename)
-			if err != nil {
-				return nil, fmt.Errorf("upload failed: %v", err)
-			}
+		fileKey, err := database.UploadFileToS3(data, file.Filename)
+		if err != nil {
+			return nil, fmt.Errorf("upload failed: %v", err)
+		}
 
-			fileURL := fmt.Sprintf(
-				"https://%s.s3.amazonaws.com/%s",
-				database.BucketName,
-				fileKey,
-			)
+		fileURL := fmt.Sprintf(
+			"https://%s.s3.amazonaws.com/%s",
+			database.BucketName,
+			fileKey,
+		)
 
-			newAttachment := models.Attachment{
-				FileName: file.Filename,
-				FileKey:  fileKey,
-				URL:      fileURL,
-				UserID:   userID,
-			}
+		newAttachment := models.Attachment{
+			FileName: file.Filename,
+			FileKey:  fileKey,
+			URL:      fileURL,
+			UserID:   userID,
+		}
 
-			if err := db.Create(&newAttachment).Error; err != nil {
-				return nil, err
-			}
+		if err := database.DB.Create(&newAttachment).Error; err != nil {
+			return nil, err
+		}
 
-			attachment = &newAttachment
+		attachment = &newAttachment
 
-		// CASE 3: no attachment at all (VALID)
-		default:
-			attachment = nil
+	// CASE 3: no attachment at all (VALID)
+	default:
+		attachment = nil
 	}
 
-
 	submission := models.Submission{
-		AssignmentID:	assignmentID,
-		Answer:        	form.Answer,
-		CreatedBy:  	userID,
+		AssignmentID: assignmentID,
+		Answer:       form.Answer,
+		CreatedBy:    userID,
 	}
 
 	if attachment != nil {
 		submission.AttachmentID = &attachment.ID
 	}
 
-	if err := db.Create(&submission).Error; err != nil {
+	if err := database.DB.Create(&submission).Error; err != nil {
 		return nil, err
 	}
 
@@ -642,7 +641,7 @@ func UpdateSubmission(
 	}
 
 	if len(updates) > 0 {
-		if err := db.Model(&submission).Updates(updates).Error; err != nil {
+		if err := database.DB.Model(&submission).Updates(updates).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -650,7 +649,7 @@ func UpdateSubmission(
 	switch {
 	// CASE 1: remove attachment
 	case form.Attachment == "null" && file == nil:
-		if err := db.Model(&submission).
+		if err := database.DB.Model(&submission).
 			Update("attachment_id", nil).Error; err != nil {
 			return nil, err
 		}
@@ -658,7 +657,7 @@ func UpdateSubmission(
 	// CASE 2: use existing attachment
 	case form.Attachment != "" && form.Attachment != "null" && file == nil:
 		var attachment models.Attachment
-		if err := db.
+		if err := database.DB.
 			Where("id = ? AND user_id = ?", form.Attachment, userID).
 			First(&attachment).
 			Error; err != nil {
@@ -666,7 +665,7 @@ func UpdateSubmission(
 			return nil, errors.New("invalid attachment id")
 		}
 
-		if err := db.Model(&submission).
+		if err := database.DB.Model(&submission).
 			Update("attachment_id", attachment.ID).Error; err != nil {
 			return nil, err
 		}
@@ -702,11 +701,11 @@ func UpdateSubmission(
 			UserID:   userID,
 		}
 
-		if err := db.Create(&newAttachment).Error; err != nil {
+		if err := database.DB.Create(&newAttachment).Error; err != nil {
 			return nil, err
 		}
 
-		if err := db.Model(&submission).
+		if err := database.DB.Model(&submission).
 			Update("attachment_id", newAttachment.ID).Error; err != nil {
 			return nil, err
 		}
@@ -715,7 +714,7 @@ func UpdateSubmission(
 		// no change
 	}
 
-	if err := db.
+	if err := database.DB.
 		Preload("Attachment").
 		First(&submission, "id = ?", submission.ID).
 		Error; err != nil {
@@ -726,72 +725,86 @@ func UpdateSubmission(
 	return &response, nil
 }
 
-func CreateComment(
-	submission models.Submission, 
+func CreateOrUpdateComment(
+	submission *models.Submission,
 	userID,
 	role string,
-	form *models.CommentForm, 
+	form *models.CommentForm,
 ) (*models.ResponseComment, error) {
+	var existingComment models.Comment
+	err := database.DB.
+		Where("submission_id = ? AND created_by = ?", submission.ID, userID).
+		First(&existingComment).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
 	var comment *models.Comment
 
-	comment = &models.Comment{
-		Comment: 		form.Comment,
-		CreatedByRole: 	models.Role(role),
-		CreatedBy: 		userID,
-	}
+	if err == gorm.ErrRecordNotFound {
+		comment = &models.Comment{
+			SubmissionID:  submission.ID,
+			Comment:       form.Comment,
+			CreatedByRole: models.Role(role),
+			CreatedBy:     userID,
+			Visible:       form.Visible,
+		}
 
+		if err := database.DB.Create(comment).Error; err != nil {
+			return nil, err
+		}
 
-	if err := db.Create(&comment).Error; err != nil {
-		return nil, err
-	}
+	} else {
+		existingComment.Comment = form.Comment
+		existingComment.CreatedByRole = models.Role(role)
+		existingComment.Visible = form.Visible
 
-	if err := db.
-		Model(&submission).
-		Association("Comments").
-		Append(&comment); err != nil {
+		if err := database.DB.Save(&existingComment).Error; err != nil {
+			return nil, err
+		}
 
-		return nil, err
+		comment = &existingComment
 	}
 
 	response := models.ResponseComment{
-		ID: 		comment.ID,
-		Comment: 	comment.Comment,
-		CreatedBy:	comment.CreatedBy,
+		ID:        comment.ID,
+		Comment:   comment.Comment,
+		CreatedBy: role,
+		Visible:   comment.Visible,
 	}
 
 	return &response, nil
 }
 
-func UpdateComment(
-	comment models.Comment, 
-	userID,
+func ToggleComment(
+	comment *models.Comment,
 	role string,
-	form *models.CommentForm, 
 ) (*models.ResponseComment, error) {
-	updates := map[string]interface{}{}
 
-	if form.Comment != "" {
-		updates["comment"] = form.Comment
-	}
-	if form.Visible != nil {
-		updates["visible"] = *form.Visible
-	}
+	newVisible := !comment.Visible
 
-	if len(updates) > 0 {
-		if err := db.Model(&comment).Updates(updates).Error; err != nil {
+	updates := map[string]interface{}{
+		"visible": newVisible,
+	}
+	
+	if string(comment.CreatedByRole) == role || role == "teacher" {
+		if err := database.DB.Model(comment).Updates(updates).Error; err != nil {
 			return nil, err
 		}
+	}
 
-		if err := db.First(&comment, "id = ?", comment.ID).Error; err != nil {
-			return nil, err
-		}
+	if err := database.DB.First(comment, "id = ?", comment.ID).Error; err != nil {
+		return nil, err
 	}
 
 	response := models.ResponseComment{
-		ID: 		comment.ID,
-		Comment: 	comment.Comment,
-		CreatedBy:	comment.CreatedBy,
+		ID:        comment.ID,
+		Comment:   comment.Comment,
+		CreatedBy: string(comment.CreatedByRole),
+		Visible:   comment.Visible,
 	}
 
 	return &response, nil
 }
+

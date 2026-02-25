@@ -19,7 +19,8 @@ type Assignment = {
 }
 
 export default function Page() {
-  const [assignment, setCourses] = useState<Assignment[] | null>(null);
+  const [assignment, setAssignment] = useState<Assignment[] | null>(null);
+  const [userRole, setUserRole] = useState("");
   const [loading, setLoading] = useState(true);
   const { course_id } = useParams()
   const router = useRouter();
@@ -46,7 +47,8 @@ export default function Page() {
       }
 
       const data = await res.json();
-      setCourses(data);
+      setAssignment(data.assignments);
+      setUserRole(data.role);
       setLoading(false);
     }
 
@@ -56,27 +58,44 @@ export default function Page() {
   if (loading) return <div>Loading...</div>;
 
   if (!assignment || assignment.length === 0)
-    return <div><Button
-        variant="outline"
-        size="sm"
-        className="absolute top-4 right-4 md:top-6 md:right-6"
-        onClick={handleClick}
-      >
-        <Plus /> New Assignment
-      </Button>No assignment found or you are not logged in.</div>;
+    return (
+      <div className="relative h-full flex items-center justify-center">
+        <div className="text-center">
+          No assignment found or you are not logged in.
+        </div>
+      
+        {userRole === "teacher" && (
+          <div className="absolute right-6 top-6">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-sm"
+              onClick={handleClick}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              New Assignment
+            </Button>
+          </div>
+        )}
+      </div>
+    );
 
   return (
-    <div className="relative flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute top-4 right-4 md:top-6 md:right-6"
-        onClick={handleClick}
-      >
-        <Plus /> New Assignment
-      </Button>
-
-      <div className="pt-10">
+    <div className="relative flex flex-col gap-1 py-1">
+      { userRole == "teacher" && (
+        <div className="flex justify-end mr-30">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-sm"
+            onClick={handleClick}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            New Assignment
+          </Button>
+        </div>
+      )}
+      <div className="pt-1">
         {assignment.map((assignment, index) => (
           <AssignmentCards key={assignment.id} assignment={assignment} />
         ))}

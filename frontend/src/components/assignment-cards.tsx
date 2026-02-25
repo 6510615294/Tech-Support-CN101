@@ -1,6 +1,5 @@
 'use client'
 
-import { IconMap, IconTrendingDown, IconTrendingUp } from "@tabler/icons-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -100,41 +99,50 @@ export function AssignmentCards({
   const { course_id } = useParams()
 
   return (
-    <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+    <div className="px-16 py-5 max-w-7xl m-auto">
       <Link 
         href={`/courses/${course_id}/assignments/${assignment.id}`} 
-        className="block hover:shadow-lg transition-shadow duration-200 rounded-lg" // Add hover effects to the Link
+        className="block"
       >
-      <Card className="@container/card">
+      <Card className="w-full rounded-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {assignment.title}
+          <CardTitle className="line-clamp-2 sm:line-clamp-1">
+            <span className="text-2xl">Assignment: </span>
+            <span className="text-2xl font-light">
+              {assignment.title}
+            </span>
           </CardTitle>
-          <CardDescription>{assignment.description}</CardDescription>
+          <CardDescription className="line-clamp-2 sm:line-clamp-1">
+            <span>
+              {assignment.description}
+            </span>  
+          </CardDescription>
           <CardAction className="flex flex-col items-center">
-            <Badge variant={result.variant}>
-              <StatusIcon size={16} className="mr-1" />
-              <span>{result.status}</span>
+            <Badge variant={result.variant} className="rounded-sm">
+              <div className="flex items-center gap-1">
+                <StatusIcon size={14} />
+                <span className="font-normal">{result.status}</span>
+              </div>
             </Badge>
-            <span className="text-sm font-medium mt-1 text-gray-600">
+            <span className="text-sm font-normal mt-1 text-gray-300">
               {assignment.point} Points 
             </span>
           </CardAction>
         </CardHeader>
-        <CardFooter className="flex-col items-start gap-1.5 text-sm">
+        <CardFooter className="flex-col items-start gap-1.5">
           <div className="line-clamp-1 flex gap-2 font-medium">
             {assignment.tags.map((tag, index) => (
-              <Badge key={assignment.id+tag} variant='outline'>
-                <span>{tag}</span>
+              <Badge key={assignment.id+index} variant='outline' className="rounded-md">
+                <span className="text-sm font-normal">{tag}</span>
               </Badge>
             ))}
           </div>
-          <div className="text-muted-foreground">
-            <Badge variant='outline'>
-              <Calendar />
-              <span><strong>Due:</strong> {formattedDue}</span>
-            </Badge>
-          </div>
+          <Badge variant='outline' className="rounded-md">
+            <div className="calendar-icon">
+              <Calendar size={16} />
+            </div>
+            <span className="text-lg font-normal">Due: {formattedDue}</span>
+          </Badge>
         </CardFooter>
       </Card>
       </Link>

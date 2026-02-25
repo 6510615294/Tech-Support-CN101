@@ -11,10 +11,13 @@ import {
 } from "@/components/ui/card"
 import Link from "next/link";
 import { Separator } from "./ui/separator";
-import { Calendar } from "lucide-react";
+import { Calendar, Pencil } from "lucide-react";
+import { Button } from "./ui/button";
+import { useRouter } from "next/navigation"
 
 export function CourseCards({
   course,
+  role,
 }: {
   course: {
     id: string
@@ -24,39 +27,60 @@ export function CourseCards({
     semester: string
     teacher: string
   }
+  role: string
 }
 ) {
+  const router = useRouter()
+  
+  const handleEdit = () => {
+    router.push(`/courses/${course.id}/edit`)
+  }
 
   return (
-    <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-      <Link 
-        href={`/courses/${course.id}/assignments`} 
-        className="block hover:shadow-lg transition-shadow duration-200 rounded-lg"
-      >
-      <Card className="@container/card">
+    <div className="p-3">
+      <Card className="rounded-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-xl h-[3.5rem] overflow-hidden line-clamp-2">
-            {course.name}
-          </CardTitle>
-          <CardDescription>{course.teacher}</CardDescription>
+          <Link
+            href={`/courses/${course.id}/assignments`}
+            className="flex-1"
+          >
+            <div>
+              <CardTitle className="text-2xl h-12 line-clamp-1">
+                {course.name}
+              </CardTitle>
+              <CardDescription className="text-gray-300">{course.teacher}</CardDescription>
+            </div>
+          </Link>
+          {role === "teacher" && (
+            <CardAction>
+              <Button
+                onClick={handleEdit}
+                size={"icon-sm"}
+                variant={"ghost"}
+              >
+                <Pencil />
+              </Button>
+            </CardAction>
+          )}
         </CardHeader>
         <Separator></Separator>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
-          <div className="">
-            <span><strong>Section</strong> {course.section}</span>
+          <div className="pl-2">
+            <span className="font-bold text-lg">Section </span>
+            <span className="text-lg text-gray-300">{course.section}</span>
           </div>
-          <div className="">
-            <span><strong>Semester</strong> {course.semester}</span>
+          <div className="pl-2 pb-1">
+            <span className="font-bold text-lg">Semester </span>
+            <span className="text-lg text-gray-300">{course.semester}</span>
           </div>
-          <div className="">
-            <Badge>
-              <Calendar />
-              <span>{course.schedule}</span>
-            </Badge>
-          </div>
+          <Badge variant='outline' className="rounded-md">
+            <div className="calendar-icon">
+              <Calendar size={16} />
+            </div>
+            <span className="text-lg font-normal">Due: {course.schedule}</span>
+          </Badge>
         </CardFooter>
       </Card>
-      </Link>
     </div>
   )
 }

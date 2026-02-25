@@ -6,10 +6,10 @@ import (
 )
 
 type CourseForm struct {
-	Name		string		`form:"name"`
-	CourseDate	string		`form:"course_date"`
-	Section		string		`form:"section"`
-	Semester	string		`form:"semester"`
+	Name        string `json:"name" form:"name"`
+	CourseDate  string `json:"course_date" form:"course_date"`
+	Section     string `json:"section" form:"section"`
+	Semester    string `json:"semester" form:"semester"`
 }
 
 type AssignmentForm struct {
@@ -25,17 +25,20 @@ type AssignmentForm struct {
 }
 
 type SubmissionForm struct {
-	Assignment		string			`form:"assignment"`
-	Answer			string			`form:"answer"`
-	Attachment		string			`form:"attachment"`
+	Answer     string `json:"answer" form:"answer"`
+	Attachment string `json:"attachment" form:"attachment"`
 }
 
 type CommentForm struct {
-	Comment 		string			`form:"comment"`
-	Point 			int16			`form:"point"`
-	Visible			*bool			`form:"visible"`
+	Comment string `json:"comment" form:"comment"`
+	Visible bool   `json:"visible" form:"visible"`
 }
 
 type GradeForm struct {
-	Point *int16 `form:"point"` 
+	Point int16 `json:"point" form:"point"`
+}
+
+type PythonCodeForm struct {
+	SourceCode	string `json:"source_code" form:"source_code"`
+	Input		string `json:"stdin" form:"stdin"`
 }

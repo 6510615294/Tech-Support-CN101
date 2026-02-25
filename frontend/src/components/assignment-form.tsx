@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TagsInput } from "@/components/ui/tags-input";
@@ -12,7 +12,7 @@ import { SmartDatetimeInput } from "@/components/ui/smart-datetime-input";
 import {
   Form,
   FormControl,
-  FormDescription,
+  // FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,9 +31,23 @@ import {
   FileUploaderItem,
 } from "@/components/ui/file-upload";
 import { useParams } from "next/navigation";
+import { Textarea } from "./ui/textarea";
+
+type Assignment = {
+  id: string
+  title: string
+  description: string
+  point: number
+  attachment_id: string
+  file_name: string
+  start_date: string
+  due_date: string
+  close_date: string
+  tags: string[]
+};
 
 const formSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Title is required").max(150),
   description: z.string().min(1, "Description is required"),
   point: z.number().min(0).max(100),
   file: z.any().optional(),
@@ -45,15 +59,35 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function AssignmentForm() {
+interface AssignmentFormProps {
+  assignment?: Assignment;
+}
+
+export default function AssignmentForm({ assignment }: AssignmentFormProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [existingAttachment, setExistingAttachment] = useState<{file_name: string, attachment_id: string} | null>(
+    assignment?.attachment_id && assignment?.file_name 
+      ? { file_name: assignment.file_name, attachment_id: assignment.attachment_id }
+      : null
+  );
+  
   const handleFileChange = (files: File[] | null) => {
     const selected = files?.[0] ?? null;
     setFile(selected);
     form.setValue("file", selected);
+    // Clear existing attachment when a new file is selected
+    if (selected) {
+      setExistingAttachment(null);
+    }
   };
-  const { course_id } = useParams();
 
+  const handleRemoveExistingAttachment = () => {
+    setExistingAttachment(null);
+  };
+  const { course_id, assignment_id } = useParams();
+  const router = useRouter()
+  const isEditing = !!assignment || !!assignment_id;
+  
   const dropZoneConfig = {
     maxFiles: 1,
     maxSize: 1024 * 1024 * 4, // 4MB
@@ -69,6 +103,20 @@ export default function AssignmentForm() {
       close_date: null,
     },
   });
+
+  useEffect(() => {
+    if (assignment) {
+      form.reset({
+        title: assignment.title,
+        description: assignment.description,
+        point: assignment.point,
+        tags: assignment.tags || [],
+        start_date: assignment.start_date ? new Date(assignment.start_date) : null,
+        due_date: assignment.due_date ? new Date(assignment.due_date) : null,
+        close_date: assignment.close_date ? new Date(assignment.close_date) : null,
+      });
+    }
+  }, [assignment, form]);
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -90,12 +138,20 @@ export default function AssignmentForm() {
 
       if (values.file && values.file instanceof File) {
         formData.append("file", values.file);
+      } else if (existingAttachment) {
+        formData.append("attachment_id", existingAttachment.attachment_id);
       }
 
       const token = localStorage.getItem("token");
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments`, {
-        method: "POST",
+      const url = isEditing 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id || assignment?.id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments`;
+      
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`, 
         },
@@ -108,8 +164,11 @@ export default function AssignmentForm() {
         return;
       }
 
-      window.location.href = `/courses/${course_id}/assignments`;
-      alert("Assignment created successfully!");
+      const successMessage = isEditing 
+        ? "Assignment updated successfully!" 
+        : "Assignment created successfully!";
+      alert(successMessage);
+      router.push(`/courses/${course_id}/assignments`);
     } catch (error) {
       alert("Failed to submit assignment. Please try again.");
       console.error(error);
@@ -118,17 +177,27 @@ export default function AssignmentForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
-        
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-8 max-w-3xl mx-auto py-10"
+        onKeyDown={(e) => {
+          if (
+            e.key === "Enter" &&
+            (e.target as HTMLElement).tagName !== "TEXTAREA"
+          ) {
+            e.preventDefault()
+          }
+        }}
+      >
         <FormField
           control={form.control}
           name="title"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Title</FormLabel>
-              <FormControl>
+              <FormControl className="rounded-sm">
                 <Input
-                  placeholder="Assignment 1"
+                  placeholder=""
                   type="text"
                   {...field}
                   value={field.value ?? ""}
@@ -145,10 +214,9 @@ export default function AssignmentForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Description"
-                  type="text"
+              <FormControl className="rounded-sm">
+                <Textarea
+                  placeholder=""
                   {...field}
                   value={field.value ?? ""}
                 />
@@ -164,9 +232,9 @@ export default function AssignmentForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Point</FormLabel>
-              <FormControl>
+              <FormControl className="rounded-sm">
                 <Input
-                  placeholder="10"
+                  placeholder=""
                   type="number"
                   {...field}
                   value={field.value ?? ""}
@@ -191,12 +259,12 @@ export default function AssignmentForm() {
                   value={file ? [file] : null}
                   onValueChange={handleFileChange}
                   dropzoneOptions={dropZoneConfig}
-                  className="relative bg-background rounded-lg p-2"
+                  className="relative bg-background p-1"
                 > 
-                  {!file && (
+                  {(!file && !existingAttachment) && (
                     <FileInput
                       id="fileInput"
-                      className="outline-dashed outline-1 outline-slate-500"
+                      className="outline-dashed outline-1 outline-slate-500 rounded-sm"
                     >
                       <div className="flex flex-col items-center justify-center p-8 w-full">
                         <CloudUpload className="text-gray-500 w-10 h-10" />
@@ -204,7 +272,7 @@ export default function AssignmentForm() {
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          SVG, PNG, JPG or GIF
+                          PDF, PNG or PY
                         </p>
                       </div>
                     </FileInput>
@@ -222,6 +290,15 @@ export default function AssignmentForm() {
                         <span>{file.name}</span>
                       </FileUploaderItem>
                     )}
+                    {existingAttachment && !file && (
+                      <FileUploaderItem 
+                        onClick={handleRemoveExistingAttachment}
+                        index={0}
+                      >
+                        <Paperclip className="h-4 w-4 stroke-current" />
+                        <span>{existingAttachment.file_name}</span>
+                      </FileUploaderItem>
+                    )}
                   </FileUploaderContent>
                 </FileUploader>
               </FormControl>
@@ -236,14 +313,13 @@ export default function AssignmentForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tags</FormLabel>
-              <FormControl>
+              <FormControl className="rounded-sm">
                 <TagsInput
                   value={field.value ?? []}
                   onValueChange={field.onChange}
                   placeholder="Enter your tags"
                 />
               </FormControl>
-              <FormDescription>Add tags.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -262,7 +338,6 @@ export default function AssignmentForm() {
                   placeholder="e.g. Tomorrow morning 9am"
                 />
               </FormControl>
-              <FormDescription>Please select the full time</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -304,7 +379,9 @@ export default function AssignmentForm() {
           )}
         />
 
-        <Button type="submit">Submit</Button>
+        <Button className="w-full" type="submit">
+          {isEditing ? "Save" : "Submit"}
+        </Button>
       </form>
     </Form>
   );

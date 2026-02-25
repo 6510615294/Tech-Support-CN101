@@ -17,6 +17,7 @@ type Course = {
 
 export default function Page() {
   const [courses, setCourses] = useState<Course[] | null>(null);
+  const [userRole, setUserRole] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -42,7 +43,8 @@ export default function Page() {
       }
 
       const data = await res.json();
-      setCourses(data);
+      setCourses(data.courses);
+      setUserRole(data.role)
       setLoading(false);
     }
 
@@ -52,36 +54,53 @@ export default function Page() {
   if (loading) return <div>Loading...</div>;
 
   if (!courses || courses.length === 0)
-    return <div><div className="flex justify-end px-4 lg:px-6 mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleClick}
-        >
-          <Plus /> New Course
-        </Button>
-      </div>No courses found or you are not logged in.</div>;
+    return (
+      <div className="relative h-full flex items-center justify-center">
+        <div className="text-center">
+          No courses found or you are not logged in.
+        </div>
+      
+        {userRole === "teacher" && (
+          <div className="absolute top-6 right-8 lg:right-18">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClick}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              New Course
+            </Button>
+          </div>
+        )}
+      </div>
+    );
 
   return (
     <div className="w-full relative">
-      <div className="flex justify-end px-4 lg:px-6 mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleClick}
-        >
-          <Plus /> New Course
-        </Button>
-      </div>
+      {userRole == "teacher" && (
+        <div className="flex justify-end px-18 lg:px-18 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClick}
+          >
+            <Plus /> New Course
+          </Button>
+        </div>
+      )}
       <div className="
         grid grid-cols-1 gap-4 px-4 
-        lg:px-6 
+        lg:px-15 
         sm:grid-cols-2
         md:grid-cols-3
         lg:grid-cols-3
       ">
         {courses.map((course) => (
-          <CourseCards key={course.id} course={course} />
+          <CourseCards
+            key={course.id}
+            course={course}
+            role={userRole}
+          />
         ))}
       </div>
     </div>

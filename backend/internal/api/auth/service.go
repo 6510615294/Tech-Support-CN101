@@ -14,6 +14,8 @@ import (
 type TUAPIResponse struct {
 	Status		bool	`json:"status"`
 	Username	string	`json:"username"`
+	ThName		string	`json:"displayname_th"`
+	EnName		string	`json:"displayname_en"`
 	Type 		string	`json:"type"`
 	Email		string	`json:"email"`
 }
@@ -51,12 +53,14 @@ func AuthenticateUser(inputUsername, password string) (*models.User, error) {
 		}
 
 		user := &models.User{
-			Username: res.Username,
-			UserType: res.Type,
-			Role: role,
-			Email: res.Email,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			Username: 	res.Username,
+			UserType: 	res.Type,
+			ThName: 	res.ThName,
+			EnName: 	res.EnName,
+			Role: 		role,
+			Email: 		res.Email,
+			CreatedAt: 	time.Now(),
+			UpdatedAt: 	time.Now(),
 		}
 
 		if err := database.DB.Create(user).Error; err != nil {
@@ -67,7 +71,18 @@ func AuthenticateUser(inputUsername, password string) (*models.User, error) {
 	} else if err != nil {
 		// Some other DB error
 		return nil, err
-	}
+	} else if user.ThName != res.ThName || user.EnName != res.EnName {
+
+		err := database.DB.Model(&user).Updates(map[string]interface{}{
+			"th_name":    res.ThName,
+			"en_name":    res.EnName,
+			"updated_at": time.Now(),
+		}).Error
+
+		if err != nil {
+			return nil, err
+		}
+	}	
 
 	return &user, nil
 }

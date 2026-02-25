@@ -48,10 +48,12 @@ type ResponseComment struct {
 	ID				string         	`json:"id"`
 	Comment			string			`json:"comment"`
 	CreatedBy		string			`json:"commentator"`
+	Visible			bool			`json:"visible"`
 }
 
 type ResponseSubmission struct {
 	ID				string         		`json:"id"`
+	Submitter    	string             	`json:"submitter"`
 	Answer  		string         		`json:"answer"`
 	Point        	*int16          	`json:"point"`
 	GradedBy		*string				`json:"gradedby"`
@@ -63,4 +65,12 @@ type ResponseSubmission struct {
 type ResponseDetailedAssignment struct {
 	Assignment		ResponseAssignment		`json:"assignment"`
 	Submissions		[]ResponseSubmission	`json:"submissions"`
+}
+
+type ResponsePythonCode struct {
+	Stdout  	string 	`json:"stdout"`
+	Stderr  	*string 	`json:"stderr"`
+	Status  	string	`json:"status"`
+	Time 		string 	`json:"time"`
+	Memory		int	`json:"memory"`
 }

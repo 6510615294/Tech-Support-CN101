@@ -18,6 +18,8 @@ const (
 type User struct {
 	ID         	string         	`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	Username   	string         	`gorm:"unique;not null" json:"username"`
+	ThName		string			`gorm:"default:ชื่อ สกุล" json:"th_name"`
+	EnName		string			`gorm:"default:Name Surname" json:"en_name"`
 	UserType   	string		  	`json:"user_type"`
 	Role       	Role           	`gorm:"type:VARCHAR(20);not null" json:"role"`
 	Email      	string		  	`gorm:"unique;not null" json:"email"`
@@ -96,7 +98,8 @@ type Assignment struct {
 
 type Comment struct {
 	ID        		string         	`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	Comment     	string         	`gorm:"unique;not null" json:"comment"`
+	SubmissionID 	string         	`gorm:"not null;index" json:"submission_id"`
+	Comment     	string         	`gorm:"not null" json:"comment"`
 	CreatedByRole 	Role			`gorm:"type:VARCHAR(20);not null" json:"created_by_role"`
 	CreatedBy   	string         	`json:"created_by"`
 	CreatedAt 		time.Time      	`json:"created_at"`
@@ -113,7 +116,8 @@ type Submission struct {
 	GradedBy      	*string         `gorm:"type:VARCHAR(20);null" json:"graded_by,omitempty"`
 	AttachmentID 	*string     	`gorm:"null" json:"attachment_id,omitempty"`
 	Attachment   	*Attachment 	`gorm:"foreignKey:AttachmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
-	Comments		[]Comment		`gorm:"many2many:submission_comment;" json:"comment"`
+	Comments		[]Comment		`gorm:"foreignKey:SubmissionID;constraint:OnDelete:CASCADE;" json:"comments"`
+	Submitter 		User   			`gorm:"foreignKey:CreatedBy;references:ID" json:"-"`
 	CreatedBy   	string         	`json:"created_by"`
 	CreatedAt   	time.Time      	`json:"created_at"`
 	DeletedAt		gorm.DeletedAt 	`gorm:"index" json:"-"`

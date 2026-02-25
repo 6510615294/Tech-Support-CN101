@@ -1,9 +1,8 @@
-import { CourseCards } from "@/components/course-cards";
 import CourseForm from "@/components/course-form";
 
 export default function Page() {
   return (
-    <div className="">
+    <div className="mt-10">
       <CourseForm />
     </div>
   )
