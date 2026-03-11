@@ -110,6 +110,21 @@ func ReadPythonFileFromS3ByKey(fileKey string) (string, error) {
 	return fileContent, nil
 }
 
+func DeleteFileFromS3(fileKey string) error {
+	ctx := context.TODO()
+	
+	_, err := S3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(BucketName),
+		Key:    aws.String(fileKey),
+	})
+	if err != nil {
+		fmt.Printf("Error deleting object from S3: %v\n", err)
+		return err
+	}
+	
+	return nil
+}
+
 // isValidUTF8 checks if the string contains only valid UTF-8 characters
 func isValidUTF8(s string) bool {
 	// In Go, strings are always valid UTF-8 by design
@@ -123,3 +138,27 @@ func isValidUTF8(s string) bool {
 	}
 	return true
 }
+
+func DownloadFileFromS3ByKey(fileKey string) ([]byte, error) {
+	ctx := context.TODO()
+	
+	result, err := S3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(BucketName),
+		Key:    aws.String(fileKey),
+	})
+	if err != nil {
+		fmt.Printf("Error getting object from S3: %v\n", err)
+		return nil, err
+	}
+	defer result.Body.Close()
+	
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(result.Body)
+	if err != nil {
+		fmt.Printf("Error reading file content: %v\n", err)
+		return nil, err
+	}
+	
+	return buf.Bytes(), nil
+}
+

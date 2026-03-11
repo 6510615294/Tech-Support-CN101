@@ -1,127 +1,48 @@
 package course
 
 import (
+	"mime/multipart"
 	"time"
+	"gorm.io/gorm"
+	"errors"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterRoutes(app fiber.Router) {
-	app.Get("/courses", getCourses)
-	app.Get("/courses/:course_id", getCourse)
-	app.Post("/courses", createCourse)
-	app.Put("/courses/:course_id", updateCourse)
-	app.Delete("/courses/:course_id", deleteCourse)
-	app.Get("/courses/join/:course_id", joinCourse)
-	app.Get("/courses/:course_id/students", getStudents)
-	app.Post("/courses/:course_id/students/:student_id", changeStudentStatus)
-	app.Get("/courses/:course_id/assignments", getAssignments)
-	app.Get("/courses/:course_id/assignments/:assignment_id", getAssignment)
-	app.Post("/courses/:course_id/assignments", createAssignment)
-	app.Put("/courses/:course_id/assignments/:assignment_id", updateAssignment)
-	app.Delete("/courses/:course_id/assignments/:assignment_id", deleteAssignment)
-	app.Post("/courses/:course_id/assignments/:assignment_id/submission", createSubmission)
-	app.Put("/courses/:course_id/assignments/:assignment_id/submission/:submission_id", updateSubmission)
-	// app.Delete("/courses/:course_id/assignments/:assignment_id/submission", deleteSubmission)
-	app.Post("/courses/:course_id/assignments/:assignment_id/submission/:submission_id/comment", createOrUpdateComment)
-	app.Post("/courses/:course_id/assignments/:assignment_id/submission/:submission_id/comment/:comment_id", toggleComment)
-	app.Put("/courses/:course_id/assignments/:assignment_id/submission/:submission_id/grade", updateGrade)
+func RegisterBaseRoutes(app fiber.Router) {
+	app.Post("/", createCourse)
+	app.Get("/", getCourses)
 }
 
-func isInCourse(userID, courseID string) bool {
-	var user models.User
-	if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
-		return false
-	}
-
-	switch user.Role {
-	case "student":
-		var enrollment models.Enrollment
-		if err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error; err != nil {
-			return false
-		}
-		
-	case "ta":
-		var enrollment models.Enrollment
-		if err := database.DB.Where("course_id = ? AND student_id = ?", courseID, userID).First(&enrollment).Error; err != nil {
-			return false
-		}
-
-	case "teacher":
-		var course models.Course
-		if err := database.DB.Where("teacher_id = ?", userID).First(&course).Error; err != nil {
-			return false
-		}
-		
-	case "ai":
-		return true
-
-	default:
-		return false
-	}
-
-	return true
-}
-
-func getRole(userID string) string {
-	var role string
-	database.DB.Model(&models.User{}).
-		Select("role").
-		Where("id = ?", userID).
-		Scan(&role)
-
-	return role
-}
-
-func getCourses(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
-	userRole := getRole(idStr)
-
-	courses, err := GetCourses(idStr, userRole)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"role":    userRole,
-		"courses": courses,
-	})
-}
-
-func getCourse(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
-	courseID := c.Params("course_id")
-
-	if !isInCourse(idStr, courseID) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "no access",
-		})
-	}
-
-	course, err := GetCourse(courseID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-		return c.JSON(fiber.Map{
-			"role":    getRole(idStr),
-			"course": course,
-	})
+func RegisterCourseWithIDRoutes(app fiber.Router) {
+	app.Get("/", getCourse)
+	app.Put("/", updateCourse)
+	app.Delete("/", deleteCourse)
+	app.Post("/enroll", enrollCourse)
+	app.Get("/member", getMember)
+	app.Put("/member/:member_id", updateMember)
+	app.Delete("/member/:member_id", deleteMember)
+	app.Post("/assignments", createAssignment)
+	app.Get("/assignments", getAssignments)
+	app.Get("/assignments/:assignment_id", getAssignment)
+	app.Put("/assignments/:assignment_id", updateAssignment)
+	app.Delete("/assignments/:assignment_id", deleteAssignment)
+	app.Get("/assignments/:assignment_id/summary", getAssignmentSummary)
+	app.Post("/assignments/:assignment_id/override/", createAssignmentOverride)
+	app.Post("/assignments/:assignment_id/submission", createSubmission)
+	app.Put("/assignments/:assignment_id/submission/:submission_id", updateSubmission)
+	app.Post("/assignments/:assignment_id/submission/:submission_id/comment", createOrUpdateComment)
+	app.Post("/assignments/:assignment_id/submission/:submission_id/comment/:comment_id", toggleComment)
+	app.Put("/assignments/:assignment_id/submission/:submission_id/grade", updateGrade)
 }
 
 func createCourse(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
 
-	if getRole(idStr) != "teacher" {
+	if !models.HasPermission(role, "course:create") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
@@ -132,7 +53,7 @@ func createCourse(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
 	}
 
-	data, err := CreateCourse(idStr, form)
+	data, err := CreateCourse(userID, role, &form)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -142,19 +63,60 @@ func createCourse(c *fiber.Ctx) error {
 	return c.JSON(data)
 }
 
+func getCourses(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
+
+	courses, err := GetCourses(userID, role)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"role":    role,
+		"courses": courses,
+	})
+}
+
+func getCourse(c *fiber.Ctx) error {
+	role := c.Locals("course_role").(string)
+	courseID := c.Params("course_id")
+
+	course, err := GetCourse(courseID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"role":   role,
+		"course": course,
+	})
+}
+
 func updateCourse(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
 	var course models.Course
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
+	err := database.DB.First(&course, "id = ?", courseID).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "course not found",
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "internal server error",
 		})
 	}
 
-	if getRole(idStr) != "admin" && course.TeacherID != idStr {
+	if !models.HasPermission(role, "course:update") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
@@ -165,7 +127,7 @@ func updateCourse(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
 	}
 
-	data, err := UpdateCourse(course, form)
+	data, err := UpdateCourse(&course, &form)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -176,18 +138,25 @@ func updateCourse(c *fiber.Ctx) error {
 }
 
 func deleteCourse(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
 	var course models.Course
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid course id",
+	err := database.DB.First(&course, "id = ?", courseID).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "course not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
 		})
 	}
-
-	if getRole(idStr) != "admin" && course.TeacherID != idStr {
+	
+	if !models.HasPermission(role, "course:delete") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
@@ -200,44 +169,46 @@ func deleteCourse(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Course deleted successfully",
+		"message": "course deleted",
 	})
 }
 
-func joinCourse(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+func enrollCourse(c *fiber.Ctx) error {
+	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
-
-	var course models.Course
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
+	
+	if !models.HasPermission(role, "course:enroll") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "no course",
+			"error": "no access",
 		})
 	}
+	
+	var form models.EnrollmentForms
+	if err := c.BodyParser(&form); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
+	}
 
-	data, err := JoinCourse(idStr, &course)
+	data, err := EnrollCourse(courseID, &form)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "internal server error",
 		})
 	}
 
 	return c.JSON(data)
 }
 
-func getStudents(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+func getMember(c *fiber.Ctx) error {
 	courseID := c.Params("course_id")
-
-	if !isInCourse(idStr, courseID) {
+	role := c.Locals("course_role").(string)
+	
+	if !models.HasPermission(role, "member:view_all") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
 
-	students, err := GetStudents(courseID)
+	students, err := GetMember(courseID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -247,62 +218,90 @@ func getStudents(c *fiber.Ctx) error {
 	return c.JSON(students)
 }
 
-func changeStudentStatus(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+func updateMember(c *fiber.Ctx) error {
+	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
-	studentID := c.Params("student_id")
+	memberID := c.Params("member_id")
 
-	var course models.Course
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid course id",
-		})
-	}
-
-	if getRole(idStr) != "admin" && course.TeacherID != idStr {
+	if !models.HasPermission(role, "member:update") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
-
-	var form map[string]interface{}
+	
+	var form models.UpdateMemberForm
 	if err := c.BodyParser(&form); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
 	}
 
-	enrollment, err := ChangeStudentStatus(courseID, studentID, form)
+	member, err := UpdateMember(courseID, memberID, &form)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
 
-	return c.JSON(enrollment)
+	return c.JSON(member)
+}
+
+func deleteMember(c *fiber.Ctx) error {
+	role := c.Locals("course_role").(string)
+	courseID := c.Params("course_id")
+	memberID := c.Params("member_id")
+
+	if !models.HasPermission(role, "member:delete") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "no access",
+		})
+	}
+	
+	var courseMember models.CourseMember
+	if err := database.DB.First(&courseMember, "course_id = ? AND user_id_id = ?", courseID, memberID).Error; err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "invalid course id or user id",
+		})
+	}
+
+	if err := database.DB.Delete(&courseMember).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "deleted member",
+	})
 }
 
 func createAssignment(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
-	var course models.Course
-	if err := database.DB.First(&course, "id = ?", courseID).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "invalid course id"})
+	if !models.HasPermission(role, "assignment:create") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "no access",
+		})
 	}
 
-	if getRole(idStr) != "admin" && course.TeacherID != idStr {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "no access"})
+	multipartForm, err := c.MultipartForm()
+	if err != nil && err != fiber.ErrNotFound {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid multipart form"})
 	}
 
-	file, _ := c.FormFile("file")
+	var files []*multipart.FileHeader
+	if multipartForm != nil {
+		if uploadedFiles, ok := multipartForm.File["files"]; ok {
+			files = uploadedFiles
+		}
+	}
 
 	var form models.AssignmentForm
 	if err := c.BodyParser(&form); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
 	}
 
-	assignment, err := CreateAssignment(courseID, idStr, &form, file)
+	assignment, err := CreateAssignment(courseID, userID, &form, files)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -311,17 +310,11 @@ func createAssignment(c *fiber.Ctx) error {
 }
 
 func getAssignments(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
-	if !isInCourse(idStr, courseID) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "no access",
-		})
-	}
-
-	assignments, err := GetAssignments(courseID)
+	assignments, err := GetAssignments(userID, courseID, role)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -329,63 +322,77 @@ func getAssignments(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"role":    getRole(idStr),
-		"assignments": assignments,
+		"role":    		role,
+		"assignments": 	assignments,
 	})
 }
 
 func getAssignment(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
 	courseID := c.Params("course_id")
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("course_role").(string)
 	assignmentID := c.Params("assignment_id")
-	userRole := getRole(idStr)
-	
-	if !isInCourse(idStr, courseID) {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "no access",
-		})
-	}
 
-	assignment, err := GetAssignment(idStr, userRole, assignmentID)
+	assignment, err := GetAssignment(userID, courseID, role, assignmentID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"role": userRole,
-		"data": assignment,
-	})
-}
-
-func updateAssignment(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
-	assignmentID := c.Params("assignment_id")
-
-	var assignment models.Assignment
-	if err := database.DB.First(&assignment, "id = ?", assignmentID).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "internal server error",
 		})
 	}
 
-	if getRole(idStr) != "admin" && assignment.CreatedBy != idStr {
+	return c.JSON(fiber.Map{
+		"role": role,
+		"assignment": assignment,
+	})
+}
+
+func updateAssignment(c *fiber.Ctx) error {
+	courseID := c.Params("course_id")
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("course_role").(string)
+	assignmentID := c.Params("assignment_id")
+
+	var assignment models.Assignment
+	err := database.DB.
+		Where("id = ? AND course_id = ?", assignmentID, courseID).
+		First(&assignment).Error
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "assignment not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	if !models.HasPermission(role, "assignment:update") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
 
-	file, _ := c.FormFile("file")
+	multipartForm, err := c.MultipartForm()
+	if err != nil && err != fiber.ErrNotFound {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid multipart form"})
+	}
+
+	var files []*multipart.FileHeader
+	if multipartForm != nil {
+		if uploadedFiles, ok := multipartForm.File["files"]; ok {
+			files = uploadedFiles
+		}
+	}
 
 	var form models.AssignmentForm
 	if err := c.BodyParser(&form); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
 	}
 
-	data, err := UpdateAssignment(assignment, form, file, idStr)
+	data, err := UpdateAssignment(&assignment, &form, files, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -396,23 +403,33 @@ func updateAssignment(c *fiber.Ctx) error {
 }
 
 func deleteAssignment(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	courseID := c.Params("course_id")
+	role := c.Locals("course_role").(string)
 	assignmentID := c.Params("assignment_id")
-
-	var assignment models.Assignment
-	if err := database.DB.First(&assignment, "id = ?", assignmentID).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid assignment id",
-		})
-	}
-
-	if getRole(idStr) != "admin" && assignment.CreatedBy != idStr {
+	
+	if !models.HasPermission(role, "assignment:delete") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
+	
+	var assignment models.Assignment
+	err := database.DB.
+		Where("id = ? AND course_id = ?", assignmentID, courseID).
+		First(&assignment).Error
+		
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "assignment not found",
+			})
+		}
 
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+		
 	if err := database.DB.Delete(&assignment).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "internal server error",
@@ -420,36 +437,147 @@ func deleteAssignment(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Assignment deleted successfully",
+		"message": "assignment deleted",
+	})
+}
+
+func getAssignmentSummary(c *fiber.Ctx) error {
+	courseID := c.Params("course_id")
+	role := c.Locals("course_role").(string)
+	assignmentID := c.Params("assignment_id")
+	
+	if !models.HasPermission(role, "assignment:view_all") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "no access",
+		})
+	}
+	
+	var assignment models.Assignment
+	err := database.DB.
+		Where("id = ? AND course_id = ?", assignmentID, courseID).
+		First(&assignment).Error;
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "assignment not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	summary, err := GetAssignmentSummary(&assignment)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(summary)
+}
+
+func createAssignmentOverride(c *fiber.Ctx) error {
+	courseID := c.Params("course_id")
+	assignmentID := c.Locals("assignment_id").(string)
+	role := c.Locals("course_role").(string)
+
+	if !models.HasPermission(role, "assignment:update") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "no access",
+		})
+	}
+	
+	var assignment models.Assignment
+	err := database.DB.
+		Where("id = ? AND course_id = ?", assignmentID, courseID).
+		First(&assignment).Error
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "submission not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	var form models.AssignmentOverrideForm
+	if err := c.BodyParser(&form); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
+	}
+
+	_, err = CreateAssignmentOverride(assignmentID , form)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "override assignment",
 	})
 }
 
 func createSubmission(c *fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	role := getRole(userID)
-
+	courseID := c.Params("course_id")
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("course_role").(string)
 	assignmentID := c.Params("assignment_id")
 
-	if role != "student" {
+	if !models.HasPermission(role, "submission:create") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
 
 	var assignment models.Assignment
-	if err := database.DB.First(&assignment, "id = ?", assignmentID).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid assignment id",
+	err := database.DB.
+		Where("id = ? AND course_id = ?", assignmentID, courseID).
+		First(&assignment).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "assignment not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
 		})
 	}
 
-	if !isInCourse(userID, assignment.CourseID) {
+	now := time.Now()
+
+	if !assignment.Visible {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "no access",
+			"error": "assignment not visible",
 		})
 	}
 
-	if !assignment.Visible || assignment.CloseDate.Before(time.Now()) {
+	effectiveCloseDate := assignment.CloseDate
+
+	var override models.AssignmentOverride
+	err = database.DB.
+		Select("extended_due_date").
+		Where("assignment_id = ? AND student_id = ?", assignmentID, userID).
+		Take(&override).Error
+
+	if err == nil {
+		effectiveCloseDate = override.ExtendedDueDate
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	if effectiveCloseDate.Before(now) {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "assignment is closed",
 		})
@@ -464,7 +592,7 @@ func createSubmission(c *fiber.Ctx) error {
 
 	file, _ := c.FormFile("file")
 
-	submission, err := CreateSubmission(assignment.ID, userID, &form, file)
+	submission, err := CreateSubmission(assignmentID, userID, &form, file)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -475,20 +603,61 @@ func createSubmission(c *fiber.Ctx) error {
 }
 
 func updateSubmission(c *fiber.Ctx) error {
-	userID := c.Locals("user_id")
-	idStr, _ := userID.(string)
+	userID := c.Locals("user_id").(string)
 	submissionID := c.Params("submission_id")
-
+	role := c.Locals("course_role").(string)
+	
+	if !models.HasPermission(role, "submission:update") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "no access",
+		})
+	}
+	
 	var submission models.Submission
-	if err := database.DB.First(&submission, "id = ?", submissionID).Error; err != nil {
+	err := database.DB.
+		Preload("Assignment").
+		Where("id = ? AND student_id = ?", submissionID, userID).
+		First(&submission).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "submission not found",
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "internal server error",
 		})
 	}
 
-	if getRole(idStr) != "admin" && submission.CreatedBy != idStr {
+	if !submission.Assignment.Visible {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "no access",
+			"error": "assignment not visible",
+		})
+	}
+
+	now := time.Now()
+
+	effectiveCloseDate := submission.Assignment.CloseDate
+
+	var override models.AssignmentOverride
+	err = database.DB.
+		Select("extended_due_date").
+		Where("assignment_id = ? AND student_id = ?", submission.AssignmentID, userID).
+		Take(&override).Error
+
+	if err == nil {
+		effectiveCloseDate = override.ExtendedDueDate
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
+		})
+	}
+
+	if effectiveCloseDate.Before(now) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "assignment is closed",
 		})
 	}
 
@@ -496,10 +665,12 @@ func updateSubmission(c *fiber.Ctx) error {
 
 	var form models.SubmissionForm
 	if err := c.BodyParser(&form); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid form"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid form",
+		})
 	}
 
-	data, err := UpdateSubmission(submission, form, file, idStr)
+	data, err := UpdateSubmission(&submission, &form, file, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -510,43 +681,32 @@ func updateSubmission(c *fiber.Ctx) error {
 }
 
 func createOrUpdateComment(c *fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	role := getRole(userID)
+	courseID := c.Params("course_id")
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("course_role").(string)
 	submissionID := c.Params("submission_id")
 
-	if role == "student" {
+	if !models.HasPermission(role, "assignment:comment") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
-
+	
 	var submission models.Submission
-	query := database.DB.
-		Joins("JOIN assignments a ON a.id = submissions.assignment_id").
-		Joins("JOIN courses c ON c.id = a.course_id").
-		Where("submissions.id = ?", submissionID)
+	err := database.DB.
+		Joins("JOIN assignments ON assignments.id = submissions.assignment_id").
+		Where("submissions.id = ? AND assignments.course_id = ?", submissionID, courseID).
+		First(&submission).Error
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "submission not found",
+			})
+		}
 
-	switch role {
-
-	case "teacher":
-		query = query.Where("c.teacher_id = ?", userID)
-
-	case "ta":
-		query = query.
-			Joins("JOIN enrollments e ON e.course_id = c.id").
-			Where("e.student_id = ?", userID)
-
-	case "ai":
-
-	default:
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid role",
-		})
-	}
-
-	if err := query.First(&submission).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "submission not found or no access",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
 		})
 	}
 
@@ -557,7 +717,7 @@ func createOrUpdateComment(c *fiber.Ctx) error {
 		})
 	}
 
-	data, err := CreateOrUpdateComment(&submission, userID, role, &form)
+	data, err := CreateOrUpdateComment(submissionID, userID, role, &form)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -568,46 +728,39 @@ func createOrUpdateComment(c *fiber.Ctx) error {
 }
 
 func toggleComment (c *fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	role := getRole(userID)
+	courseID := c.Params("course_id")
+	submissionID := c.Params("submission_id")
+	role := c.Locals("course_role").(string)
 	commentID := c.Params("comment_id")
 
-	if role == "student" {
+	if !models.HasPermission(role, "assignment:comment") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
+	
+	var submission models.Submission
+	err := database.DB.
+		Joins("JOIN assignments ON assignments.id = submissions.assignment_id").
+		Where("submissions.id = ? AND assignments.course_id = ?", submissionID, courseID).
+		First(&submission).Error
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "submission not found",
+			})
+		}
 
-	var comment models.Comment
-
-	query := database.DB.
-		Model(&models.Comment{}).
-		Joins("JOIN submissions s ON s.id = comments.submission_id").
-		Joins("JOIN assignments a ON a.id = s.assignment_id").
-		Joins("JOIN courses c ON c.id = a.course_id").
-		Where("comments.id = ?", commentID)
-	
-	switch role {
-	
-	case "teacher":
-		query = query.Where("c.teacher_id = ?", userID)
-	
-	case "ta":
-		query = query.
-			Joins("JOIN enrollments e ON e.course_id = c.id AND e.student_id = ?", userID)
-	
-	case "ai":
-		// AI has no additional restriction
-	
-	default:
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid role",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
 		})
 	}
-	
-	if err := query.First(&comment).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "comment not found or no access",
+
+	var comment models.Comment
+	if err := database.DB.First(&comment, "id = ?", commentID).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "no comment or no access",
 		})
 	}
 
@@ -622,43 +775,31 @@ func toggleComment (c *fiber.Ctx) error {
 }
 
 func updateGrade(c *fiber.Ctx) error {
-	userID, _ := c.Locals("user_id").(string)
-	role := getRole(userID)
+	courseID := c.Params("course_id")
+	role := c.Locals("course_role").(string)
 	submissionID := c.Params("submission_id")
 
-	if role == "student" {
+	if !models.HasPermission(role, "assignment:grade") {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "no access",
 		})
 	}
-
+	
 	var submission models.Submission
-	query := database.DB.
-		Joins("JOIN assignments a ON a.id = submissions.assignment_id").
-		Joins("JOIN courses c ON c.id = a.course_id").
-		Where("submissions.id = ?", submissionID)
+	err := database.DB.
+		Joins("JOIN assignments ON assignments.id = submissions.assignment_id").
+		Where("submissions.id = ? AND assignments.course_id = ?", submissionID, courseID).
+		First(&submission).Error
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "submission not found",
+			})
+		}
 
-	switch role {
-
-	case "teacher":
-		query = query.Where("c.teacher_id = ?", userID)
-
-	case "ta":
-		query = query.
-			Joins("JOIN enrollments e ON e.course_id = c.id").
-			Where("e.student_id = ?", userID)
-
-	case "ai":
-
-	default:
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "invalid role",
-		})
-	}
-
-	if err := query.First(&submission).Error; err != nil {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "submission not found or no access",
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "internal server error",
 		})
 	}
 
@@ -668,41 +809,14 @@ func updateGrade(c *fiber.Ctx) error {
 			"error": "invalid form",
 		})
 	}
-
-	var gradable bool
-	var prev models.Role
 	
-	if submission.GradedBy == nil {
-			gradable = true
-	} else {
-			prev = models.Role(*submission.GradedBy)
-	}
-	
-	switch models.Role(role) {
-	case models.RoleTeacher:
-			gradable = true
-	
-	case models.RoleTeacherAssistance:
-			if submission.GradedBy != nil {
-				gradable = (prev == models.RoleAI)
-			} else {
-				gradable = true
-			}
-	
-	case models.RoleAI:
-			gradable = false
-	
-	default:
-			gradable = false
-	}
-	
-	if !gradable {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": "invalid role",
-			})
+	if !canGradeSubmission(role, &submission) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "invalid role",
+		})
 	}
 
-	updates := map[string]interface{}{}
+	updates := map[string]any{}
 
 	updates["point"] = form.Point
 	updates["graded_by"] = role
@@ -713,10 +827,30 @@ func updateGrade(c *fiber.Ctx) error {
 		})
 	}
 
-	data := map[string]interface{}{
-		"point":     updates["point"],
-		"graded_by": updates["graded_by"],
+	data := map[string]any{
+		"submission_id":	submissionID,
+		"point":     		updates["point"],
+		"graded_by": 		updates["graded_by"],
 	}
 
 	return c.JSON(data)
+}
+
+//helper
+func canGradeSubmission(role string, s *models.Submission) bool {
+
+	switch role {
+
+	case "teacher":
+		return true
+
+	case "ta":
+		if s.GradedBy == nil {
+			return true
+		}
+		return *s.GradedBy == "ai"
+
+	default:
+		return false
+	}
 }

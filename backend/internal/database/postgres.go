@@ -26,12 +26,13 @@ func Connect() {
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Course{},
-		&models.Enrollment{},
+		&models.CourseMember{},
 		&models.Attachment{},
 		&models.Tag{},
 		&models.Assignment{},
 		&models.Comment{},
 		&models.Submission{},
+		&models.AssignmentOverride{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

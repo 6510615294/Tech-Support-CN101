@@ -19,7 +19,12 @@ func SetupRoutes(app *fiber.App) {
     protected := api.Group("")
     protected.Use(middleware.AuthMiddleware)
     me.RegisterRoutes(protected)
-    course.RegisterRoutes(protected)
+
+    courses := protected.Group("/courses")
+	course.RegisterBaseRoutes(courses)
+	courseWithID := courses.Group("/:course_id", middleware.CourseMiddleware)
+	course.RegisterCourseWithIDRoutes(courseWithID)
+
     upload.RegisterRoutes(protected)
     file.RegisterRoutes(protected)
     run.RegisterRoutes(protected)

@@ -37,7 +37,8 @@ func AuthMiddleware(c *fiber.Ctx) error {
 			"error": "Invalid user",
 		})
 	}
-
+	
+	c.Locals("user_role", string(user.Role))
 	c.Locals("user_id", claims["user_id"])
 	return c.Next()
 }
@@ -63,4 +64,32 @@ func ParseToken(tokenStr string) (jwt.MapClaims, error) {
     }
 
     return nil, errors.New("invalid token")
+}
+
+func CourseMiddleware(c *fiber.Ctx) error {
+	userID := c.Locals("user_id")
+	if userID == nil {
+		return fiber.ErrUnauthorized
+	}
+
+	courseID := c.Params("course_id")
+	if courseID == "" {
+		return fiber.ErrBadRequest
+	}
+
+	var role string
+
+	err := database.DB.
+		Model(&models.CourseMember{}).
+		Select("role").
+		Where("user_id = ? AND course_id = ?", userID, courseID).
+		Take(&role).Error
+
+	if err != nil {
+		return fiber.ErrForbidden
+	}
+	
+	c.Locals("course_role", role)
+	
+	return c.Next()
 }

@@ -1,6 +1,6 @@
 package models
 
-func ConvertCourseToResponse(course Course) ResponseCourse {
+func ConvertCourseToResponse(course *										Course) ResponseCourse {
 	return ResponseCourse{
 		ID:         course.ID,
 		Name:       course.Name,
@@ -13,30 +13,31 @@ func ConvertCourseToResponse(course Course) ResponseCourse {
 
 func ConvertCoursesToResponse(courses []Course) []ResponseCourse {
 	response := make([]ResponseCourse, 0, len(courses))
-	for _, c := range courses {
-		response = append(response, ConvertCourseToResponse(c))
+
+	for i := range courses {
+		response = append(response, ConvertCourseToResponse(&courses[i]))
 	}
+
 	return response
 }
 
-func ConvertEnrollmentToResponse(enrollment Enrollment) ResponseEnrollment {
-	return ResponseEnrollment{
-		ID:         enrollment.ID,
-		Status: 	enrollment.Status,
-		CourseID:	enrollment.CourseID,
-		StudentID: 	enrollment.StudentID,
+func ConvertCourseMemberToResponse(courseMember *CourseMember) ResponseMember {
+	return ResponseMember{
+		UserID:		courseMember.UserID,
+		Username:	courseMember.User.Username,	
+		EnName:		courseMember.User.EnName,
+		ThName:		courseMember.User.ThName,
+		Email:		courseMember.User.Email,
+		Status:		courseMember.Status,
+		Role:		courseMember.Role,
 	}
 }
 
-func ConvertEnrollmentsToResponse(enrollments []Enrollment) []ResponseEnrollment {
-	response := make([]ResponseEnrollment, 0, len(enrollments))
-	for _, c := range enrollments {
-		response = append(response, ConvertEnrollmentToResponse(c))
-	}
-	return response
-}
-
-func ConvertAssignmentToResponse(a Assignment) ResponseAssignment {
+func ConvertAssignmentToResponse(
+	a *Assignment,
+	hasOverride bool,
+	override *AssignmentOverride,
+) ResponseAssignment {
 	tagNames := make([]string, len(a.Tags))
 	for i, tag := range a.Tags {
 		tagNames[i] = tag.Name
@@ -44,37 +45,63 @@ func ConvertAssignmentToResponse(a Assignment) ResponseAssignment {
 
 	const layout = "2006-01-02"
 
-	var fileName *string
-	if a.Attachment != nil {
-		fileName = &a.Attachment.FileName
+	attachments := make([]ResponseAttachment, len(a.Attachments))
+	for i, att := range a.Attachments {
+		attachments[i] = ResponseAttachment{
+			ID:        att.ID,
+			URL:       att.URL,
+			FileName:  att.FileName,
+			FileType:  att.FileType,
+			CreatedAt: att.CreatedAt.Format(layout),
+		}
+	}
+	
+	dueDate := a.DueDate
+	closeDate := a.CloseDate
+
+	if hasOverride {
+		dueDate = override.ExtendedDueDate
+		closeDate = override.ExtendedDueDate
 	}
 
 	return ResponseAssignment{
-		ID:           a.ID,
-		Title:        a.Title,
-		Description:  a.Description,
-		Point:        a.Point,
-		StartDate:    a.StartDate.Format(layout),
-		DueDate:      a.DueDate.Format(layout),
-		CloseDate:    a.CloseDate.Format(layout),
-		AttachmentID: a.AttachmentID,
-		FileName:     fileName,
-		Tags:         tagNames,
+		ID:          a.ID,
+		Title:       a.Title,
+		Description: a.Description,
+		Point:       a.Point,
+		StartDate:   a.StartDate.Format(layout),
+		DueDate:     dueDate.Format(layout),
+		CloseDate:   closeDate.Format(layout),
+		Attachments: attachments,
+		Tags:        tagNames,
+		AIAgent: 	 a.AIAgent,
+		Visible: 	 a.Visible,
 	}
 }
 
 
-func ConvertAssignmentsToResponse(assignments []Assignment) []ResponseAssignment {
+func ConvertAssignmentsToResponse(
+	assignments []Assignment,
+	overrides map[string]AssignmentOverride,
+) []ResponseAssignment {
+
 	response := make([]ResponseAssignment, 0, len(assignments))
-	for _, a := range assignments {
-		response = append(response, ConvertAssignmentToResponse(a))
+
+	for i := range assignments {
+		a := &assignments[i]
+
+		override, ok := overrides[a.ID]
+
+		response = append(response, ConvertAssignmentToResponse(a, ok, &override))
 	}
+
 	return response
 }
 
 func ConvertDetailedAssignmentToResponse(
-	a Assignment,
+	a *Assignment,
 	s *[]Submission,
+	o *AssignmentOverride,
 ) ResponseDetailedAssignment {
 
 	tagNames := make([]string, len(a.Tags))
@@ -84,22 +111,37 @@ func ConvertDetailedAssignmentToResponse(
 
 	const layout = "2006-01-02"
 
-	var assignmentFileName *string
-	if a.Attachment != nil {
-		assignmentFileName = &a.Attachment.FileName
+	attachments := make([]ResponseAttachment, len(a.Attachments))
+	for i, att := range a.Attachments {
+		attachments[i] = ResponseAttachment{
+			ID:        att.ID,
+			URL:       att.URL,
+			FileName:  att.FileName,
+			FileType:  att.FileType,
+			CreatedAt: att.CreatedAt.Format(layout),
+		}
+	}
+	
+	dueDate := a.DueDate
+	closeDate := a.CloseDate
+
+	if o != nil {
+		dueDate = o.ExtendedDueDate
+		closeDate = o.ExtendedDueDate
 	}
 
 	assignmentResponse := ResponseAssignment{
-		ID:           a.ID,
-		Title:        a.Title,
-		Description:  a.Description,
-		Point:        a.Point,
-		StartDate:    a.StartDate.Format(layout),
-		DueDate:      a.DueDate.Format(layout),
-		CloseDate:    a.CloseDate.Format(layout),
-		AttachmentID: a.AttachmentID,
-		FileName:     assignmentFileName,
-		Tags:         tagNames,
+		ID:          a.ID,
+		Title:       a.Title,
+		Description: a.Description,
+		Point:       a.Point,
+		StartDate:   a.StartDate.Format(layout),
+		DueDate:     dueDate.Format(layout),
+		CloseDate:   closeDate.Format(layout),
+		Attachments: attachments,
+		Tags:        tagNames,
+		AIAgent:     a.AIAgent,
+		Visible:     a.Visible,
 	}
 
 	submissionResponses := make([]ResponseSubmission, len(*s))
@@ -128,7 +170,7 @@ func ConvertDetailedAssignmentToResponse(
 
 		submissionResponses[i] = ResponseSubmission{
 			ID:           sub.ID,
-			Submitter:    sub.Submitter.Username + "|" + sub.Submitter.EnName + "|" + sub.Submitter.ThName,
+			Submitter:    sub.Student.Username + "|" + sub.Student.EnName + "|" + sub.Student.ThName,
 			Answer:       sub.Answer,
 			Point:        sub.Point,
 			AttachmentID: sub.AttachmentID,
@@ -144,8 +186,7 @@ func ConvertDetailedAssignmentToResponse(
 	}
 }
 
-func ConvertSubmissionToResponse(s Submission) ResponseSubmission {
-	const layout = "2006-01-02"
+func ConvertSubmissionToResponse(s *Submission) ResponseSubmission {
 
 	var fileName *string
 	if s.Attachment != nil {
