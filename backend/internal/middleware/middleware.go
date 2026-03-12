@@ -37,7 +37,7 @@ func AuthMiddleware(c *fiber.Ctx) error {
 			"error": "Invalid user",
 		})
 	}
-	
+
 	c.Locals("user_role", string(user.Role))
 	c.Locals("user_id", claims["user_id"])
 	return c.Next()
@@ -88,8 +88,8 @@ func CourseMiddleware(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.ErrForbidden
 	}
-	
+
 	c.Locals("course_role", role)
-	
+
 	return c.Next()
 }

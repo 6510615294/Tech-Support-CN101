@@ -5,11 +5,6 @@ import {
   LayoutTemplate,
   Box,
   School,
-  FileText,
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  FileTextIcon,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -21,7 +16,6 @@ import {
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { useParams, usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
 
 type NavMainProps = {
   isTeacher: boolean;
@@ -54,8 +48,8 @@ export function NavMain({ isTeacher }: NavMainProps) {
               </SidebarMenuSubItem>
               <SidebarMenuSubItem key="resource">
                 <SidebarMenuSubButton asChild>
-                  <Link href={`/courses/${course_id}/resources`}>
-                    <span className="group-data-[collapsible=icon]:hidden">Resources</span>
+                  <Link href={`/courses/${course_id}/member`}>
+                    <span className="group-data-[collapsible=icon]:hidden">Member</span>
                   </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>

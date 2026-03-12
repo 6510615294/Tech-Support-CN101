@@ -4,17 +4,23 @@ import AssignmentForm from "@/components/assignment-form";
 import { useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
+type attachment = {
+  id: string
+  file_name: string
+}
+
 type Assignment = {
   id: string
   title: string
   description: string
   point: number
-  attachment_id: string
-  file_name: string
+  attachments: attachment[]
   start_date: string
   due_date: string
   close_date: string
   tags: string[]
+  ai_agent: boolean
+  visible: boolean
 };
 
 export default function Page() {
@@ -40,7 +46,7 @@ export default function Page() {
       }
 
       const raw = await res.json();
-      setAssignment(raw.data.assignment);
+      setAssignment(raw.assignment.assignment);
       setLoading(false);
     }
 

@@ -18,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 
 import {
   CloudUpload,
@@ -31,30 +32,38 @@ import {
   FileUploaderItem,
 } from "@/components/ui/file-upload";
 import { useParams } from "next/navigation";
-import { Textarea } from "./ui/textarea";
+import { TipTapTextEditor } from "./ui/tiptap";
+
+type attachment = {
+  id: string
+  file_name: string
+}
 
 type Assignment = {
   id: string
   title: string
   description: string
   point: number
-  attachment_id: string
-  file_name: string
+  attachments: attachment[]
   start_date: string
   due_date: string
   close_date: string
   tags: string[]
+  ai_agent: boolean
+  visible: boolean
 };
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required").max(150),
   description: z.string().min(1, "Description is required"),
   point: z.number().min(0).max(100),
-  file: z.any().optional(),
+  files: z.array(z.any()).optional(),
   tags: z.array(z.string()).optional(),
   start_date: z.any(),
   due_date: z.any(),
   close_date: z.any().optional(),
+  ai_agent: z.boolean().optional(),
+  visible: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,34 +73,39 @@ interface AssignmentFormProps {
 }
 
 export default function AssignmentForm({ assignment }: AssignmentFormProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [existingAttachment, setExistingAttachment] = useState<{file_name: string, attachment_id: string} | null>(
-    assignment?.attachment_id && assignment?.file_name 
-      ? { file_name: assignment.file_name, attachment_id: assignment.attachment_id }
-      : null
+  const [files, setFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<{file_name: string, attachment_id: string}[]>(
+    assignment?.attachments ? assignment.attachments.map(a => ({ file_name: a.file_name, attachment_id: a.id })) : []
   );
   
-  const handleFileChange = (files: File[] | null) => {
-    const selected = files?.[0] ?? null;
-    setFile(selected);
-    form.setValue("file", selected);
-    // Clear existing attachment when a new file is selected
-    if (selected) {
-      setExistingAttachment(null);
+  const handleFileChange = (newFiles: File[] | null) => {
+    const selectedFiles = newFiles ?? [];
+    setFiles(selectedFiles);
+    form.setValue("files", selectedFiles);
+    // Clear existing attachments when new files are selected
+    if (selectedFiles.length > 0) {
+      setExistingAttachments([]);
     }
   };
 
-  const handleRemoveExistingAttachment = () => {
-    setExistingAttachment(null);
+  const handleRemoveFile = (index: number) => {
+    const updatedFiles = files.filter((_, i) => i !== index);
+    setFiles(updatedFiles);
+    form.setValue("files", updatedFiles);
+  };
+
+  const handleRemoveExistingAttachment = (index: number) => {
+    const updated = existingAttachments.filter((_, i) => i !== index);
+    setExistingAttachments(updated);
   };
   const { course_id, assignment_id } = useParams();
   const router = useRouter()
   const isEditing = !!assignment || !!assignment_id;
   
   const dropZoneConfig = {
-    maxFiles: 1,
-    maxSize: 1024 * 1024 * 4, // 4MB
-    multiple: false,
+    maxFiles: 5,
+    maxSize: 1024 * 1024 * 5, // 5MB
+    multiple: true,
   };
 
   const form = useForm<FormValues>({
@@ -101,6 +115,8 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
       start_date: null,
       due_date: null,
       close_date: null,
+      ai_agent: false,
+      visible: true,
     },
   });
 
@@ -114,6 +130,8 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
         start_date: assignment.start_date ? new Date(assignment.start_date) : null,
         due_date: assignment.due_date ? new Date(assignment.due_date) : null,
         close_date: assignment.close_date ? new Date(assignment.close_date) : null,
+        ai_agent: assignment.ai_agent,
+        visible: assignment.visible,
       });
     }
   }, [assignment, form]);
@@ -132,14 +150,28 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
         formData.append("close", values.close_date.toISOString());
       }
 
+      if (values.ai_agent !== undefined) {
+        formData.append("ai_agent", String(values.ai_agent));
+      }
+
+      if (values.visible !== undefined) {
+        formData.append("visible", String(values.visible));
+      }
+
       if (values.tags) {
         values.tags.forEach(tag => formData.append("tags", tag));
       }
 
-      if (values.file && values.file instanceof File) {
-        formData.append("file", values.file);
-      } else if (existingAttachment) {
-        formData.append("attachment_id", existingAttachment.attachment_id);
+      if (values.files && Array.isArray(values.files) && values.files.length > 0) {
+        values.files.forEach((file) => {
+          if (file instanceof File) {
+            formData.append("files", file);
+          }
+        });
+      } else if (existingAttachments && existingAttachments.length > 0) {
+        existingAttachments.forEach((attachment) => {
+          formData.append("attachments", attachment.attachment_id);
+        });
       }
 
       const token = localStorage.getItem("token");
@@ -149,7 +181,6 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
         : `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments`;
       
       const method = isEditing ? "PUT" : "POST";
-
       const res = await fetch(url, {
         method,
         headers: {
@@ -174,7 +205,7 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
       console.error(error);
     }
   };
-
+  
   return (
     <Form {...form}>
       <form
@@ -215,10 +246,10 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl className="rounded-sm">
-                <Textarea
-                  placeholder=""
-                  {...field}
+                <TipTapTextEditor
                   value={field.value ?? ""}
+                  onChange={field.onChange}
+                  editable={true}
                 />
               </FormControl>
               <FormMessage />
@@ -250,18 +281,18 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
 
         <FormField
           control={form.control}
-          name="file"
+          name="files"
           render={() => (
             <FormItem>
-              <FormLabel>Attachment</FormLabel>
+              <FormLabel>Attachments</FormLabel>
               <FormControl>
                 <FileUploader
-                  value={file ? [file] : null}
+                  value={files.length > 0 ? files : null}
                   onValueChange={handleFileChange}
                   dropzoneOptions={dropZoneConfig}
                   className="relative bg-background p-1"
                 > 
-                  {(!file && !existingAttachment) && (
+                  {(files.length === 0 && existingAttachments.length === 0) && (
                     <FileInput
                       id="fileInput"
                       className="outline-dashed outline-1 outline-slate-500 rounded-sm"
@@ -278,27 +309,26 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
                     </FileInput>
                   )}
                   <FileUploaderContent>
-                    {file && (
+                    {files.map((file, index) => (
                       <FileUploaderItem 
-                        onClick={() => {
-                          setFile(null);
-                          form.setValue("file", null);
-                        }}
-                        index={0}
+                        key={index}
+                        onClick={() => handleRemoveFile(index)}
+                        index={index}
                       >
                         <Paperclip className="h-4 w-4 stroke-current" />
                         <span>{file.name}</span>
                       </FileUploaderItem>
-                    )}
-                    {existingAttachment && !file && (
+                    ))}
+                    {existingAttachments.map((attachment, index) => (
                       <FileUploaderItem 
-                        onClick={handleRemoveExistingAttachment}
-                        index={0}
+                        key={attachment.attachment_id}
+                        onClick={() => handleRemoveExistingAttachment(index)}
+                        index={index}
                       >
                         <Paperclip className="h-4 w-4 stroke-current" />
-                        <span>{existingAttachment.file_name}</span>
+                        <span>{attachment.file_name}</span>
                       </FileUploaderItem>
-                    )}
+                    ))}
                   </FileUploaderContent>
                 </FileUploader>
               </FormControl>
@@ -375,6 +405,44 @@ export default function AssignmentForm({ assignment }: AssignmentFormProps) {
                 />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="ai_agent"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">AI Agent</FormLabel>
+                <FormMessage />
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="visible"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Visible</FormLabel>
+                <FormMessage />
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value ?? false}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
             </FormItem>
           )}
         />

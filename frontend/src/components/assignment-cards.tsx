@@ -112,11 +112,6 @@ export function AssignmentCards({
               {assignment.title}
             </span>
           </CardTitle>
-          <CardDescription className="line-clamp-2 sm:line-clamp-1">
-            <span>
-              {assignment.description}
-            </span>  
-          </CardDescription>
           <CardAction className="flex flex-col items-center">
             <Badge variant={result.variant} className="rounded-sm">
               <div className="flex items-center gap-1">

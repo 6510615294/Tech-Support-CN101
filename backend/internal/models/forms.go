@@ -5,6 +5,11 @@ import (
 	// "gorm.io/gorm"
 )
 
+type LoginForm struct {
+ 	Username    string `json:"username"`
+ 	Password    string `json:"password"`
+}
+
 type CourseForm struct {
 	Name        string `json:"name" form:"name"`
 	CourseDate  string `json:"course_date" form:"course_date"`
@@ -21,8 +26,8 @@ type AssignmentForm struct {
 	CloseDate 	time.Time	`form:"close"`
 	Tags		[]string	`form:"tags"`
 	Attachments	[]string	`form:"attachments"`
-	AIAgent		*bool		`form:"ai_agent"`
-	Visible		*bool		`form:"visible"`
+	AIAgent		bool		`form:"ai_agent"`
+	Visible		bool		`form:"visible"`
 }
 
 type SubmissionForm struct {

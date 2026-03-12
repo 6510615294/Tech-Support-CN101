@@ -45,6 +45,7 @@ var RolePermissions = map[string][]string{
 		"submission:view_all",
 		"file:read_all",
 		"file:dowload_all",
+		"run:python",
 	},
 	"student": {
 		"course:view_own",

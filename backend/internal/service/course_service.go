@@ -1,0 +1,195 @@
+package service
+
+import (
+	"math/rand"
+	stderrors "errors"
+
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+)
+
+func generateCourseID() string {
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	id := make([]byte, 6)
+	for i := range id {
+		id[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(id)
+}
+
+func CreateCourse(userID, role string, form *models.CourseForm) (*models.ResponseCourse, error) {
+	courseID := generateCourseID()
+
+	course := &models.Course{
+		ID:         courseID,
+		Name:       form.Name,
+		CourseDate: form.CourseDate,
+		Section:    form.Section,
+		Semester:   form.Semester,
+		TeacherID:  userID,
+	}
+
+	member := &models.CourseMember{
+		UserID:   userID,
+		CourseID: courseID,
+		Role:     role,
+		Status:   "active",
+	}
+
+	err := repository.CreateCourseWithMember(course, member)
+	if err != nil {
+		return nil, err
+	}
+
+	response := models.ConvertCourseToResponse(course)
+
+	return &response, nil
+}
+
+func GetCourses(userID, userRole string) ([]models.ResponseCourse, error) {
+	var courses []models.Course
+	var err error
+
+	if models.HasPermission(userRole, "course:view_all") {
+		courses, err = repository.GetAllCourses()
+
+	} else if models.HasPermission(userRole, "course:view_own") {
+		courses, err = repository.GetCoursesByUser(userID)
+
+	} else {
+		return nil, errors.ErrForbidden
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	response := models.ConvertCoursesToResponse(courses)
+
+	return response, nil
+}
+
+func GetCourse(courseID string) (*models.ResponseCourse, error) {
+	course, err := repository.GetCourseByID(courseID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := models.ConvertCourseToResponse(course)
+
+	return &response, nil
+}
+
+func UpdateCourse(
+	courseID string,
+	form *models.CourseForm,
+) (*models.ResponseCourse, error) {
+
+	course, err := repository.GetCourseByID(courseID)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := map[string]any{}
+
+	if form.Name != "" {
+		updates["name"] = form.Name
+	}
+
+	if form.CourseDate != "" {
+		updates["course_date"] = form.CourseDate
+	}
+
+	if form.Section != "" {
+		updates["section"] = form.Section
+	}
+
+	if form.Semester != "" {
+		updates["semester"] = form.Semester
+	}
+
+	if len(updates) > 0 {
+		if err := repository.UpdateCourse(course.ID, updates); err != nil {
+			return nil, err
+		}
+
+		course, err = repository.GetCourseByID(course.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	response := models.ConvertCourseToResponse(course)
+	return &response, nil
+}
+
+func DeleteCourse(courseID string) error {
+	course, err := repository.GetCourseByID(courseID)
+	if err != nil {
+		return err
+	}
+
+	return repository.DeleteCourse(course.ID)
+}
+
+//o(n) querry (Absolutely 3N)
+func EnrollCourse(
+	courseID string,
+	form *models.EnrollmentForms,
+) (*models.ResponseEnrollmentResults, error) {
+
+	results := &models.ResponseEnrollmentResults{
+		EnrollmentResult: make([]models.ResponseEnrollmentResult, 0, len(form.UserEnroll)),
+	}
+
+	for _, enrollment := range form.UserEnroll {
+
+		result := models.ResponseEnrollmentResult{
+			Username: enrollment.Username,
+			Role:     enrollment.CourseRole,
+			Status:   "Success",
+		}
+
+		user, err := repository.GetUserByUsername(enrollment.Username)
+		if err != nil {
+
+			if stderrors.Is(err, errors.ErrUserNotFound) {
+				result.Status = "Need Register"
+			} else {
+				result.Status = "Error"
+			}
+
+			results.EnrollmentResult = append(results.EnrollmentResult, result)
+			continue
+		}
+
+		exists, err := repository.IsUserInCourse(user.ID, courseID)
+		if err != nil {
+			result.Status = "Error"
+			results.EnrollmentResult = append(results.EnrollmentResult, result)
+			continue
+		}
+
+		if exists {
+			result.Status = "Already In Course"
+			results.EnrollmentResult = append(results.EnrollmentResult, result)
+			continue
+		}
+
+		err = repository.CreateCourseMember(&models.CourseMember{
+			UserID:   user.ID,
+			CourseID: courseID,
+			Role:     enrollment.CourseRole,
+			Status:   "enrolled",
+		})
+
+		if err != nil {
+			result.Status = "Error"
+		}
+
+		results.EnrollmentResult = append(results.EnrollmentResult, result)
+	}
+
+	return results, nil
+}

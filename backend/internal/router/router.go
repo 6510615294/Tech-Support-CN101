@@ -1,12 +1,7 @@
 package router
 
 import (
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/auth"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/courses"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/files"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/me"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/run"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/api/upload"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/handler"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,18 +9,26 @@ import (
 func SetupRoutes(app *fiber.App) {
     api := app.Group("/api")
     authGroup := api.Group("/auth")
-    auth.RegisterRoutes(authGroup)
+    handler.RegisterAuthRoutes(authGroup)
 
     protected := api.Group("")
     protected.Use(middleware.AuthMiddleware)
-    me.RegisterRoutes(protected)
+    handler.RegisterMeRoutes(protected)
 
-    courses := protected.Group("/courses")
-	course.RegisterBaseRoutes(courses)
-	courseWithID := courses.Group("/:course_id", middleware.CourseMiddleware)
-	course.RegisterCourseWithIDRoutes(courseWithID)
+    courseWithoutID := protected.Group("/courses")
+	handler.RegisterCourseWithoutIDRoutes(courseWithoutID)
+	courses := courseWithoutID.Group("/:course_id", middleware.CourseMiddleware)
+	handler.RegisterCourseRoutes(courses)
 
-    upload.RegisterRoutes(protected)
-    file.RegisterRoutes(protected)
-    run.RegisterRoutes(protected)
+	members := courses.Group("/members")
+	handler.RegisterMemberRoutes(members)
+
+	assignments := courses.Group("/assignments")
+	handler.RegisterAssignmentRoutes(assignments)
+
+	submissions := assignments.Group("/submissions")
+	handler.RegisterSubmissionRoutes(submissions)
+
+	comment := submissions.Group("/comment")
+	handler.RegisterCommentRoutes(comment)
 }

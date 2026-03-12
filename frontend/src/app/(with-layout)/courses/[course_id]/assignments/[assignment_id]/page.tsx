@@ -2,26 +2,31 @@
 
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { AssignmentCard } from "@/components/assignment-card";
+import { AssignmentCard } from "./assignment-card";
 import { useParams } from "next/navigation";
-import { SubmissionCards } from "@/components/submission-cards";
-import { SubmissionDetail } from "@/components/submission-detail";
-import SubmissionForm from "@/components/submission-form";
+import { SubmissionCards } from "./submission-cards";
+import { SubmissionDetail } from "./submission-detail";
+import SubmissionForm from "./submission-form";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash } from "lucide-react";
+import { HatGlasses, Pencil, Trash, ChartPie } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
+
+type attachment = {
+  id: string
+  file_name: string
+}
 
 type Assignment = {
-    id: string
-    title: string
-    description: string
-    point: number
-    start_date: string
-    due_date: string
-    close_date: string
-    attachment_id: string
-    file_name: string
-    tags: string[]
-}
+  id: string
+  title: string
+  description: string
+  point: number
+  attachments: attachment[]
+  start_date: string
+  due_date: string
+  close_date: string
+  tags: string[]
+};
 
 type Submission = {
   id: string
@@ -46,45 +51,54 @@ export default function Page() {
   const [submissions, setSubmissions] = useState<Submission[] | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [userRole, setUserRole] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const { course_id, assignment_id } = useParams()
   const router = useRouter();
 
-  useEffect(() => {
-    async function loadAssignment() {
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`, {
-        headers: {
-        Authorization: `Bearer ${token}`,
-        },
-      });
+  async function loadAssignment() {
+    const token = localStorage.getItem("token");
+    
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`, {
+      headers: {
+      Authorization: `Bearer ${token}`,
+      },
+    });
 
-      if (!res.ok) {
-        setLoading(false);
-        return;
-      }
-
-      const raw = await res.json();
-      console.log(raw)
-      const data = raw.data;
-      setAssignment(data.assignment);
-      setSubmissions(
-        [...data.submissions].sort((a, b) =>
-          a.submitter.localeCompare(b.submitter)
-        )
-      )
-      setUserRole(raw.role);
-      
-        if (data.submissions && data.submissions.length > 0) {
-          setSelectedSubmission(data.submissions[0]);
-        }
-      
-        setLoading(false);
+    if (!res.ok) {
+      setLoading(false);
+      return;
     }
 
-    loadAssignment();
+    const raw = await res.json();
+    console.log(raw)
+    const data = raw.assignment;
+    setAssignment(data.assignment);
+    setSubmissions(
+      [...data.submissions].sort((a, b) =>
+        a.submitter.localeCompare(b.submitter)
+      )
+    )
+    setUserRole(raw.role);
+    
+      if (data.submissions && data.submissions.length > 0) {
+        setSelectedSubmission(data.submissions[0]);
+      }
+    
+      setLoading(false);
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadAssignment();
+    };
+  
+    fetchData();
   }, []);
+  
+  const handleSummary = () => {
+    router.push(`/courses/${course_id}/assignments/${assignment_id}/summary`);
+  };
 
   const handleEdit = () => {
     router.push(`/courses/${course_id}/assignments/${assignment_id}/edit`);
@@ -208,10 +222,32 @@ export default function Page() {
   if (loading) return <div>Loading...</div>;
   if (!assignment) return <div>Assignment not found</div>;
 
+  // Check if the assignment is closed (past close_date)
+  const isAssignmentClosed = new Date() > new Date(assignment.close_date);
+
   return (
-    <div>
+    <div className="flex-col">
       { userRole == "teacher" && (
-        <div className="flex justify-end mr-18 gap-1">
+        <div className=" flex-1 flex justify-end mx-20 gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-sm"
+            onClick={handleSummary}
+          >
+            <ChartPie className="w-4 h-4 mr-1" />
+            Summary
+          </Button>
+          <Toggle
+            variant="outline"
+            size="sm"
+            className="rounded-sm"
+            pressed={isAnonymous}
+            onPressedChange={setIsAnonymous}
+          >
+            <HatGlasses className="w-4 h-4 mr-1" />
+            Anonymous mode
+          </Toggle>
           <Button
             variant="outline"
             size="sm"
@@ -232,12 +268,12 @@ export default function Page() {
           </Button>
         </div>
       )}
-      <div className="flex gap-3 max-w-7xl m-auto">
+      <div className="flex-1 flex gap-3 max-w-7xl mx-15">
         <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden scrollbar-hide w-full gap-3 min-h-0">
           <AssignmentCard key={assignment.id} assignment={assignment} />
           {userRole !== "student" && submissions && submissions.length > 0 ? (
             <SubmissionCards
-              showName={true}
+              showName={!isAnonymous}
               submissions={submissions}
               onSelect={setSelectedSubmission}
             />
@@ -245,7 +281,9 @@ export default function Page() {
             <SubmissionForm
               submission={selectedSubmission}
               maxPoint={assignment.point}
+              disabled={isAssignmentClosed}  
               isLoading={loading}
+              onUpdate={loadAssignment}
             />
           ) : (
             <></>
@@ -259,6 +297,7 @@ export default function Page() {
               submission={selectedSubmission}
               maxPoint={assignment.point}
               role={userRole}
+              isAnonymous={isAnonymous}
               onSave={async (grade, comment, isVisible) => {
                 if (!selectedSubmission) return
                 

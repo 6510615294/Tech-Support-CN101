@@ -24,7 +24,7 @@ func ConvertCoursesToResponse(courses []Course) []ResponseCourse {
 func ConvertCourseMemberToResponse(courseMember *CourseMember) ResponseMember {
 	return ResponseMember{
 		UserID:		courseMember.UserID,
-		Username:	courseMember.User.Username,	
+		Username:	courseMember.User.Username,
 		EnName:		courseMember.User.EnName,
 		ThName:		courseMember.User.ThName,
 		Email:		courseMember.User.Email,
@@ -55,7 +55,7 @@ func ConvertAssignmentToResponse(
 			CreatedAt: att.CreatedAt.Format(layout),
 		}
 	}
-	
+
 	dueDate := a.DueDate
 	closeDate := a.CloseDate
 
@@ -121,7 +121,7 @@ func ConvertDetailedAssignmentToResponse(
 			CreatedAt: att.CreatedAt.Format(layout),
 		}
 	}
-	
+
 	dueDate := a.DueDate
 	closeDate := a.CloseDate
 
