@@ -33,6 +33,10 @@ func Connect() {
 		&models.Comment{},
 		&models.Submission{},
 		&models.AssignmentOverride{},
+		&models.AssignmentTemplate{},
+		&models.AIConfig{},
+		&models.AssignmentPrompt{},
+		&models.GradingJob{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}

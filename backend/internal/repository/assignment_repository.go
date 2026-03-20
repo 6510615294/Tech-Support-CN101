@@ -2,10 +2,11 @@ package repository
 
 import (
 	stderrors "errors"
+
 	"gorm.io/gorm"
-	
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 )
 
@@ -20,7 +21,7 @@ func GetAssignment(courseID, assignmentID string) (*models.Assignment, error) {
 		Where("course_id = ? AND id = ?", courseID, assignmentID).
 		First(&assignment).
 		Error
-	
+
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.ErrAssignmentNotFound
 	}
@@ -37,12 +38,27 @@ func GetAssignmentWithRelations(courseID, assignmentID string) (*models.Assignme
 		Where("course_id = ?", courseID).
 		First(&assignment, "id = ?", assignmentID).
 		Error
-	
+
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.ErrAssignmentNotFound
 	}
 
 	return &assignment, err
+}
+
+func GetAssignmentMaxPoint(assignmentID string) (*int16, error) {
+	var assignment models.Assignment
+
+	err := database.DB.
+		Where("id = ?", assignmentID).
+		First(&assignment).
+		Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrAssignmentNotFound
+	}
+
+	return &assignment.Point, err
 }
 
 func GetVisibleAssignment(courseID, assignmentID string) (*models.Assignment, error) {
@@ -82,7 +98,7 @@ func GetVisibleAssignments(courseID string) ([]models.Assignment, error) {
 	return assignments, err
 }
 
-func UpdateAssignment(id string, updates map[string]any,) error {
+func UpdateAssignment(id string, updates map[string]any) error {
 	return database.DB.
 		Model(&models.Assignment{}).
 		Where("id = ?", id).
@@ -105,6 +121,56 @@ func CreateAssignmentOverride(
 	return override, nil
 }
 
+func CreateAssignmentPrompt(
+	prompt *models.AssignmentPrompt,
+) (*models.AssignmentPrompt, error) {
+
+	if err := database.DB.Create(prompt).Error; err != nil {
+		return nil, err
+	}
+
+	return prompt, nil
+}
+
+func GetAssignmentPrompt(assignmentID string) (*models.AssignmentPrompt, error) {
+	var prompt models.AssignmentPrompt
+
+	err := database.DB.
+		Where("assignment_id = ?", assignmentID).
+		First(&prompt).
+		Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrAssignmentNotFound
+	}
+
+	return &prompt, err
+}
+
+func GetAssignmentPromptByCourseID(courseID, assignmentID string) (*models.AssignmentPrompt, error) {
+	var prompt models.AssignmentPrompt
+
+	err := database.DB.
+		Joins("JOIN assignments ON assignments.id = assignment_prompts.assignment_id").
+		Where("assignments.course_id = ? AND assignment_prompts.assignment_id = ?", courseID, assignmentID).
+		First(&prompt).
+		Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrAssignmentNotFound
+	}
+
+	return &prompt, err
+}
+
+func UpdateAssignmentPrompt(id string, updates map[string]any) error {
+	return database.DB.
+		Model(&models.AssignmentPrompt{}).
+		Where("id = ?", id).
+		Updates(updates).
+		Error
+}
+
 func GetOverridesByStudent(userID string) ([]models.AssignmentOverride, error) {
 	var overrides []models.AssignmentOverride
 
@@ -114,25 +180,6 @@ func GetOverridesByStudent(userID string) ([]models.AssignmentOverride, error) {
 		Error
 
 	return overrides, err
-}
-
-func ReplaceAssignmentTags(id string, tags []models.Tag) error {
-	return database.DB.
-		Model(&models.Assignment{ID: id}).
-		Association("Tags").
-		Replace(tags)
-}
-
-func CreateTag(tag *models.Tag) error {
-	return database.DB.Create(tag).Error
-}
-
-func FindTags(names []string) ([]models.Tag, error) {
-	var existingTags []models.Tag
-
-	err := database.DB.Where("name IN ?", names).Find(&existingTags).Error
-	
-	return existingTags, err
 }
 
 func GetAssignmentOverride(assignmentID, userID string) (*models.AssignmentOverride, error) {

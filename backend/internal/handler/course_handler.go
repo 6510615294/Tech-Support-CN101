@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
-	"github.com/gofiber/fiber/v2"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
+	"github.com/gofiber/fiber/v3"
 )
 
 func RegisterCourseWithoutIDRoutes(app fiber.Router) {
@@ -19,7 +19,7 @@ func RegisterCourseRoutes(app fiber.Router) {
 	app.Post("/enroll", enrollCourse)
 }
 
-func createCourse(c *fiber.Ctx) error {
+func createCourse(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 
@@ -28,7 +28,7 @@ func createCourse(c *fiber.Ctx) error {
 	}
 
 	var form models.CourseForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -40,7 +40,7 @@ func createCourse(c *fiber.Ctx) error {
 	return c.JSON(data)
 }
 
-func getCourses(c *fiber.Ctx) error {
+func getCourses(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 
@@ -49,14 +49,10 @@ func getCourses(c *fiber.Ctx) error {
 		return SendError(c, err)
 	}
 
-	return c.JSON(fiber.Map{
-		"role":    role,
-		"courses": courses,
-	})
+	return c.JSON(courses)
 }
 
-func getCourse(c *fiber.Ctx) error {
-	role := c.Locals("course_role").(string)
+func getCourse(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 
 	course, err := service.GetCourse(courseID)
@@ -64,13 +60,10 @@ func getCourse(c *fiber.Ctx) error {
 		SendError(c, err)
 	}
 
-	return c.JSON(fiber.Map{
-		"role":   role,
-		"course": course,
-	})
+	return c.JSON(course)
 }
 
-func updateCourse(c *fiber.Ctx) error {
+func updateCourse(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
@@ -79,7 +72,7 @@ func updateCourse(c *fiber.Ctx) error {
 	}
 
 	var form models.CourseForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -91,7 +84,7 @@ func updateCourse(c *fiber.Ctx) error {
 	return c.JSON(data)
 }
 
-func deleteCourse(c *fiber.Ctx) error {
+func deleteCourse(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
@@ -109,7 +102,7 @@ func deleteCourse(c *fiber.Ctx) error {
 	})
 }
 
-func enrollCourse(c *fiber.Ctx) error {
+func enrollCourse(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
@@ -118,7 +111,7 @@ func enrollCourse(c *fiber.Ctx) error {
 	}
 
 	var form models.EnrollmentForms
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 

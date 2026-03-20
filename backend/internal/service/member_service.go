@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
 func GetMember(courseID string) ([]models.ResponseMember, error) {

@@ -1,13 +1,13 @@
 package models
 
-func ConvertCourseToResponse(course *										Course) ResponseCourse {
+func ConvertCourseToResponse(course *Course) ResponseCourse {
 	return ResponseCourse{
-		ID:         course.ID,
-		Name:       course.Name,
-		Schedule:  	course.CourseDate,
-		Section:    course.Section,
-		Semester:	course.Semester,
-		Teacher:   	course.Teacher.Username,
+		ID:       course.ID,
+		Name:     course.Name,
+		Schedule: course.CourseDate,
+		Section:  course.Section,
+		Semester: course.Semester,
+		Teacher:  course.Teacher.EnName,
 	}
 }
 
@@ -23,13 +23,13 @@ func ConvertCoursesToResponse(courses []Course) []ResponseCourse {
 
 func ConvertCourseMemberToResponse(courseMember *CourseMember) ResponseMember {
 	return ResponseMember{
-		UserID:		courseMember.UserID,
-		Username:	courseMember.User.Username,
-		EnName:		courseMember.User.EnName,
-		ThName:		courseMember.User.ThName,
-		Email:		courseMember.User.Email,
-		Status:		courseMember.Status,
-		Role:		courseMember.Role,
+		UserID:   courseMember.UserID,
+		Username: courseMember.User.Username,
+		EnName:   courseMember.User.EnName,
+		ThName:   courseMember.User.ThName,
+		Email:    courseMember.User.Email,
+		Status:   courseMember.Status,
+		Role:     courseMember.Role,
 	}
 }
 
@@ -49,7 +49,6 @@ func ConvertAssignmentToResponse(
 	for i, att := range a.Attachments {
 		attachments[i] = ResponseAttachment{
 			ID:        att.ID,
-			URL:       att.URL,
 			FileName:  att.FileName,
 			FileType:  att.FileType,
 			CreatedAt: att.CreatedAt.Format(layout),
@@ -74,11 +73,10 @@ func ConvertAssignmentToResponse(
 		CloseDate:   closeDate.Format(layout),
 		Attachments: attachments,
 		Tags:        tagNames,
-		AIAgent: 	 a.AIAgent,
-		Visible: 	 a.Visible,
+		AIAgent:     a.AIAgent,
+		Visible:     a.Visible,
 	}
 }
-
 
 func ConvertAssignmentsToResponse(
 	assignments []Assignment,
@@ -115,7 +113,6 @@ func ConvertDetailedAssignmentToResponse(
 	for i, att := range a.Attachments {
 		attachments[i] = ResponseAttachment{
 			ID:        att.ID,
-			URL:       att.URL,
 			FileName:  att.FileName,
 			FileType:  att.FileType,
 			CreatedAt: att.CreatedAt.Format(layout),
@@ -194,11 +191,88 @@ func ConvertSubmissionToResponse(s *Submission) ResponseSubmission {
 	}
 
 	return ResponseSubmission{
-		ID:				s.ID,
-		Answer: 		s.Answer,
-		Point:        	s.Point,
-		GradedBy: 		(*string)(s.GradedBy),
-		AttachmentID: 	s.AttachmentID,
-		FileName:     	fileName,
+		ID:           s.ID,
+		Answer:       s.Answer,
+		Point:        s.Point,
+		GradedBy:     (*string)(s.GradedBy),
+		AttachmentID: s.AttachmentID,
+		FileName:     fileName,
 	}
+}
+
+func ConvertAssignmentTemplatesToResponse(
+	templates []AssignmentTemplate,
+) []ResponseAssignmentTemplates {
+
+	response := make([]ResponseAssignmentTemplates, 0, len(templates))
+
+	for _, template := range templates {
+
+		tagNames := make([]string, len(template.Tags))
+		for i, tag := range template.Tags {
+			tagNames[i] = tag.Name
+		}
+
+		data := ResponseAssignmentTemplates{
+			ID:    template.ID,
+			Title: template.Title,
+			Tags:  tagNames,
+		}
+
+		response = append(response, data)
+	}
+
+	return response
+}
+
+func ConvertAssignmentTemplateToResponse(
+	template *AssignmentTemplate,
+) *ResponseAssignmentTemplate {
+
+	tagNames := make([]string, len(template.Tags))
+	for i, tag := range template.Tags {
+		tagNames[i] = tag.Name
+	}
+
+	const layout = "2006-01-02"
+
+	attachments := make([]ResponseAttachment, len(template.Attachments))
+	for i, att := range template.Attachments {
+		attachments[i] = ResponseAttachment{
+			ID:        att.ID,
+			FileName:  att.FileName,
+			FileType:  att.FileType,
+			CreatedAt: att.CreatedAt.Format(layout),
+		}
+	}
+
+	response := ResponseAssignmentTemplate{
+		Title:       template.Title,
+		Description: template.Description,
+		Point:       template.Point,
+		Attachments: attachments,
+		Tags:        tagNames,
+		AIAgent:     false,
+		Visible:     true,
+	}
+
+	return &response
+}
+
+func ConvertAttachmentsToResponse(
+	attachments []Attachment,
+) []ResponseAttachment {
+	const layout = "2006-01-02"
+
+	response := make([]ResponseAttachment, len(attachments))
+	for i, att := range attachments {
+		response[i] = ResponseAttachment{
+			ID:        att.ID,
+			FileName:  att.FileName,
+			FileType:  att.FileType,
+			CreatedAt: att.CreatedAt.Format(layout),
+		}
+	}
+
+	return response
 }

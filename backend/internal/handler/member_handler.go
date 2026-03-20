@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
-	"github.com/gofiber/fiber/v2"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
+	"github.com/gofiber/fiber/v3"
 )
 
 func RegisterMemberRoutes(app fiber.Router) {
@@ -13,7 +13,7 @@ func RegisterMemberRoutes(app fiber.Router) {
 	app.Delete("/:member_id", deleteMember)
 }
 
-func getMember(c *fiber.Ctx) error {
+func getMember(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 	role := c.Locals("course_role").(string)
 
@@ -29,7 +29,7 @@ func getMember(c *fiber.Ctx) error {
 	return c.JSON(students)
 }
 
-func updateMember(c *fiber.Ctx) error {
+func updateMember(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 	memberID := c.Params("member_id")
@@ -39,7 +39,7 @@ func updateMember(c *fiber.Ctx) error {
 	}
 
 	var form models.UpdateMemberForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -51,7 +51,7 @@ func updateMember(c *fiber.Ctx) error {
 	return c.JSON(member)
 }
 
-func deleteMember(c *fiber.Ctx) error {
+func deleteMember(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 	memberID := c.Params("member_id")

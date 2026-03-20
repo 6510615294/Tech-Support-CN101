@@ -2,10 +2,10 @@ package service
 
 import (
 	stderrors "errors"
-	
+
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
 func CreateOrUpdateComment(
@@ -79,8 +79,8 @@ func ToggleComment(
 
 	allowed :=
 		models.HasPermission(role, "assignment:comment_any") ||
-		(models.HasPermission(role, "assignment:comment_own") &&
-			string(comment.CreatedByRole) == role)
+			(models.HasPermission(role, "assignment:comment_own") &&
+				string(comment.CreatedByRole) == role)
 
 	if !allowed {
 		return nil, errors.ErrForbidden

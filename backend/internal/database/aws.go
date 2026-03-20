@@ -76,12 +76,12 @@ func (r *BytesReader) Seek(offset int64, whence int) (int64, error) {
 
 func ReadPythonFileFromS3ByKey(fileKey string) (string, error) {
 	ctx := context.TODO()
-	
+
 	// Validate that the file is a .py file
 	if len(fileKey) < 3 || fileKey[len(fileKey)-3:] != ".py" {
 		return "", fmt.Errorf("invalid file: only .py files are allowed")
 	}
-	
+
 	result, err := S3Client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(BucketName),
 		Key:    aws.String(fileKey),
@@ -91,28 +91,28 @@ func ReadPythonFileFromS3ByKey(fileKey string) (string, error) {
 		return "", err
 	}
 	defer result.Body.Close()
-	
+
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(result.Body)
 	if err != nil {
 		fmt.Printf("Error reading file content: %v\n", err)
 		return "", err
 	}
-	
+
 	// Convert bytes to string
 	fileContent := buf.String()
-	
+
 	// Validate that the content is valid UTF-8 text
 	if !isValidUTF8(fileContent) {
 		return "", fmt.Errorf("invalid file content: file is not valid text")
 	}
-	
+
 	return fileContent, nil
 }
 
 func DeleteFileFromS3(fileKey string) error {
 	ctx := context.TODO()
-	
+
 	_, err := S3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(BucketName),
 		Key:    aws.String(fileKey),
@@ -121,7 +121,7 @@ func DeleteFileFromS3(fileKey string) error {
 		fmt.Printf("Error deleting object from S3: %v\n", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -141,7 +141,7 @@ func isValidUTF8(s string) bool {
 
 func DownloadFileFromS3ByKey(fileKey string) ([]byte, error) {
 	ctx := context.TODO()
-	
+
 	result, err := S3Client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(BucketName),
 		Key:    aws.String(fileKey),
@@ -151,14 +151,13 @@ func DownloadFileFromS3ByKey(fileKey string) ([]byte, error) {
 		return nil, err
 	}
 	defer result.Body.Close()
-	
+
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(result.Body)
 	if err != nil {
 		fmt.Printf("Error reading file content: %v\n", err)
 		return nil, err
 	}
-	
+
 	return buf.Bytes(), nil
 }
-

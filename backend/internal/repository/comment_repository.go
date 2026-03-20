@@ -2,10 +2,11 @@ package repository
 
 import (
 	stderrors "errors"
+
 	"gorm.io/gorm"
-	
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 )
 
@@ -15,6 +16,28 @@ func CreateComment(comment *models.Comment) (*models.Comment, error) {
 	}
 
 	return comment, nil
+}
+
+func CreateOrUpdateComment(comment *models.Comment) error {
+	var existing models.Comment
+
+	err := database.DB.
+		Where("submission_id = ? AND created_by_role = ?", comment.SubmissionID, comment.CreatedByRole).
+		First(&existing).Error
+
+	if err == nil {
+		return database.DB.Model(&existing).Updates(map[string]any{
+			"comment":    comment.Comment,
+			"visible":    comment.Visible,
+			"created_by": comment.CreatedBy,
+		}).Error
+	}
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return database.DB.Create(comment).Error
+	}
+
+	return err
 }
 
 func GetCommentByIDAndCourse(

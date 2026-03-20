@@ -1,0 +1,243 @@
+package service
+
+import (
+	"io"
+	"mime/multipart"
+	"strings"
+
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
+)
+
+func buildAssignmentSummary(
+	assignment *models.Assignment,
+	courseMembers []models.CourseMember,
+	submissions []models.Submission,
+) (*models.ResponseAssignmentSummary, error) {
+
+	totalStudents := int16(len(courseMembers))
+
+	submissionMap := make(map[string]*models.Submission)
+	for i := range submissions {
+		submissionMap[submissions[i].StudentID] = &submissions[i]
+	}
+
+	var submitted int16
+	var incomplete int16
+	var graded int16
+	var ungraded int16
+	var scores []float32
+
+	submissionList := make([]models.ResponseAssignmentSubmissionList, 0, len(courseMembers))
+
+	for _, cm := range courseMembers {
+
+		var point int16
+		var percentage float32
+		status := "no submitted"
+
+		submission, ok := submissionMap[cm.UserID]
+
+		if ok && submission.AttachmentID != nil {
+
+			if submission.UpdatedAt.Before(assignment.DueDate) || submission.UpdatedAt.Equal(assignment.DueDate) {
+				status = "submitted"
+			} else {
+				status = "overduedate"
+			}
+
+			if submission.Point != nil {
+				point = *submission.Point
+				percentage = float32(point) / float32(assignment.Point) * 100
+				graded++
+				scores = append(scores, float32(point))
+			} else {
+				ungraded++
+			}
+
+			submitted++
+		} else {
+			incomplete++
+		}
+
+		submissionList = append(submissionList, models.ResponseAssignmentSubmissionList{
+			UserID:           cm.UserID,
+			StudentID:        cm.User.Username,
+			EnName:           cm.User.EnName,
+			ThName:           cm.User.ThName,
+			Email:            cm.User.Email,
+			Point:            point,
+			Percentage:       percentage,
+			SubmissionStatus: status,
+		})
+	}
+
+	// statistics calculations remain same
+	// average, median, distribution etc.
+
+	distribution := createScoreDistribution(scores, float32(assignment.Point))
+
+	response := models.ResponseAssignmentSummary{
+		Statistic: models.ResponseAssignmentStatistic{
+			Student:      totalStudents,
+			Submitted:    submitted,
+			Incomplete:   incomplete,
+			Distribution: distribution,
+		},
+		SubmissionList: submissionList,
+	}
+
+	return &response, nil
+}
+
+func createScoreDistribution(scores []float32, maxPoints float32) []models.ScoreDistribution {
+
+	if maxPoints <= 0 {
+		maxPoints = 100
+	}
+
+	binSize := maxPoints / 5
+
+	distribution := make([]models.ScoreDistribution, 5)
+
+	for i := range distribution {
+		start := float32(i) * binSize
+		end := start + binSize
+
+		if i == len(distribution)-1 {
+			end = maxPoints
+		}
+
+		distribution[i] = models.ScoreDistribution{
+			RangeStart: start,
+			RangeEnd:   end,
+			Count:      0,
+		}
+	}
+
+	for _, score := range scores {
+		for i := range distribution {
+			if i == len(distribution)-1 {
+
+				if score >= distribution[i].RangeStart && score <= distribution[i].RangeEnd {
+					distribution[i].Count++
+					break
+				}
+			} else {
+				if score >= distribution[i].RangeStart && score < distribution[i].RangeEnd {
+					distribution[i].Count++
+					break
+				}
+			}
+		}
+	}
+
+	return distribution
+}
+
+func sanitizeFileName(fileName string) string {
+	// Replace path separators and other unsafe characters
+	unsafeChars := []string{"\\", "/", ":", "*", "?", "\"", "<", ">", "|"}
+	sanitized := fileName
+	for _, char := range unsafeChars {
+		sanitized = strings.ReplaceAll(sanitized, char, "_")
+	}
+	return sanitized
+}
+
+func resolveTags(names []string) ([]models.Tag, error) {
+
+	if len(names) > 5 {
+		names = names[:5]
+	}
+
+	var clean []string
+	for _, t := range names {
+		name := strings.TrimSpace(t)
+		if name != "" {
+			clean = append(clean, name)
+		}
+	}
+
+	existing, err := repository.FindTags(clean)
+	if err != nil {
+		return nil, err
+	}
+
+	tagMap := map[string]models.Tag{}
+	for _, t := range existing {
+		tagMap[t.Name] = t
+	}
+
+	var result []models.Tag
+
+	for _, name := range clean {
+
+		if tag, ok := tagMap[name]; ok {
+			result = append(result, tag)
+			continue
+		}
+
+		newTag := models.Tag{Name: name}
+
+		if err := repository.CreateTag(&newTag); err != nil {
+			return nil, err
+		}
+
+		result = append(result, newTag)
+	}
+
+	return result, nil
+}
+
+func handleAttachments(
+	userID string,
+	existingIDs []string,
+	files []*multipart.FileHeader,
+) ([]models.Attachment, error) {
+
+	var attachments []models.Attachment
+
+	existing, err := repository.GetAttachmentsByIDs(userID, existingIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(existing) != len(existingIDs) {
+		return nil, errors.ErrAttachmentNotFound
+	}
+
+	attachments = append(attachments, existing...)
+
+	for _, file := range files {
+
+		src, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+
+		data, _ := io.ReadAll(src)
+		src.Close()
+
+		fileKey, err := database.UploadFileToS3(data, file.Filename)
+		if err != nil {
+			return nil, err
+		}
+
+		att := models.Attachment{
+			FileName: file.Filename,
+			FileKey:  fileKey,
+			UserID:   userID,
+		}
+
+		if err := repository.CreateAttachment(&att); err != nil {
+			return nil, err
+		}
+
+		attachments = append(attachments, att)
+	}
+
+	return attachments, nil
+}

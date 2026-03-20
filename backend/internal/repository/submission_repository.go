@@ -2,10 +2,11 @@ package repository
 
 import (
 	stderrors "errors"
+
 	"gorm.io/gorm"
-	
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 )
 
@@ -26,6 +27,21 @@ func GetSubmission(courseID, submissionID string) (*models.Submission, error) {
 	}
 
 	return &submission, nil
+}
+
+func GetSubmissions(assignmentID string) ([]models.Submission, error) {
+	var submissions []models.Submission
+
+	err := database.DB.
+		InnerJoins("Attachment").
+		Where("assignment_id = ?", assignmentID).
+		Find(&submissions).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return submissions, nil
 }
 
 func GetSubmissionsWithComments(assignmentID string) ([]models.Submission, error) {
@@ -58,7 +74,7 @@ func GetSubmissionWithAssignment(submissionID, userID string) (*models.Submissio
 	return &submission, nil
 }
 
-func GetStudentSubmissions(assignmentID, userID string,) ([]models.Submission, error) {
+func GetStudentSubmissions(assignmentID, userID string) ([]models.Submission, error) {
 	var submissions []models.Submission
 
 	err := database.DB.

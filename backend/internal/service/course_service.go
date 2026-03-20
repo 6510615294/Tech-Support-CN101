@@ -1,12 +1,12 @@
 package service
 
 import (
-	"math/rand"
 	stderrors "errors"
+	"math/rand"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
 func generateCourseID() string {
@@ -133,7 +133,7 @@ func DeleteCourse(courseID string) error {
 	return repository.DeleteCourse(course.ID)
 }
 
-//o(n) querry (Absolutely 3N)
+// o(n) querry (Absolutely 3N)
 func EnrollCourse(
 	courseID string,
 	form *models.EnrollmentForms,

@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
-	"github.com/gofiber/fiber/v2"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
+	"github.com/gofiber/fiber/v3"
 )
 
 func RegisterSubmissionRoutes(app fiber.Router) {
@@ -14,7 +14,7 @@ func RegisterSubmissionRoutes(app fiber.Router) {
 	app.Get("/:submission_id/read", readSubmission)
 }
 
-func createSubmission(c *fiber.Ctx) error {
+func createSubmission(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 	assignmentID := c.Params("assignment_id")
 	userID := c.Locals("user_id").(string)
@@ -25,7 +25,7 @@ func createSubmission(c *fiber.Ctx) error {
 	}
 
 	var form models.SubmissionForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -39,7 +39,7 @@ func createSubmission(c *fiber.Ctx) error {
 	return c.JSON(submission)
 }
 
-func updateSubmission(c *fiber.Ctx) error {
+func updateSubmission(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("course_role").(string)
 	submissionID := c.Params("submission_id")
@@ -49,7 +49,7 @@ func updateSubmission(c *fiber.Ctx) error {
 	}
 
 	var form models.SubmissionForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -63,7 +63,7 @@ func updateSubmission(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func updateGrade(c *fiber.Ctx) error {
+func updateGrade(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 	submissionID := c.Params("submission_id")
 	role := c.Locals("course_role").(string)
@@ -73,7 +73,7 @@ func updateGrade(c *fiber.Ctx) error {
 	}
 
 	var form models.GradeForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -85,12 +85,13 @@ func updateGrade(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
-func readSubmission(c *fiber.Ctx) error {
+func readSubmission(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	submissionID := c.Params("submission_id")
-
+	print("test1")
 	content, err := service.ReadSubmission(submissionID, userID, role)
+	print("test2")
 	if err != nil {
 		return err
 	}

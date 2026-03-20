@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
-	"github.com/gofiber/fiber/v2"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
+	"github.com/gofiber/fiber/v3"
 )
 
 func RegisterCommentRoutes(app fiber.Router) {
@@ -12,7 +12,7 @@ func RegisterCommentRoutes(app fiber.Router) {
 	app.Post("/:comment_id", toggleComment)
 }
 
-func createOrUpdateComment(c *fiber.Ctx) error {
+func createOrUpdateComment(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("course_role").(string)
@@ -23,7 +23,7 @@ func createOrUpdateComment(c *fiber.Ctx) error {
 	}
 
 	var form models.CommentForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -35,7 +35,7 @@ func createOrUpdateComment(c *fiber.Ctx) error {
 	return c.JSON(data)
 }
 
-func toggleComment(c *fiber.Ctx) error {
+func toggleComment(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 	submissionID := c.Params("submission_id")
 	commentID := c.Params("comment_id")

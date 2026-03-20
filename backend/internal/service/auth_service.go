@@ -6,18 +6,18 @@ import (
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/go-resty/resty/v2"
 )
 
 type TUAPIResponse struct {
-	Status		bool	`json:"status"`
-	Username	string	`json:"username"`
-	ThName		string	`json:"displayname_th"`
-	EnName		string	`json:"displayname_en"`
-	Type 		string	`json:"type"`
-	Email		string	`json:"email"`
+	Status   bool   `json:"status"`
+	Username string `json:"username"`
+	ThName   string `json:"displayname_th"`
+	EnName   string `json:"displayname_en"`
+	Type     string `json:"type"`
+	Email    string `json:"email"`
 }
 
 func AuthenticateUser(form *models.LoginForm) (*models.User, error) {

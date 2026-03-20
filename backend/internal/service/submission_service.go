@@ -6,10 +6,10 @@ import (
 	"mime/multipart"
 	"time"
 
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
 func CreateSubmission(
@@ -171,8 +171,8 @@ func ReadSubmission(
 
 	allowed :=
 		models.HasPermission(role, "file:read_all") ||
-		(models.HasPermission(role, "file:read_own") &&
-			submission.StudentID == userID)
+			(models.HasPermission(role, "file:read_own") &&
+				submission.StudentID == userID)
 
 	if !allowed {
 		return "", errors.ErrForbidden

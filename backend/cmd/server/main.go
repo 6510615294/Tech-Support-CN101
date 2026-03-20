@@ -1,27 +1,32 @@
 package main
 
 import (
-    "log"
+	"log"
 
-    "github.com/gofiber/fiber/v2"
-    "github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 
-    "github.com/6510615294/Tech-Support-CN101/backend/internal/config"
-    "github.com/6510615294/Tech-Support-CN101/backend/internal/database"
-    "github.com/6510615294/Tech-Support-CN101/backend/internal/router"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/router"
 )
 
 func main() {
-    config.LoadEnv()
-    database.Connect()
+	config.LoadEnv()
+	database.Connect()
 
-    database.ConnectS3("cnproject-6510615120")
+	database.ConnectS3("cnproject-6510615120")
+	queue.Init(
+		"",
+		"",
+	)
 
-    app := fiber.New()
-    app.Use(cors.New())
+	app := fiber.New()
+	app.Use(cors.New())
 
-    router.SetupRoutes(app)
+	router.SetupRoutes(app)
 
-    log.Println("Server running on :8080")
-    app.Listen(":8080")
+	log.Println("Server running on :8080")
+	app.Listen(":8080")
 }

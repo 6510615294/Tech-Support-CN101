@@ -5,7 +5,7 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 func RegisterRunRoutes(app fiber.Router) {
@@ -22,16 +22,15 @@ func getRole(userID string) models.Role {
 	return role
 }
 
-func runPython(c *fiber.Ctx) error {
+func runPython(c fiber.Ctx) error {
 	role := c.Locals("user_role").(string)
-
 
 	if !models.HasPermission(role, "run:python") {
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	var form models.PythonCodeForm
-	if err := c.BodyParser(&form); err != nil {
+	if err := c.Bind().Body(&form); err != nil {
 		return SendError(c, errors.ErrBadRequest)
 	}
 

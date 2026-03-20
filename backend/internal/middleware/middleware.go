@@ -7,13 +7,13 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 var secret = config.GetEnv("JWT_SECRET")
 
-func AuthMiddleware(c *fiber.Ctx) error {
+func AuthMiddleware(c fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 
 	if authHeader == "" {
@@ -46,27 +46,27 @@ func AuthMiddleware(c *fiber.Ctx) error {
 // ParseToken validates and parses a JWT token string.
 func ParseToken(tokenStr string) (jwt.MapClaims, error) {
 
-    token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-        // Make sure token uses HMAC and correct signing method
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, errors.New("unexpected signing method")
-        }
-        return []byte(secret), nil
-    })
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		// Make sure token uses HMAC and correct signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(secret), nil
+	})
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    // Extract claims if valid
-    if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-        return claims, nil
-    }
+	// Extract claims if valid
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
 
-    return nil, errors.New("invalid token")
+	return nil, errors.New("invalid token")
 }
 
-func CourseMiddleware(c *fiber.Ctx) error {
+func CourseMiddleware(c fiber.Ctx) error {
 	userID := c.Locals("user_id")
 	if userID == nil {
 		return fiber.ErrUnauthorized

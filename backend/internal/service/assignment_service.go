@@ -1,17 +1,20 @@
 package service
 
 import (
-	"fmt"
-	"mime/multipart"
-	"strings"
 	"archive/zip"
 	"bytes"
-	"io"
+	"encoding/json"
+	"fmt"
+	"mime/multipart"
+	"net/http"
+	"time"
 
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
 func CreateAssignment(
@@ -44,8 +47,8 @@ func CreateAssignment(
 		CloseDate:   form.CloseDate,
 		Attachments: attachments,
 		Tags:        tags,
-		AIAgent: 	 form.AIAgent,
-		Visible: 	 form.Visible,
+		AIAgent:     form.AIAgent,
+		Visible:     form.Visible,
 	}
 
 	if err := repository.CreateAssignment(&assignment); err != nil {
@@ -59,13 +62,13 @@ func CreateAssignment(
 func GetAssignments(userID, courseID, role string) (*[]models.ResponseAssignment, error) {
 	var assignments []models.Assignment
 	var err error
-	
+
 	if models.HasPermission(role, "assignment:view_all") {
 		assignments, err = repository.GetAssignmentsByCourse(courseID)
 
 	} else if models.HasPermission(role, "assignment:view_visible") {
 		assignments, err = repository.GetVisibleAssignments(courseID)
-	
+
 	} else {
 		return nil, errors.ErrForbidden
 	}
@@ -73,7 +76,7 @@ func GetAssignments(userID, courseID, role string) (*[]models.ResponseAssignment
 	if err != nil {
 		return nil, err
 	}
-	
+
 	overrideMap := map[string]models.AssignmentOverride{}
 
 	if models.HasPermission(role, "submission:view_own") {
@@ -97,13 +100,13 @@ func GetAssignment(userID, courseID, role, assignmentID string) (*models.Respons
 	var submissions []models.Submission
 	var override *models.AssignmentOverride
 	var err error
-	
+
 	if models.HasPermission(role, "assignment:view_all") {
 		assignment, err = repository.GetAssignmentWithRelations(courseID, assignmentID)
-	
+
 	} else if models.HasPermission(role, "assignment:view_visible") {
 		assignment, err = repository.GetVisibleAssignment(courseID, assignmentID)
-	
+
 	} else {
 		return nil, errors.ErrForbidden
 	}
@@ -114,7 +117,7 @@ func GetAssignment(userID, courseID, role, assignmentID string) (*models.Respons
 
 	if models.HasPermission(role, "submission:view_all") {
 		submissions, err = repository.GetSubmissionsWithComments(assignmentID)
-	
+
 	} else if models.HasPermission(role, "submission:view_own") {
 		submissions, err = repository.GetStudentSubmissions(assignmentID, userID)
 		if err != nil {
@@ -147,7 +150,7 @@ func UpdateAssignment(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	updates := map[string]any{}
 
 	if form.Title != "" {
@@ -170,7 +173,6 @@ func UpdateAssignment(
 	}
 	updates["visible"] = form.Visible
 	updates["ai_agent"] = form.AIAgent
-
 
 	if len(updates) > 0 {
 		if err := repository.UpdateAssignment(assignmentID, updates); err != nil {
@@ -249,6 +251,78 @@ func CreateAssignmentOverride(
 	return repository.CreateAssignmentOverride(&override)
 }
 
+func CreateAssignmentPrompt(
+	courseID string,
+	assignmentID string,
+	form models.AssignmentPromptForm,
+) (*models.ResponsePrompt, error) {
+
+	assignment, err := repository.GetAssignment(courseID, assignmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if assignment.ID == "" {
+		return nil, errors.ErrAssignmentNotFound
+	}
+
+	prompt := models.AssignmentPrompt{
+		AssignmentID: assignmentID,
+		Prompt:       form.Prompt,
+	}
+
+	Assignmentprompt, err := repository.CreateAssignmentPrompt(&prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	response := models.ResponsePrompt{
+		Prompt: Assignmentprompt.Prompt,
+	}
+
+	return &response, nil
+}
+
+func GetAssignmentPrompt(
+	courseID string,
+	assignmentID string,
+) (*models.ResponsePrompt, error) {
+	prompt, err := repository.GetAssignmentPromptByCourseID(courseID, assignmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := models.ResponsePrompt{
+		Prompt: prompt.Prompt,
+	}
+
+	return &response, nil
+}
+
+func UpdateAssignmentPrompt(
+	courseID,
+	assignmentID string,
+	form *models.AssignmentPromptForm,
+) error {
+	prompt, err := repository.GetAssignmentPromptByCourseID(courseID, assignmentID)
+	if err != nil {
+		return err
+	}
+
+	updates := map[string]any{}
+
+	if form.Prompt != "" {
+		updates["prompt"] = form.Prompt
+	}
+
+	err = repository.UpdateAssignmentPrompt(prompt.ID, updates)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func GetAssignmentSummary(courseID, assignmentID string) (*models.ResponseAssignmentSummary, error) {
 
 	assignment, err := repository.GetAssignment(courseID, assignmentID)
@@ -269,138 +343,143 @@ func GetAssignmentSummary(courseID, assignmentID string) (*models.ResponseAssign
 	return buildAssignmentSummary(assignment, courseMembers, submissions)
 }
 
-func buildAssignmentSummary(
-	assignment *models.Assignment,
-	courseMembers []models.CourseMember,
-	submissions []models.Submission,
-) (*models.ResponseAssignmentSummary, error) {
-
-	totalStudents := int16(len(courseMembers))
-
-	submissionMap := make(map[string]*models.Submission)
-	for i := range submissions {
-		submissionMap[submissions[i].StudentID] = &submissions[i]
+func AutoGradingAssignment(userID, courseID, assignmentID string) error {
+	_, err := repository.GetAssignment(courseID, assignmentID)
+	if err != nil {
+		return err
 	}
 
-	var submitted int16
-	var incomplete int16
-	var graded int16
-	var ungraded int16
-	var scores []float32
-
-	submissionList := make([]models.ResponseAssignmentSubmissionList, 0, len(courseMembers))
-
-	for _, cm := range courseMembers {
-
-		var point int16
-		var percentage float32
-		status := "no submitted"
-
-		submission, ok := submissionMap[cm.UserID]
-
-		if ok && submission.AttachmentID != nil {
-
-			if submission.UpdatedAt.Before(assignment.DueDate) || submission.UpdatedAt.Equal(assignment.DueDate) {
-				status = "submitted"
-			} else {
-				status = "overduedate"
-			}
-
-			if submission.Point != nil {
-				point = *submission.Point
-				percentage = float32(point) / float32(assignment.Point) * 100
-				graded++
-				scores = append(scores, float32(point))
-			} else {
-				ungraded++
-			}
-
-			submitted++
-		} else {
-			incomplete++
+	job, _ := repository.GetGradingJob(assignmentID, userID)
+	if job != nil {
+		if job.Status == models.JobPending || job.Status == models.JobProcessing {
+			return errors.ErrAIGradingLimit
 		}
 
-		submissionList = append(submissionList, models.ResponseAssignmentSubmissionList{
-			UserID:           cm.UserID,
-			StudentID:        cm.User.Username,
-			EnName:           cm.User.EnName,
-			ThName:           cm.User.ThName,
-			Email:            cm.User.Email,
-			Point:            point,
-			Percentage:       percentage,
-			SubmissionStatus: status,
-		})
+		err = repository.ResetGradingJob(job.ID)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := repository.CreateGradingJob(assignmentID, userID)
+		if err != nil {
+			return err
+		}
 	}
 
-	// statistics calculations remain same
-	// average, median, distribution etc.
-
-	distribution := createScoreDistribution(scores, float32(assignment.Point))
-
-	response := models.ResponseAssignmentSummary{
-		Statistic: models.ResponseAssignmentStatistic{
-			Student:      totalStudents,
-			Submitted:    submitted,
-			Incomplete:   incomplete,
-			Distribution: distribution,
-		},
-		SubmissionList: submissionList,
+	payload := queue.AutoGradingPayload{
+		AssignmentID: assignmentID,
+		TeacherID:    userID,
 	}
 
-	return &response, nil
+	err = queue.EnqueueAutoGrading(payload)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func createScoreDistribution(scores []float32, maxPoints float32) []models.ScoreDistribution {
+func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
+	n8nURL := config.GetEnv("N8N_URL")
 
-	if maxPoints <= 0 {
-		maxPoints = 100
+	// Get assignment
+	assignment, err := repository.GetAssignment(courseID, assignmentID)
+	if err != nil {
+		return err
 	}
 
-	binSize := maxPoints / 5
-
-	distribution := make([]models.ScoreDistribution, 5)
-
-	for i := range distribution {
-		start := float32(i) * binSize
-		end := start + binSize
-
-		if i == len(distribution)-1 {
-			end = maxPoints
-		}
-
-		distribution[i] = models.ScoreDistribution{
-			RangeStart: start,
-			RangeEnd:   end,
-			Count:      0,
-		}
+	// Get AI config for user
+	aiConfig, err := repository.GetAIConfig(userID)
+	if err != nil {
+		return err
 	}
 
-	for _, score := range scores {
-		for i := range distribution {
-			if i == len(distribution)-1 {
+	// Get assignment prompt (optional)
+	assignmentPrompt := ""
+	prompt, err := repository.GetAssignmentPromptByCourseID(courseID, assignmentID)
+	if err == nil && prompt != nil {
+		assignmentPrompt = prompt.Prompt
+	}
 
-				if score >= distribution[i].RangeStart && score <= distribution[i].RangeEnd {
-					distribution[i].Count++
-					break
-				}
-			} else {
-				if score >= distribution[i].RangeStart && score < distribution[i].RangeEnd {
-					distribution[i].Count++
-					break
-				}
+	// Get submissions with attachments
+	submissions, err := repository.GetSubmissionsWithAttachments(assignmentID)
+	if err != nil {
+		return err
+	}
+
+	// Build N8NSubmissions array
+	n8nSubmissions := []models.N8NSubmission{}
+	for i, submission := range submissions {
+		print(i)
+		answer := submission.Answer
+
+		// If submission has an attachment, download and read the text from S3
+		if submission.Attachment != nil {
+			fileBytes, err := database.DownloadFileFromS3ByKey(submission.Attachment.FileKey)
+			if err != nil {
+				return err
 			}
+			answer = string(fileBytes)
 		}
+
+		n8nSubmission := models.N8NSubmission{
+			SubmissionID: submission.ID,
+			Answer:       answer,
+		}
+		n8nSubmissions = append(n8nSubmissions, n8nSubmission)
 	}
 
-	return distribution
+	// Build N8NForm
+	n8nForm := models.N8NForm{
+		AIConfig: models.ResponseAIConfig{
+			Provider:       aiConfig.Provider,
+			Model:          aiConfig.Model,
+			BaseURL:        aiConfig.BaseURL,
+			Temperature:    aiConfig.Temperature,
+			PromptTemplate: aiConfig.PromptTemplate,
+		},
+		MaxPoint:         assignment.Point,
+		AssignmentPrompt: assignmentPrompt,
+		Submissions:      n8nSubmissions,
+	}
+
+	// Serialize to JSON
+	formBytes, err := json.Marshal(n8nForm)
+	if err != nil {
+		return err
+	}
+
+	// Send POST request to n8n URL
+	req, err := http.NewRequest("POST", n8nURL, bytes.NewBuffer(formBytes))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("n8n returned status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func DownloadSubmissions(courseID, assignmentID string) ([]byte, error) {
 	if _, err := repository.GetAssignment(courseID, assignmentID); err != nil {
 		return nil, err
-	}	
-	
-	submissions, err := repository.GetSubmissionsWithAttachments(courseID)
+	}
+
+	submissions, err := repository.GetSubmissionsWithAttachments(assignmentID)
 	if err != nil {
 		return nil, err
 	}
@@ -446,109 +525,4 @@ func DownloadSubmissions(courseID, assignmentID string) ([]byte, error) {
 	}
 
 	return zipBuffer.Bytes(), nil
-}
-
-func sanitizeFileName(fileName string) string {
-	// Replace path separators and other unsafe characters
-	unsafeChars := []string{"\\", "/", ":", "*", "?", "\"", "<", ">", "|"}
-	sanitized := fileName
-	for _, char := range unsafeChars {
-		sanitized = strings.ReplaceAll(sanitized, char, "_")
-	}
-	return sanitized
-}
-
-func resolveTags(names []string) ([]models.Tag, error) {
-
-	if len(names) > 5 {
-		names = names[:5]
-	}
-
-	var clean []string
-	for _, t := range names {
-		name := strings.TrimSpace(t)
-		if name != "" {
-			clean = append(clean, name)
-		}
-	}
-
-	existing, err := repository.FindTags(clean)
-	if err != nil {
-		return nil, err
-	}
-
-	tagMap := map[string]models.Tag{}
-	for _, t := range existing {
-		tagMap[t.Name] = t
-	}
-
-	var result []models.Tag
-
-	for _, name := range clean {
-
-		if tag, ok := tagMap[name]; ok {
-			result = append(result, tag)
-			continue
-		}
-
-		newTag := models.Tag{Name: name}
-
-		if err := repository.CreateTag(&newTag); err != nil {
-			return nil, err
-		}
-
-		result = append(result, newTag)
-	}
-
-	return result, nil
-}
-
-func handleAttachments(
-	userID string,
-	existingIDs []string,
-	files []*multipart.FileHeader,
-) ([]models.Attachment, error) {
-
-	var attachments []models.Attachment
-
-	existing, err := repository.GetAttachmentsByIDs(userID, existingIDs)
-	if err != nil {
-		return nil, err
-	}
-	
-	if len(existing) != len(existingIDs) {
-		return nil, errors.ErrAttachmentNotFound
-	}
-
-	attachments = append(attachments, existing...)
-
-	for _, file := range files {
-
-		src, err := file.Open()
-		if err != nil {
-			return nil, err
-		}
-
-		data, _ := io.ReadAll(src)
-		src.Close()
-
-		fileKey, err := database.UploadFileToS3(data, file.Filename)
-		if err != nil {
-			return nil, err
-		}
-
-		att := models.Attachment{
-			FileName: file.Filename,
-			FileKey:  fileKey,
-			UserID:   userID,
-		}
-
-		if err := repository.CreateAttachment(&att); err != nil {
-			return nil, err
-		}
-
-		attachments = append(attachments, att)
-	}
-
-	return attachments, nil
 }

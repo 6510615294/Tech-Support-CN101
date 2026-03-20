@@ -2,10 +2,11 @@ package repository
 
 import (
 	stderrors "errors"
+
 	"gorm.io/gorm"
-	
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 )
 
@@ -30,7 +31,7 @@ func GetAllCourses() ([]models.Course, error) {
 
 	var courses []models.Course
 
-	err := database.DB.Find(&courses).Error
+	err := database.DB.Preload("Teacher").Find(&courses).Error
 	return courses, err
 }
 
@@ -39,6 +40,7 @@ func GetCoursesByUser(userID string) ([]models.Course, error) {
 	var courses []models.Course
 
 	err := database.DB.
+		Preload("Teacher").
 		Joins("JOIN course_members ON course_members.course_id = courses.id").
 		Where("course_members.user_id = ?", userID).
 		Find(&courses).Error

@@ -1,17 +1,20 @@
 "use client"
 
-import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import { AssignmentCard } from "./assignment-card";
-import { useParams } from "next/navigation";
-import { SubmissionCards } from "./submission-cards";
-import { SubmissionDetail } from "./submission-detail";
-import SubmissionForm from "./submission-form";
-import { Button } from "@/components/ui/button";
-import { HatGlasses, Pencil, Trash, ChartPie } from "lucide-react";
-import { Toggle } from "@/components/ui/toggle";
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
+import { BreadcrumbNav } from "@/components/breadcrumb-nav"
+import { AssignmentInfo } from "./assignment-info"
+import { SubmissionList } from "./submission-list"
+import { CommentGrade } from "./comment-grade"
+import { AnswerBox } from "./answer-box"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent } from "@/components/ui/card"
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
+import { AlertCircle } from "lucide-react"
 
-type attachment = {
+type Attachment = {
   id: string
   file_name: string
 }
@@ -21,12 +24,19 @@ type Assignment = {
   title: string
   description: string
   point: number
-  attachments: attachment[]
+  attachments: Attachment[]
   start_date: string
   due_date: string
   close_date: string
   tags: string[]
-};
+}
+
+type Comment = {
+  id: string
+  comment: string
+  commentator: string
+  visible: boolean
+}
 
 type Submission = {
   id: string
@@ -39,349 +49,184 @@ type Submission = {
   comments: Comment[]
 }
 
-type Comment = {
-  id: string
-  comment: string
-  commentator: string
-  visible: boolean
-}
-
-export default function Page() {
-  const [assignment, setAssignment] = useState<Assignment | null>(null);
-  const [submissions, setSubmissions] = useState<Submission[] | null>(null);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [userRole, setUserRole] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function AssignmentDetailPage() {
   const { course_id, assignment_id } = useParams()
-  const router = useRouter();
 
-  async function loadAssignment() {
-    const token = localStorage.getItem("token");
-    
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`, {
-      headers: {
-      Authorization: `Bearer ${token}`,
-      },
-    });
+  const { user } = useAuth()
+  const router = useRouter()
 
-    if (!res.ok) {
-      setLoading(false);
-      return;
-    }
-
-    const raw = await res.json();
-    console.log(raw)
-    const data = raw.assignment;
-    setAssignment(data.assignment);
-    setSubmissions(
-      [...data.submissions].sort((a, b) =>
-        a.submitter.localeCompare(b.submitter)
-      )
-    )
-    setUserRole(raw.role);
-    
-      if (data.submissions && data.submissions.length > 0) {
-        setSelectedSubmission(data.submissions[0]);
-      }
-    
-      setLoading(false);
-  }
+  const [assignment, setAssignment] = useState<Assignment | null>(null)
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isStudent, setIsStudent] = useState(true)
 
   useEffect(() => {
+    if (!user?.token) {
+      router.push("/")
+      return
+    }
+
     const fetchData = async () => {
-      await loadAssignment();
-    };
-  
-    fetchData();
-  }, []);
-  
-  const handleSummary = () => {
-    router.push(`/courses/${course_id}/assignments/${assignment_id}/summary`);
-  };
-
-  const handleEdit = () => {
-    router.push(`/courses/${course_id}/assignments/${assignment_id}/edit`);
-  };
-  
-  async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this assignment? This action cannot be undone.")) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem("token");
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        console.error("Failed to delete course");
-        alert("Failed to delete assignment");
-        return;
+      setIsLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        })
+        if (!res.ok) throw new Error("Failed to fetch assignment")
+        const data = await res.json()
+        setAssignment(data.assignment)
+        setSubmissions(data.submissions || [])
+        setIsStudent(data.role == "student")
+        
+        // For students, find their own submission
+        if (data.role == "student" && data.submissions?.length > 0) {
+          const mySubmission = data.submissions[0]
+          setSelectedSubmission(mySubmission || null)
+        } else if (data.role != "student" && data.submissions?.length > 0) {
+          // For non-students, select first submission
+          setSelectedSubmission(data.submissions[0])
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      } finally {
+        setIsLoading(false)
       }
-
-      router.push(`/courses/${course_id}/assignments`);
-      alert("Assignment deleted successfully!");
-    } catch (err) {
-      console.error("Error deleting course", err);
-      alert("Something went wrong.");
     }
+
+    fetchData()
+  }, [user, course_id, assignment_id, router, isStudent])
+
+  const handleSelectSubmission = (submission: Submission) => {
+    setSelectedSubmission(submission)
   }
-  
-  async function sendComment(
-    comment: string,
-    visible: boolean,
-    submissionId: string
-  ) {
-    const token = localStorage.getItem("token")
-  
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/submission/${submissionId}/comment`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          comment: comment,
-          visible: visible,
-        }),
-      }
+
+  const handleSubmitGrade = async (grade: number, comment: string, visible: boolean) => {
+    if (!selectedSubmission) return
+    // TODO: Implement API call
+    console.log("Submit grade:", { grade, comment, visible, submissionId: selectedSubmission.id })
+  }
+
+  const handleCodeChange = (code: string) => {
+    console.log("Code changed")
+  }
+
+  const handleRunCode = async (code: string): Promise<string> => {
+    // TODO: Implement API call to run code
+    return "Output: Code execution result..."
+  }
+
+  const handleSubmit = async (answer: string, file?: File) => {
+    // TODO: Implement API call
+    console.log("Submit:", { answer, file })
+  }
+
+  // Student has valid submission only if attachment exists
+  const studentHasSubmission = isStudent && selectedSubmission && selectedSubmission.attachment_id
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48 w-full" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        </div>
+      </div>
     )
-  
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(errText || "Failed to send comment")
-    }
-  
-    return res.json()
   }
 
-  async function sendGrade(
-    grade: number,
-    submissionId: string
-  ) {
-    const token = localStorage.getItem("token")
-  
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/submission/${submissionId}/grade`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          point: grade,
-        }),
-      }
+  if (error || !assignment) {
+    return (
+      <div className="p-6">
+        <Empty className="py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <AlertCircle className="h-5 w-5" />
+            </EmptyMedia>
+            <EmptyTitle>Failed to load assignment</EmptyTitle>
+            <EmptyDescription>{error || "Assignment not found"}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     )
-  
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(errText || "Failed to send grade")
-    }
-  
-    return res.json()
   }
-
-  async function toggleComment(
-    commentID: string,
-    submissionId: string
-  ) {
-    const token = localStorage.getItem("token")
-  
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/submission/${submissionId}/comment/${commentID}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          commentID: commentID,
-        }),
-      }
-    )
-  
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(errText || "Failed to toggle comment")
-    }
-  
-    return res.json()
-  }
-
-  if (loading) return <div>Loading...</div>;
-  if (!assignment) return <div>Assignment not found</div>;
-
-  // Check if the assignment is closed (past close_date)
-  const isAssignmentClosed = new Date() > new Date(assignment.close_date);
 
   return (
-    <div className="flex-col">
-      { userRole == "teacher" && (
-        <div className=" flex-1 flex justify-end mx-20 gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-sm"
-            onClick={handleSummary}
-          >
-            <ChartPie className="w-4 h-4 mr-1" />
-            Summary
-          </Button>
-          <Toggle
-            variant="outline"
-            size="sm"
-            className="rounded-sm"
-            pressed={isAnonymous}
-            onPressedChange={setIsAnonymous}
-          >
-            <HatGlasses className="w-4 h-4 mr-1" />
-            Anonymous mode
-          </Toggle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-sm"
-            onClick={handleEdit}
-          >
-            <Pencil className="w-4 h-4 mr-1" />
-            Edit Assignment
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="rounded-sm"
-            onClick={handleDelete}
-          >
-            <Trash className="w-4 h-4 mr-1" />
-            Delete Assignment
-          </Button>
+    <div className="space-y-6 p-6">
+      {/* Breadcrumb */}
+      <BreadcrumbNav assignmentName={assignment.title} />
+
+      {/* 1. Assignment Info */}
+      <AssignmentInfo assignment={assignment} />
+
+      {/* Main Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left Column - 4. Answer Box */}
+        <div className="lg:col-span-2">
+          {isStudent ? (
+            <AnswerBox
+              courseId={`${course_id}`}
+              assignmentId={`${assignment_id}`}
+              submissionId={selectedSubmission?.id || ""}
+              attachmentId={selectedSubmission?.attachment_id}
+              fileName={selectedSubmission?.file_name}
+              isStudent={true}
+              hasSubmission={!!studentHasSubmission}
+              onSubmit={handleSubmit}
+            />
+          ) : selectedSubmission ? (
+            <AnswerBox
+              courseId={`${course_id}`}
+              assignmentId={`${assignment_id}`}
+              submissionId={selectedSubmission.id || ""}
+              attachmentId={selectedSubmission.attachment_id}
+              fileName={selectedSubmission.file_name}
+              isStudent={false}
+              hasSubmission={true}
+              onCodeChange={handleCodeChange}
+              onRunCode={handleRunCode}
+            />
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Select a submission to view
+              </CardContent>
+            </Card>
+          )}
         </div>
-      )}
-      <div className="flex-1 flex gap-3 max-w-7xl mx-15">
-        <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden scrollbar-hide w-full gap-3 min-h-0">
-          <AssignmentCard key={assignment.id} assignment={assignment} />
-          {userRole !== "student" && submissions && submissions.length > 0 ? (
-            <SubmissionCards
-              showName={!isAnonymous}
+
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* 2. Submission List - Only for non-students */}
+          {!isStudent && (
+            <SubmissionList
               submissions={submissions}
-              onSelect={setSelectedSubmission}
+              selectedId={selectedSubmission?.id || null}
+              onSelect={handleSelectSubmission}
+              maxPoints={assignment.point}
             />
-          ) : userRole === "student" ? (
-            <SubmissionForm
-              submission={selectedSubmission}
-              maxPoint={assignment.point}
-              disabled={isAssignmentClosed}  
-              isLoading={loading}
-              onUpdate={loadAssignment}
-            />
-          ) : (
-            <></>
           )}
-        </div>
-    
-        <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden scrollbar-hide w-full gap-3 min-h-0">
-          {submissions && submissions.length > 0 ? (
-            <SubmissionDetail
-              key={selectedSubmission?.id}
-              submission={selectedSubmission}
-              maxPoint={assignment.point}
-              role={userRole}
-              isAnonymous={isAnonymous}
-              onSave={async (grade, comment, isVisible) => {
-                if (!selectedSubmission) return
-                
-                try {
-                  const result = await sendComment(comment, isVisible, selectedSubmission.id)
-                  console.log("comment created:", result)
-            
-                  setSelectedSubmission((prev) =>
-                    prev
-                      ? {
-                        ...prev,
-                        comments: prev.comments.some(c => c.id === result.id)
-                          ? prev.comments.map(c =>
-                              c.id === result.id ? result : c
-                            )
-                          : [...prev.comments, result],
-                        }
-                      : prev
-                  )
-                } catch (err) {
-                  console.error(err)
-                  alert("Failed to add comment")
-                }
-                
-                try {
-                  const result = await sendGrade(grade, selectedSubmission.id)
-                  console.log("graded:", result)
-        
-                  setSubmissions((prev) =>
-                    prev
-                      ? prev.map((sub) =>
-                        sub.id === selectedSubmission?.id
-                          ? {
-                              ...sub,
-                              point: result.point,
-                            }
-                          : sub
-                        )
-                      : prev
-                  )
-                  
-                  setSelectedSubmission((prev) =>
-                    prev
-                      ? {
-                        ...prev,
-                        point: result.point,
-                        }
-                      : prev
-                  )
-                } catch (err) {
-                  console.error(err)
-                  alert("Failed to update grade")
-                }
-              }}
-              toggleComment={async (commentID) => {
-                if (!selectedSubmission) return
-                
-                try {
-                  const result = await toggleComment(commentID, selectedSubmission.id)
-                  console.log("comment toggled:", result)
-            
-                  setSelectedSubmission((prev) =>
-                    prev
-                      ? {
-                        ...prev,
-                        comments: prev.comments.some(c => c.id === result.id)
-                          ? prev.comments.map(c =>
-                              c.id === result.id ? result : c
-                            )
-                          : [...prev.comments, result],
-                        }
-                      : prev
-                  )
-                } catch (err) {
-                  console.error(err)
-                  alert("Failed to toggle")
-                }
-              }}
+
+          {/* 3. Comments & Grade */}
+          {(isStudent && studentHasSubmission) || (!isStudent && selectedSubmission) ? (
+            <CommentGrade
+              comments={selectedSubmission?.comments || []}
+              currentGrade={selectedSubmission?.point || 0}
+              maxPoints={assignment.point}
+              gradedBy={selectedSubmission?.graded_by || ""}
+              isStudent={isStudent}
+              onSubmitGrade={handleSubmitGrade}
             />
-          ) : (
-            <p className="text-sm text-muted-foreground p-5">
-                No Submission yet
-            </p>    
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -20,12 +20,12 @@ export function TipTapTextEditor({ value, onChange, editable }: EditorProps) {
       StarterKit.configure({
         bulletList: {
           HTMLAttributes: {
-            class: "list-disc ml-3",
+            class: "list-disc",
           },
         },
         orderedList: {
           HTMLAttributes: {
-            class: "list-decimal ml-3",
+            class: "list-decimal",
           },
         },
       }),
@@ -62,7 +62,7 @@ export function TipTapTextEditor({ value, onChange, editable }: EditorProps) {
       className={
         editable
           ? "border rounded-sm"
-          : "w-full text-lg"
+          : "ml-2 w-full text-md"
       }
     >
       {/* Toolbar */}
