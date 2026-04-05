@@ -3,8 +3,10 @@
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { User, CheckCircle, Clock, FileText } from "lucide-react"
+import { User, CheckCircle, Clock } from "lucide-react"
+import { useMemo, useState } from "react";
 
 type Comment = {
   id: string
@@ -29,18 +31,80 @@ interface SubmissionListProps {
   selectedId: string | null
   onSelect: (submission: Submission) => void
   maxPoints: number
+  isAnonymous: boolean
 }
 
-export function SubmissionList({ submissions, selectedId, onSelect, maxPoints }: SubmissionListProps) {
+type SortBy = "id" | "enName" | "thName" | "point"
+
+export function SubmissionList({ submissions, selectedId, onSelect, maxPoints, isAnonymous = false }: SubmissionListProps) {
+  const [sortBy, setSortBy] = useState<SortBy>("id")
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
+  
   const isGraded = (submission: Submission) => {
     return submission.graded_by && submission.graded_by.length > 0
   }
 
+  const parseSubmitter = (submitter: string) => {
+    const [id = "", enName = "", thName = ""] = submitter.split("|")
+    return { id, enName, thName }
+  }
+  
+  const sortedSubmissions = useMemo(() => {
+    // When showName is false, force sort by point in ascending order
+    const effectiveSortBy = isAnonymous ? "point" : sortBy
+    const effectiveSortOrder = isAnonymous ? "asc" : sortOrder
+
+    return [...submissions].sort((a, b) => {
+      let result = 0
+  
+      if (effectiveSortBy === "point") {
+        result = a.point - b.point
+      } else {
+        const parsedA = parseSubmitter(a.submitter)
+        const parsedB = parseSubmitter(b.submitter)
+  
+        result = parsedA[effectiveSortBy].localeCompare(parsedB[effectiveSortBy], "th")
+      }
+  
+      return effectiveSortOrder === "asc" ? result : -result
+    })
+  }, [submissions, sortBy, sortOrder, isAnonymous])
+  
   return (
-    <Card className="h-full">
+    <Card className="w-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
-          <span>Submissions</span>
+          <div className="flex gap-1">
+            <span>Submissions</span>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setSortBy("id")}
+            >
+              id
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setSortBy("enName")}
+            >
+              en
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setSortBy("thName")}
+            >
+              th
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setSortBy("point")}
+            >
+              pt
+            </Button>
+          </div>
           <Badge variant="outline">{submissions.length}</Badge>
         </CardTitle>
       </CardHeader>
@@ -52,7 +116,7 @@ export function SubmissionList({ submissions, selectedId, onSelect, maxPoints }:
                 No submissions yet
               </p>
             ) : (
-              submissions.map((submission) => (
+              sortedSubmissions.map((submission) => (
                 <button
                   key={submission.id}
                   onClick={() => onSelect(submission)}
@@ -63,15 +127,9 @@ export function SubmissionList({ submissions, selectedId, onSelect, maxPoints }:
                 >
                   <User className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{submission.submitter}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {submission.attachment_id && (
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          File
-                        </span>
-                      )}
-                    </div>
+                    <p className="font-medium truncate">
+                      {submission.submitter.split("|")[sortBy === "enName" ? 1 : sortBy === "thName" ? 2 : 0]}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {isGraded(submission) ? (

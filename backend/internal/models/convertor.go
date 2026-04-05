@@ -51,6 +51,7 @@ func ConvertAssignmentToResponse(
 			ID:        att.ID,
 			FileName:  att.FileName,
 			FileType:  att.FileType,
+			Size: 	   att.Size,
 			CreatedAt: att.CreatedAt.Format(layout),
 		}
 	}
@@ -115,6 +116,7 @@ func ConvertDetailedAssignmentToResponse(
 			ID:        att.ID,
 			FileName:  att.FileName,
 			FileType:  att.FileType,
+			Size: 	   att.Size,
 			CreatedAt: att.CreatedAt.Format(layout),
 		}
 	}
@@ -128,17 +130,18 @@ func ConvertDetailedAssignmentToResponse(
 	}
 
 	assignmentResponse := ResponseAssignment{
-		ID:          a.ID,
-		Title:       a.Title,
-		Description: a.Description,
-		Point:       a.Point,
-		StartDate:   a.StartDate.Format(layout),
-		DueDate:     dueDate.Format(layout),
-		CloseDate:   closeDate.Format(layout),
-		Attachments: attachments,
-		Tags:        tagNames,
-		AIAgent:     a.AIAgent,
-		Visible:     a.Visible,
+		ID:          		a.ID,
+		Title:       		a.Title,
+		Description: 		a.Description,
+		Point:       		a.Point,
+		StartDate:   		a.StartDate.Format(layout),
+		DueDate:     		dueDate.Format(layout),
+		CloseDate:   		closeDate.Format(layout),
+		Attachments: 		attachments,
+		Tags:        		tagNames,
+		AIAgent:     		a.AIAgent,
+		AssignmentPrompt: 	a.AssignmentPrompt,
+		Visible:     		a.Visible,
 	}
 
 	submissionResponses := make([]ResponseSubmission, len(*s))
@@ -212,8 +215,51 @@ func ConvertAssignmentTemplatesToResponse(
 		for i, tag := range template.Tags {
 			tagNames[i] = tag.Name
 		}
+		
+		const layout = "2006-01-02"
+		
+		attachments := make([]ResponseAttachment, len(template.Attachments))
+		for i, att := range template.Attachments {
+			attachments[i] = ResponseAttachment{
+				ID:        att.ID,
+				FileName:  att.FileName,
+				FileType:  att.FileType,
+				Size: 	   att.Size,
+				CreatedAt: att.CreatedAt.Format(layout),
+			}
+		}
 
 		data := ResponseAssignmentTemplates{
+			ID:    				template.ID,
+			Title: 				template.Title,
+			Description: 		template.Description,
+			Point: 				template.Point,
+			Attachments: 		attachments,
+			Tags:  				tagNames,
+			AIAgent: 			template.AIAgent,
+			AssignmentPrompt: 	template.AssignmentPrompt,
+		}
+
+		response = append(response, data)
+	}
+
+	return response
+}
+
+func ConvertAssignmentTemplatesToShortResponse(
+	templates []AssignmentTemplate,
+) []ResponseShortAssignmentTemplates {
+
+	response := make([]ResponseShortAssignmentTemplates, 0, len(templates))
+
+	for _, template := range templates {
+
+		tagNames := make([]string, len(template.Tags))
+		for i, tag := range template.Tags {
+			tagNames[i] = tag.Name
+		}
+
+		data := ResponseShortAssignmentTemplates{
 			ID:    template.ID,
 			Title: template.Title,
 			Tags:  tagNames,
@@ -242,18 +288,21 @@ func ConvertAssignmentTemplateToResponse(
 			ID:        att.ID,
 			FileName:  att.FileName,
 			FileType:  att.FileType,
+			Size:      att.Size,
 			CreatedAt: att.CreatedAt.Format(layout),
 		}
 	}
 
 	response := ResponseAssignmentTemplate{
-		Title:       template.Title,
-		Description: template.Description,
-		Point:       template.Point,
-		Attachments: attachments,
-		Tags:        tagNames,
-		AIAgent:     false,
-		Visible:     true,
+		ID:					template.ID,
+		Title:       		template.Title,
+		Description: 		template.Description,
+		Point:       		template.Point,
+		Attachments: 		attachments,
+		Tags:        		tagNames,
+		AIAgent:     		template.AIAgent,
+		AssignmentPrompt: 	template.AssignmentPrompt,
+		Visible:     		true,
 	}
 
 	return &response
@@ -270,6 +319,7 @@ func ConvertAttachmentsToResponse(
 			ID:        att.ID,
 			FileName:  att.FileName,
 			FileType:  att.FileType,
+			Size: 	   att.Size,
 			CreatedAt: att.CreatedAt.Format(layout),
 		}
 	}

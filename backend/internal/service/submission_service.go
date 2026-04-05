@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"io"
 	"mime/multipart"
 	"time"
@@ -159,6 +158,54 @@ func UpdateGrade(
 	return data, nil
 }
 
+func UpdateGradeAndComment(
+	courseID string,
+	submissionID string,
+	userID string,
+	role string,
+	form *models.GradeAndCommentForm,
+) (map[string]any, error) {
+
+	submission, err := repository.GetSubmission(courseID, submissionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !canGradeSubmission(role, submission) {
+		return nil, errors.ErrForbidden
+	}
+
+	updates := map[string]any{
+		"point":     form.Point,
+		"graded_by": role,
+	}
+
+	if err := repository.UpdateSubmission(submission.ID, updates); err != nil {
+		return nil, err
+	}
+	
+	commentForm := models.CommentForm{
+		Comment: 	form.Comment,
+		Visible: 	form.Visible,
+	}
+	
+	responseComment, err := CreateOrUpdateComment(courseID, submissionID, userID, role, &commentForm)
+	if err != nil {
+		return nil, err
+	}
+
+	data := map[string]any{
+		"submission_id": 	submission.ID,
+		"point":         	form.Point,
+		"graded_by":     	role,
+		"comment_id":		responseComment.ID,
+		"comment":			responseComment.Comment,
+		"visible":			responseComment.Visible,
+	}
+
+	return data, nil
+}
+
 func ReadSubmission(
 	submissionID string,
 	userID string,
@@ -208,16 +255,11 @@ func uploadSubmissionFile(userID string, file *multipart.FileHeader) (*models.At
 		return nil, err
 	}
 
-	fileURL := fmt.Sprintf(
-		"https://%s.s3.amazonaws.com/%s",
-		database.BucketName,
-		fileKey,
-	)
-
 	attachment := models.Attachment{
 		FileName: file.Filename,
+		FileType: file.Header.Get("Content-Type"),
 		FileKey:  fileKey,
-		URL:      fileURL,
+		Size: 	  file.Size,
 		UserID:   userID,
 	}
 
@@ -263,7 +305,9 @@ func handleAttachmentUpdate(
 
 	attachment := models.Attachment{
 		FileName: file.Filename,
+		FileType: file.Header.Get("Content-Type"),
 		FileKey:  fileKey,
+		Size:     file.Size,
 		UserID:   userID,
 	}
 

@@ -12,35 +12,40 @@ func CreateAssignmentTemplate(
 	userID string,
 	form *models.AssignmentTemplateForm,
 	files []*multipart.FileHeader,
-) error {
+) (*models.ResponseAssignmentTemplate, error) {
 	if len(form.Attachments)+len(files) > 5 {
-		return errors.ErrTooManyAttachments
+		return nil, errors.ErrTooManyAttachments
 	}
 
 	attachments, err := handleAttachments(userID, form.Attachments, files)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tags, err := resolveTags(form.Tags)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	template := models.AssignmentTemplate{
-		Title:       form.Title,
-		Description: form.Description,
-		Point:       form.Point,
-		Attachments: attachments,
-		Tags:        tags,
-		CreatedBy:   userID,
+		Title:       		form.Title,
+		Description: 		form.Description,
+		Point:       		form.Point,
+		Attachments: 		attachments,
+		Tags:        		tags,
+		AIAgent: 			form.AIAgent,
+		AssignmentPrompt: 	form.AssignmentPrompt,
+		CreatedBy:   		userID,
 	}
-
-	if err := repository.CreateAssignmentTemplate(&template); err != nil {
-		return err
+	
+	_, err = repository.CreateAssignmentTemplate(&template);
+	if err != nil {
+		return nil, err
 	}
+	
+	response := models.ConvertAssignmentTemplateToResponse(&template)
 
-	return nil
+	return response, nil
 }
 
 func GetAssignmentTemplates(userID string) (*[]models.ResponseAssignmentTemplates, error) {
@@ -52,6 +57,19 @@ func GetAssignmentTemplates(userID string) (*[]models.ResponseAssignmentTemplate
 	}
 
 	response := models.ConvertAssignmentTemplatesToResponse(templates)
+
+	return &response, nil
+}
+
+func GetShortAssignmentTemplates(userID string) (*[]models.ResponseShortAssignmentTemplates, error) {
+	var templates []models.AssignmentTemplate
+
+	templates, err := repository.GetAssignmentTemplates(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := models.ConvertAssignmentTemplatesToShortResponse(templates)
 
 	return &response, nil
 }
@@ -84,12 +102,15 @@ func UpdateAssignmentTemplate(
 	if form.Title != "" {
 		updates["title"] = form.Title
 	}
-	if form.Description != "" {
-		updates["description"] = form.Description
-	}
+
 	if form.Point > 0 {
 		updates["point"] = form.Point
 	}
+	
+	updates["description"] = form.Description
+	updates["assignment_prompt"] = form.AssignmentPrompt
+	updates["ai_agent"] = form.AIAgent
+
 
 	if len(updates) > 0 {
 		if err := repository.UpdateAssignmentTemplate(templateID, updates); err != nil {

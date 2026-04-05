@@ -13,18 +13,35 @@ import (
 func CreateCourseWithMember(
 	course *models.Course,
 	member *models.CourseMember,
-) error {
-	return database.DB.Transaction(func(tx *gorm.DB) error {
+) (*models.Course, error) {
+
+	var result models.Course
+
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// Create course
 		if err := tx.Create(course).Error; err != nil {
 			return err
 		}
 
+		// Create member
 		if err := tx.Create(member).Error; err != nil {
+			return err
+		}
+
+		if err := tx.
+			Preload("Teacher").
+			First(&result, "id = ?", course.ID).Error; err != nil {
 			return err
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func GetAllCourses() ([]models.Course, error) {
@@ -52,6 +69,7 @@ func GetCourseByID(courseID string) (*models.Course, error) {
 	var course models.Course
 
 	err := database.DB.
+		Preload("Teacher").
 		First(&course, "id = ?", courseID).
 		Error
 

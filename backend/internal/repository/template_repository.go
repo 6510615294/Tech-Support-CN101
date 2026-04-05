@@ -10,14 +10,20 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 )
 
-func CreateAssignmentTemplate(assignment *models.AssignmentTemplate) error {
-	return database.DB.Create(assignment).Error
+func CreateAssignmentTemplate(template *models.AssignmentTemplate) (string, error) {
+	err := database.DB.Create(template).Error
+	if err != nil {
+		return "", err
+	}
+	
+	return template.ID, nil
 }
 
 func GetAssignmentTemplates(userID string) ([]models.AssignmentTemplate, error) {
 	var templates []models.AssignmentTemplate
 
 	err := database.DB.
+		Preload("Attachments").
 		Preload("Tags").
 		Where("created_by = ?", userID).
 		Find(&templates).

@@ -33,7 +33,7 @@ func GetAttachment(userID, attachmentID string) (*models.Attachment, error) {
 
 	err := database.DB.
 		Where("user_id = ? AND id = ?", userID, attachmentID).
-		First(&attachmentID).
+		First(&attachment).
 		Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {

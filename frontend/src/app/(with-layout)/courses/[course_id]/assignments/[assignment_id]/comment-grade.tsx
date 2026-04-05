@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,7 @@ type Comment = {
 }
 
 interface CommentGradeProps {
+  role?: string
   comments: Comment[]
   currentGrade: number
   maxPoints: number
@@ -28,6 +29,7 @@ interface CommentGradeProps {
 }
 
 export function CommentGrade({
+  role,
   comments,
   currentGrade,
   maxPoints,
@@ -35,11 +37,23 @@ export function CommentGrade({
   isStudent,
   onSubmitGrade,
 }: CommentGradeProps) {
-  const [grade, setGrade] = useState<string>(currentGrade?.toString() || "")
-  const [comment, setComment] = useState("")
-  const [visibleToStudent, setVisibleToStudent] = useState(true)
+  const existingComment = useMemo(() => {
+    return role
+      ? comments.find(c => c.commentator === role)
+      : undefined;
+  }, [comments, role]);
+  
+  const [grade, setGrade] = useState("");
+  const [comment, setComment] = useState("");
+  const [visibleToStudent, setVisibleToStudent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false)
-
+  
+  useEffect(() => {
+    setGrade(currentGrade?.toString() ?? "");
+    setComment(existingComment?.comment ?? "");
+    setVisibleToStudent(existingComment?.visible ?? true);
+  }, [currentGrade, existingComment]);
+  
   const handleSubmit = async () => {
     if (!comment.trim() && !grade) return
     setIsSubmitting(true)

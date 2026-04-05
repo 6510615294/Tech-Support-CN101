@@ -8,7 +8,7 @@ import (
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
+	// "github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/router"
 )
 
@@ -17,10 +17,9 @@ func main() {
 	database.Connect()
 
 	database.ConnectS3("cnproject-6510615120")
-	queue.Init(
-		"",
-		"",
-	)
+	// queue.Init(
+
+	// )
 
 	app := fiber.New()
 	app.Use(cors.New())

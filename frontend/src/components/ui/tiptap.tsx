@@ -20,12 +20,12 @@ export function TipTapTextEditor({ value, onChange, editable }: EditorProps) {
       StarterKit.configure({
         bulletList: {
           HTMLAttributes: {
-            class: "list-disc",
+            class: "list-disc pl-6",
           },
         },
         orderedList: {
           HTMLAttributes: {
-            class: "list-decimal",
+            class: "list-decimal pl-6",
           },
         },
       }),

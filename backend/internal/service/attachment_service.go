@@ -35,7 +35,9 @@ func CreateAttachments(
 
 		att := models.Attachment{
 			FileName: file.Filename,
+			FileType: file.Header.Get("Content-Type"),
 			FileKey:  fileKey,
+			Size: 	  file.Size,
 			UserID:   userID,
 		}
 

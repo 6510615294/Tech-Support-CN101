@@ -35,6 +35,7 @@ func createAssignment(c fiber.Ctx) error {
 
 	var form models.AssignmentForm
 	if err := c.Bind().Body(&form); err != nil {
+		print(string(c.Body()))
 		return SendError(c, errors.ErrBadRequest)
 	}
 

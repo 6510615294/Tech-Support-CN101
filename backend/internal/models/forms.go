@@ -12,22 +12,23 @@ type LoginForm struct {
 
 type CourseForm struct {
 	Name       string `json:"name" form:"name"`
-	CourseDate string `json:"course_date" form:"course_date"`
+	Schedule   string `json:"schedule" form:"schedule"`
 	Section    string `json:"section" form:"section"`
 	Semester   string `json:"semester" form:"semester"`
 }
 
 type AssignmentForm struct {
-	Title       string    `form:"title"`
-	Description string    `form:"description"`
-	Point       int16     `form:"point"`
-	StartDate   time.Time `form:"start"`
-	DueDate     time.Time `form:"due"`
-	CloseDate   time.Time `form:"close"`
-	Tags        []string  `form:"tags"`
-	Attachments []string  `form:"attachments"`
-	AIAgent     bool      `form:"ai_agent"`
-	Visible     bool      `form:"visible"`
+	Title       		string    	`form:"title"`
+	Description 		string    	`form:"description"`
+	Point       		int16     	`form:"point"`
+	StartDate   		time.Time 	`form:"start"`
+	DueDate     		time.Time 	`form:"due"`
+	CloseDate   		time.Time 	`form:"close"`
+	Tags        		[]string  	`form:"tags"`
+	Attachments 		[]string  	`form:"attachments"`
+	AIAgent     		bool      	`form:"ai_agent"`
+	AssignmentPrompt	string		`form:"assignment_prompt"`
+	Visible     		bool      	`form:"visible"`
 }
 
 type SubmissionForm struct {
@@ -41,6 +42,12 @@ type CommentForm struct {
 
 type GradeForm struct {
 	Point int16 `json:"point" form:"point"`
+}
+
+type GradeAndCommentForm struct {
+	Point 	int16 	`json:"point" form:"point"`
+	Comment string 	`json:"comment" form:"comment"`
+	Visible bool   	`json:"visible" form:"visible"`
 }
 
 type PythonCodeForm struct {
@@ -68,11 +75,13 @@ type AssignmentOverrideForm struct {
 }
 
 type AssignmentTemplateForm struct {
-	Title       string   `json:"title" form:"title"`
-	Description string   `json:"description" form:"description"`
-	Point       int16    `json:"point" form:"point"`
-	Tags        []string `json:"tags" form:"tags"`
-	Attachments []string `json:"attachments" form:"attachments"`
+	Title       		string   	`json:"title" form:"title"`
+	Description 		string   	`json:"description" form:"description"`
+	Point       		int16    	`json:"point" form:"point"`
+	Tags        		[]string 	`json:"tags" form:"tags"`
+	Attachments 		[]string 	`json:"attachments" form:"attachments"`
+	AIAgent     		bool      	`form:"ai_agent"`
+	AssignmentPrompt	string		`form:"assignment_prompt"`
 }
 
 type AIConfigForm struct {
@@ -88,16 +97,16 @@ type AssignmentPromptForm struct {
 	Prompt string `json:"prompt" form:"prompt"`
 }
 
-type N8NSubmission struct {
+type AISubmissionForm struct {
 	SubmissionID string `json:"id"`
 	Answer       string `json:"answer"`
 }
 
-type N8NForm struct {
+type AIForm struct {
 	AIConfig         ResponseAIConfig `json:"config"`
 	MaxPoint         int16            `json:"max_point"`
 	AssignmentPrompt string           `json:"prompt"`
-	Submissions      []N8NSubmission  `json:"submissions"`
+	Submissions      []AISubmissionForm  `json:"submissions"`
 }
 
 type AIGradingForm struct {

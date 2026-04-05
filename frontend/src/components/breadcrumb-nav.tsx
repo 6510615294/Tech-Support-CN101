@@ -35,15 +35,15 @@ export function BreadcrumbNav({ courseName, assignmentName }: BreadcrumbNavProps
       label = "Courses"
     } else if (pathSegments[index - 1] === "courses" && courseName) {
       label = courseName
-    } else if (segment === "assignment") {
-      label = "Assignment"
-    } else if (pathSegments[index - 1] === "assignment" && assignmentName) {
+    } else if (segment === "assignments") {
+      label = "Assignments"
+    } else if (pathSegments[index - 1] === "assignments" && assignmentName) {
       label = assignmentName
     }
     
     return { href, label, isLast }
   })
-
+  
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />

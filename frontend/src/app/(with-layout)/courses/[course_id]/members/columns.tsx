@@ -13,7 +13,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
 import { Badge } from "@/components/ui/badge"
 
 type CourseMember = {
@@ -36,95 +35,13 @@ const statusStyles: Record<string, string> = {
   student: "bg-green-500 hover:bg-green-500",
 }
 
-export const getColumns = (course_id: string, onMemberUpdated?: () => void): ColumnDef<CourseMember>[] => {
+export const getColumns = (
+  course_id: string,
+  handleChangeStatus: (userId: string, status: string) => void,
+  handleChangeRole: (userId: string, status: string) => void,
+  handleDeleteMember: (userId: string) => void,
+): ColumnDef<CourseMember>[] => {
   
-  const handleChangeStatus = async (userId: string, newStatus: string) => {
-    const token = localStorage.getItem("token");
-    
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/member/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          new_status: newStatus,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        alert(`Failed to change status: ${errorData.message || "Unknown error"}`);
-        return;
-      }
-
-      if (onMemberUpdated) {
-        onMemberUpdated();
-      }
-    } catch (error) {
-      alert(`Error changing status: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  };
-
-  const handleChangeRole = async (userId: string, newRole: string) => {
-    const token = localStorage.getItem("token");
-    
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/member/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          new_role: newRole,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        alert(`Failed to change role: ${errorData.message || "Unknown error"}`);
-        return;
-      }
-
-      if (onMemberUpdated) {
-        onMemberUpdated();
-      }
-    } catch (error) {
-      alert(`Error changing role: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  };
-
-  const handleDeleteMember = async (userId: string) => {
-    if (!confirm("Are you sure you want to remove this member from the course?")) {
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/member/${userId}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        alert(`Failed to delete member: ${errorData.message || "Unknown error"}`);
-        return;
-      }
-
-      if (onMemberUpdated) {
-        onMemberUpdated();
-      }
-    } catch (error) {
-      alert(`Error deleting member: ${error instanceof Error ? error.message : "Unknown error"}`);
-    }
-  };
-
   return [
     {
       accessorKey: "username",
@@ -294,5 +211,3 @@ export const getColumns = (course_id: string, onMemberUpdated?: () => void): Col
     },
   ];
 }
-
-export const columns: ColumnDef<CourseMember>[] = getColumns("");

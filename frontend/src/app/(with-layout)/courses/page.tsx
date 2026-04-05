@@ -9,9 +9,20 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
-import { Pencil, BookOpen, Calendar, GraduationCap, AlertCircle, Plus } from "lucide-react"
-import { useRouter } from "next/navigation";
-
+import { Pencil, BookOpen, Calendar, GraduationCap, AlertCircle, Trash2 } from "lucide-react"
+import { CreateCourseDialog } from "@/components/create-course-dialog"
+import { EditCourseDialog } from "@/components/edit-course-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 
 type Course = {
   id: string;
@@ -24,23 +35,43 @@ type Course = {
 
 export default function Page() {
   const { user } = useAuth()
-  const [courses, setCourses] = useState<Course[] | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("")
-  const router = useRouter();
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [deletingCourse, setDeletingCourse] = useState<Course | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
-  const handleAddCourse = () => {
-    router.push(`/courses/create`);
-  };
-  
-  const handleEditCourse = (courseId: string) => {
-    router.push(`/courses/${courseId}/edit`);
-  };
+  const handleDelete = async () => {
+    if (!deletingCourse || !user?.token) return
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${deletingCourse.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+      
+      if (!res.ok) {
+        toast.error("Failed to delete Course", {
+          description: "Something went wrong. Please try again.",
+        })
+        return;
+      }
+      
+      setCourses((prev) => prev.filter((c) => c.id !== deletingCourse.id))
+      setDeletingCourse(null)
+      toast.success("Course deleted", {
+        description: "The course was deleted successfully.",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   useEffect(() => {
     async function loadCourses() {
       if (!user?.token) return
-      
+      setIsLoading(true)
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
           headers: {
@@ -54,9 +85,12 @@ export default function Page() {
         
         const data = await res.json()
         setCourses(data)
-        console.log(data)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load courses")
+        setCourses([])
+        toast.error("Error", {
+          description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
+        })
       } finally {
         setIsLoading(false)
       }
@@ -73,18 +107,18 @@ export default function Page() {
         <div className="flex-1 p-6">
           <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Your Courses</h1>
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-6 w-6 text-primary"/>
+              <h1 className="text-2xl font-bold">Your Courses</h1>
+            </div>
             <p className="mt-1 text-muted-foreground">
               Browse and access your enrolled courses
             </p>
           </div>
           {user?.role === "teacher" && (
-            <Button
-              onClick={handleAddCourse}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Course
-            </Button>
+            <CreateCourseDialog
+              onCreated={(course) => setCourses((prev) => [...prev, course])}
+            />
           )}
           </div>
 
@@ -158,19 +192,34 @@ export default function Page() {
                         </Button>
                       
                         {user?.role === "teacher" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="bg-background/80 backdrop-blur-sm hover:bg-background border"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleEditCourse(course.id);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Edit course</span>
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="bg-background/80 backdrop-blur-sm hover:bg-background border"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setEditingCourse(course);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              <span className="sr-only">Edit course</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="bg-background/80 backdrop-blur-sm hover:bg-background text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setDeletingCourse(course)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete course</span>
+                            </Button>
+                          </>
                         )}
                       </CardFooter>
                     </Card>
@@ -194,7 +243,40 @@ export default function Page() {
               </EmptyHeader>
             </Empty>
           )}
-        </div>
+      </div>
+      
+      <AlertDialog open={!!deletingCourse} onOpenChange={(open) => { if (!open) setDeletingCourse(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-primary">{deletingCourse?.name}</span>? This action cannot be undone and will remove all associated assignments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {editingCourse && (
+        <EditCourseDialog
+          course={editingCourse}
+          open={!!editingCourse}
+          onOpenChange={(open) => { if (!open) setEditingCourse(null) }}
+          onUpdated={(updated) => {
+            setCourses((prev) => prev.map((c) => c.id === updated.id ? updated : c))
+            setEditingCourse(null)
+          }}
+        />
+      )}
       </>
     )
 }

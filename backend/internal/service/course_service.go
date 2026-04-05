@@ -24,7 +24,7 @@ func CreateCourse(userID, role string, form *models.CourseForm) (*models.Respons
 	course := &models.Course{
 		ID:         courseID,
 		Name:       form.Name,
-		CourseDate: form.CourseDate,
+		CourseDate: form.Schedule,
 		Section:    form.Section,
 		Semester:   form.Semester,
 		TeacherID:  userID,
@@ -37,12 +37,12 @@ func CreateCourse(userID, role string, form *models.CourseForm) (*models.Respons
 		Status:   "active",
 	}
 
-	err := repository.CreateCourseWithMember(course, member)
+	newCourse, err := repository.CreateCourseWithMember(course, member)
 	if err != nil {
 		return nil, err
 	}
 
-	response := models.ConvertCourseToResponse(course)
+	response := models.ConvertCourseToResponse(newCourse)
 
 	return &response, nil
 }
@@ -97,8 +97,8 @@ func UpdateCourse(
 		updates["name"] = form.Name
 	}
 
-	if form.CourseDate != "" {
-		updates["course_date"] = form.CourseDate
+	if form.Schedule != "" {
+		updates["course_date"] = form.Schedule
 	}
 
 	if form.Section != "" {
@@ -181,7 +181,7 @@ func EnrollCourse(
 			UserID:   user.ID,
 			CourseID: courseID,
 			Role:     enrollment.CourseRole,
-			Status:   "enrolled",
+			Status:   "active",
 		})
 
 		if err != nil {

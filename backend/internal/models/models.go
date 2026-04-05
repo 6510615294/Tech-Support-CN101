@@ -58,7 +58,7 @@ var RolePermissions = map[string][]string{
 		"template:update",
 		"template:delete",
 		"file:read_all",
-		"file:dowload_all",
+		"file:download_all",
 		"run:python",
 		"ai",
 	},
@@ -87,7 +87,6 @@ type User struct {
 	Email     string    `gorm:"unique;not null" json:"email"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	// DeletedAt  	gorm.DeletedAt 	`gorm:"index" json:"-"`
 }
 
 type Course struct {
@@ -100,7 +99,6 @@ type Course struct {
 	Teacher    User      `gorm:"foreignKey:TeacherID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
-	// DeletedAt  	gorm.DeletedAt 	`gorm:"index" json:"-"`
 }
 
 type CourseMember struct {
@@ -117,14 +115,13 @@ type CourseMember struct {
 
 type Attachment struct {
 	ID        string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	URL       string    `gorm:"not null" json:"url"`
 	FileKey   string    `gorm:"not null" json:"-"`
 	FileName  string    `json:"file_name"`
 	FileType  string    `json:"file_type"`
+	Size	  int64		`json:"size"`
 	UserID    string    `gorm:"not null;index" json:"user_id"`
 	Uploader  User      `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	CreatedAt time.Time `json:"created_at"`
-	// DeletedAt   gorm.DeletedAt 	`gorm:"index" json:"-"`
 }
 
 type Tag struct {
@@ -134,22 +131,22 @@ type Tag struct {
 }
 
 type Assignment struct {
-	ID          string       `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	CourseID    string       `gorm:"not null;index" json:"course_id"`
-	Course      Course       `gorm:"foreignKey:CourseID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Title       string       `gorm:"not null" json:"title"`
-	Description string       `json:"description"`
-	Point       int16        `json:"point"`
-	StartDate   time.Time    `json:"start_date"`
-	DueDate     time.Time    `json:"due_date"`
-	CloseDate   time.Time    `json:"close_date"`
-	Attachments []Attachment `gorm:"many2many:assignment_attachments;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments"`
-	Tags        []Tag        `gorm:"many2many:assignment_tags;" json:"tags"`
-	AIAgent     bool         `gorm:"default:false" json:"ai_agent"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	// DeletedAt		gorm.DeletedAt 	`gorm:"index" json:"-"`
-	Visible bool `gorm:"default:true" json:"visible"`
+	ID          		string       	`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	CourseID    		string       	`gorm:"not null;index" json:"course_id"`
+	Course      		Course       	`gorm:"foreignKey:CourseID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Title       		string       	`gorm:"not null" json:"title"`
+	Description 		string       	`json:"description"`
+	Point       		int16        	`json:"point"`
+	StartDate   		time.Time    	`json:"start_date"`
+	DueDate     		time.Time    	`json:"due_date"`
+	CloseDate   		time.Time    	`json:"close_date"`
+	Attachments 		[]Attachment 	`gorm:"many2many:assignment_attachments;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments"`
+	Tags        		[]Tag        	`gorm:"many2many:assignment_tags;constraint:OnDelete:CASCADE;" json:"tags"`
+	AIAgent     		bool         	`gorm:"default:false" json:"ai_agent"`
+	AssignmentPrompt	string			`json:"assignment_prompt"`
+	CreatedAt   		time.Time    	`json:"created_at"`
+	UpdatedAt   		time.Time    	`json:"updated_at"`
+	Visible 			bool 			`gorm:"default:true" json:"visible"`
 }
 
 type AssignmentOverride struct {
@@ -169,7 +166,6 @@ type Comment struct {
 	CreatedBy     string    `json:"created_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
-	// DeletedAt 		gorm.DeletedAt 	`gorm:"index" json:"-"`
 	Visible bool `gorm:"default:true" json:"visible"`
 }
 
@@ -187,19 +183,20 @@ type Submission struct {
 	Student      User        `gorm:"foreignKey:StudentID;references:ID" json:"-"`
 	CreatedAt    time.Time   `json:"created_at"`
 	UpdatedAt    time.Time   `json:"updated_at"`
-	// DeletedAt		gorm.DeletedAt 	`gorm:"index" json:"-"`
 }
 
 type AssignmentTemplate struct {
-	ID          string       `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	Title       string       `gorm:"not null" json:"title"`
-	Description string       `json:"description"`
-	Point       int16        `json:"point"`
-	Attachments []Attachment `gorm:"many2many:assignment_template_attachments;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments"`
-	Tags        []Tag        `gorm:"many2many:assignment_template_tags;" json:"tags"`
-	CreatedBy   string       `gorm:"type:uuid" json:"created_by"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
+	ID          		string       `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	Title       		string       `gorm:"not null" json:"title"`
+	Description 		string       `json:"description"`
+	Point       		int16        `json:"point"`
+	Attachments 		[]Attachment `gorm:"many2many:assignment_template_attachments;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments"`
+	Tags        		[]Tag        `gorm:"many2many:assignment_template_tags;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"tags"`
+	AIAgent     		bool         `gorm:"default:false" json:"ai_agent"`
+	AssignmentPrompt	string		 `json:"assignment_prompt"`
+	CreatedBy   		string       `gorm:"type:uuid" json:"created_by"`
+	CreatedAt   		time.Time    `json:"created_at"`
+	UpdatedAt   		time.Time    `json:"updated_at"`
 }
 
 type AIConfig struct {

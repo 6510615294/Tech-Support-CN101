@@ -157,12 +157,7 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 		return err
 	}
 
-	maxPoint, err := repository.GetAssignmentMaxPoint(assignmentID)
-	if err != nil {
-		return err
-	}
-
-	assignmentPrompt, err := repository.GetAssignmentPrompt(assignmentID)
+	maxPoint, assignmentPrompt, err := repository.GetAssignmentMaxPointAndPrompt(assignmentID)
 	if err != nil {
 		return err
 	}
@@ -196,7 +191,7 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 		batch := submissions[i:end]
 
 		// Prepare N8NSubmission list
-		n8nSubmissions := make([]models.N8NSubmission, 0, len(batch))
+		n8nSubmissions := make([]models.AISubmissionForm, 0, len(batch))
 		for _, submission := range batch {
 			answer := submission.Answer
 
@@ -208,7 +203,7 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 				answer = string(fileBytes)
 			}
 
-			n8nSubmissions = append(n8nSubmissions, models.N8NSubmission{
+			n8nSubmissions = append(n8nSubmissions, models.AISubmissionForm{
 				SubmissionID: submission.ID,
 				Answer:       answer,
 			})
@@ -222,7 +217,7 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 		}
 
 		// Prepare AI API request
-		prompt := buildGradingPrompt(assignmentPrompt.Prompt, int(*maxPoint), string(submissionsJSON))
+		prompt := buildGradingPrompt(assignmentPrompt, int(*maxPoint), string(submissionsJSON))
 		requestBody := map[string]any{
 			"model": aiConfig.Model,
 			"messages": []map[string]string{

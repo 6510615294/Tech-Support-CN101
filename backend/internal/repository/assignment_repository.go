@@ -46,7 +46,7 @@ func GetAssignmentWithRelations(courseID, assignmentID string) (*models.Assignme
 	return &assignment, err
 }
 
-func GetAssignmentMaxPoint(assignmentID string) (*int16, error) {
+func GetAssignmentMaxPointAndPrompt(assignmentID string) (*int16, string, error) {
 	var assignment models.Assignment
 
 	err := database.DB.
@@ -55,10 +55,10 @@ func GetAssignmentMaxPoint(assignmentID string) (*int16, error) {
 		Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.ErrAssignmentNotFound
+		return nil, "", errors.ErrAssignmentNotFound
 	}
 
-	return &assignment.Point, err
+	return &assignment.Point, assignment.AssignmentPrompt, err
 }
 
 func GetVisibleAssignment(courseID, assignmentID string) (*models.Assignment, error) {

@@ -1,5 +1,7 @@
 "use client"
 
+import SmartDatetimePickerByTui from "@/components/smart-datetime-input2"
+import SmartDatetimePicker from "@/components/smart-datetime-input2"
 import { useState } from "react"
 
 export default function UploadAttachmentsPage() {
@@ -107,6 +109,8 @@ export default function UploadAttachmentsPage() {
       {error && (
         <p className="text-red-600 mt-4">{error}</p>
       )}
+      
+      <SmartDatetimePickerByTui />
     </div>
   )
 }

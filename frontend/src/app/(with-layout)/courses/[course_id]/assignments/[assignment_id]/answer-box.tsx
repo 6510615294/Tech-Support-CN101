@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Code, Play, Upload, FileText, X } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
+import { useAuth } from "@/lib/auth-context"
 
 interface AnswerBoxProps {
   courseId: string
@@ -16,7 +19,6 @@ interface AnswerBoxProps {
   fileName?: string
   isStudent: boolean
   hasSubmission: boolean
-  onCodeChange?: (code: string) => void
   onRunCode?: (code: string) => Promise<string>
   onSubmit?: (answer: string, file?: File) => void
 }
@@ -29,19 +31,25 @@ export function AnswerBox({
   fileName,
   isStudent,
   hasSubmission,
-  onCodeChange,
   onRunCode,
   onSubmit,
 }: AnswerBoxProps) {
   const [code, setCode] = useState("")
+  const [stdin, setStdin] = useState<string>("")
   const [output, setOutput] = useState<string | null>(null)
   const [isRunning, setIsRunning] = useState(false)
+  const [runError, setRunError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
   
   useEffect(() => {
+    const resetRunCode = async () => {
+      setOutput(null)
+      setRunError(null)
+    }
     const fetchAnswerContent = async () => {
       setIsLoading(true)
       setError(null)
@@ -64,7 +72,6 @@ export function AnswerBox({
         
         const content = await response.json()
         setCode(content)
-        console.log(content)
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred")
       } finally {
@@ -72,23 +79,44 @@ export function AnswerBox({
       }
     }
     
+    resetRunCode()
     fetchAnswerContent()
   }, [courseId, assignmentId, submissionId])
 
   const handleCodeChange = (newCode: string) => {
     setCode(newCode)
-    onCodeChange?.(newCode)
   }
 
   const handleRunCode = async () => {
-    if (!onRunCode) return
+    if (!onRunCode || !user) return
     setIsRunning(true)
     setOutput(null)
+    setRunError(null)
+    
     try {
-      const result = await onRunCode(code)
-      setOutput(result)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/run/python3`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          source_code: code,
+          stdin: stdin,
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error("Failed to run code")
+      }
+      
+      const result = await response.json()
+      setOutput(result.stdout || result.output || "")
+      if (result.stderr) {
+        setRunError(result.stderr)
+      }
     } catch (error) {
-      setOutput(`Error: ${error instanceof Error ? error.message : "Unknown error"}`)
+      setRunError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`)
     } finally {
       setIsRunning(false)
     }
@@ -159,6 +187,22 @@ export function AnswerBox({
     )
   }
 
+  if (error) {
+    return (
+      <div className="p-6">
+        <Empty className="py-16">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              
+            </EmptyMedia>
+            <EmptyTitle>Failed to load assignment</EmptyTitle>
+            <EmptyDescription>{error || "Assignment not found"}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
+    )
+  }
+
   // Student view - has submission (read-only)
   if (isStudent && hasSubmission) {
     return (
@@ -184,7 +228,11 @@ export function AnswerBox({
               </a>
             </div>
           )}
-          {code && (
+          {isLoading ? (
+            <div>
+              <Skeleton className="h-48" />
+            </div>
+          ) : (
             <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
               <pre className="whitespace-pre-wrap">{code}</pre>
             </div>
@@ -215,11 +263,21 @@ export function AnswerBox({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isLoading ? (
+          <Skeleton className="h-48"/>
+        ) : (
+          <Textarea
+            value={code}
+            onChange={(e) => handleCodeChange(e.target.value)}
+            className="font-mono text-sm min-h-[200px]"
+            placeholder="Code answer..."
+          />
+        )}
         <Textarea
-          value={code}
-          onChange={(e) => handleCodeChange(e.target.value)}
-          className="font-mono text-sm min-h-[200px]"
-          placeholder="Code answer..."
+          value={stdin}
+          onChange={(e) => setStdin(e.target.value)}
+          placeholder="Enter input for your Python code..."
+          className="w-full rounded-sm border p-2 text-sm min-h-16 bg-gray-900"
         />
         <div className="flex gap-2">
           <Button onClick={handleRunCode} disabled={isRunning} variant="outline">
@@ -232,6 +290,14 @@ export function AnswerBox({
             <label className="text-sm font-medium">Output</label>
             <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
               <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+            </div>
+          </div>
+        )}
+        {runError !== null && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Error</label>
+            <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
+              <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
             </div>
           </div>
         )}

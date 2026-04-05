@@ -38,17 +38,18 @@ func CreateAssignment(
 	}
 
 	assignment := models.Assignment{
-		CourseID:    courseID,
-		Title:       form.Title,
-		Description: form.Description,
-		Point:       form.Point,
-		StartDate:   form.StartDate,
-		DueDate:     form.DueDate,
-		CloseDate:   form.CloseDate,
-		Attachments: attachments,
-		Tags:        tags,
-		AIAgent:     form.AIAgent,
-		Visible:     form.Visible,
+		CourseID:    		courseID,
+		Title:       		form.Title,
+		Description: 		form.Description,
+		Point:       		form.Point,
+		StartDate:   		form.StartDate,
+		DueDate:     		form.DueDate,
+		CloseDate:   		form.CloseDate,
+		Attachments: 		attachments,
+		Tags:        		tags,
+		AIAgent:     		form.AIAgent,
+		AssignmentPrompt: 	form.AssignmentPrompt,
+		Visible:     		form.Visible,
 	}
 
 	if err := repository.CreateAssignment(&assignment); err != nil {
@@ -170,6 +171,9 @@ func UpdateAssignment(
 	}
 	if !form.CloseDate.IsZero() {
 		updates["close_date"] = form.CloseDate
+	}
+	if form.AssignmentPrompt != "" {
+		updates["assignment_prompt"] = form.AssignmentPrompt
 	}
 	updates["visible"] = form.Visible
 	updates["ai_agent"] = form.AIAgent
@@ -408,7 +412,7 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 	}
 
 	// Build N8NSubmissions array
-	n8nSubmissions := []models.N8NSubmission{}
+	n8nSubmissions := []models.AISubmissionForm{}
 	for i, submission := range submissions {
 		print(i)
 		answer := submission.Answer
@@ -422,7 +426,7 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 			answer = string(fileBytes)
 		}
 
-		n8nSubmission := models.N8NSubmission{
+		n8nSubmission := models.AISubmissionForm{
 			SubmissionID: submission.ID,
 			Answer:       answer,
 		}
@@ -430,7 +434,7 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 	}
 
 	// Build N8NForm
-	n8nForm := models.N8NForm{
+	n8nForm := models.AIForm{
 		AIConfig: models.ResponseAIConfig{
 			Provider:       aiConfig.Provider,
 			Model:          aiConfig.Model,

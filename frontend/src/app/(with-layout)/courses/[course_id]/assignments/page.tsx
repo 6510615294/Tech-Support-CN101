@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Calendar, FileText, GraduationCap, Plus, Tag } from "lucide-react"
+import { CreateAssignmentDialog } from "@/components/create-assignment-dialog"
 
 interface Course {
   id: string
@@ -41,18 +42,12 @@ export default function CourseDetailPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
-  const router = useRouter();
-  
-  const handleAddAssignment = () => {
-    router.push(`/courses/${course_id}/assignments/create`);
-  };
-  
+
   useEffect(() => {
     const fetchData = async () => {
       if (!user?.token) return
-      console.log(course_id)
+
       try {
-        console.log("test",course_id)
         // Fetch course details
         const courseRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`, {
           headers: { Authorization: `Bearer ${user.token}` },
@@ -68,6 +63,7 @@ export default function CourseDetailPage() {
         if (!assignmentsRes.ok) throw new Error("Failed to fetch assignments")
         const assignmentsData = await assignmentsRes.json()
         setAssignments(assignmentsData.assignments)
+        console.log(assignmentsData)
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load data")
       } finally {
@@ -181,12 +177,12 @@ export default function CourseDetailPage() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Assignments</h2>
                 {user?.role === "teacher" && (
-                  <Button
-                    onClick={handleAddAssignment}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Assignment
-                  </Button>
+                  <CreateAssignmentDialog
+                    courseId={course_id as string}
+                    onCreated={(assignment) => {
+                      setAssignments(prev => [...prev, assignment])
+                    }}
+                  />
                 )}
               </div>
               

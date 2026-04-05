@@ -11,6 +11,7 @@ func RegisterSubmissionRoutes(app fiber.Router) {
 	app.Post("", createSubmission)
 	app.Put("/:submission_id", updateSubmission)
 	app.Put("/:submission_id/grade", updateGrade)
+	app.Put("/:submission_id/grade-with-comment", updateCommentAndGrade)
 	app.Get("/:submission_id/read", readSubmission)
 }
 
@@ -78,6 +79,33 @@ func updateGrade(c fiber.Ctx) error {
 	}
 
 	result, err := service.UpdateGrade(courseID, submissionID, role, &form)
+	if err != nil {
+		return SendError(c, err)
+	}
+
+	return c.JSON(result)
+}
+
+func updateCommentAndGrade(c fiber.Ctx) error {
+	courseID := c.Params("course_id")
+	submissionID := c.Params("submission_id")
+	role := c.Locals("course_role").(string)
+	userID := c.Locals("user_id").(string)
+
+	if !models.HasPermission(role, "assignment:grade") {
+		return SendError(c, errors.ErrForbidden)
+	}
+	
+	if !models.HasPermission(role, "assignment:comment") {
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	var form models.GradeAndCommentForm
+	if err := c.Bind().Body(&form); err != nil {
+		return SendError(c, errors.ErrBadRequest)
+	}
+
+	result, err := service.UpdateGradeAndComment(courseID, submissionID, userID, role, &form)
 	if err != nil {
 		return SendError(c, err)
 	}

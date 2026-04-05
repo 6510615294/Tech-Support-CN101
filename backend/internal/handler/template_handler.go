@@ -12,6 +12,7 @@ import (
 func RegisterTemplateRoutes(app fiber.Router) {
 	app.Post("", createAssignmentTemplate)
 	app.Get("", getAssignmentTemplates)
+	app.Get("/short", getShortAssignmentTemplates)
 	app.Get("/:template_id", getAssignmentTemplate)
 	app.Put("/:template_id", updateAssignmentTemplate)
 	app.Delete("/:template_id", deleteAssignmentTemplate)
@@ -37,14 +38,12 @@ func createAssignmentTemplate(c fiber.Ctx) error {
 		files = multipartForm.File["files"]
 	}
 
-	err := service.CreateAssignmentTemplate(userID, &form, files)
+	template, err := service.CreateAssignmentTemplate(userID, &form, files)
 	if err != nil {
 		return SendError(c, err)
 	}
 
-	return c.JSON(fiber.Map{
-		"message": "template created",
-	})
+	return c.JSON(template)
 }
 
 func getAssignmentTemplates(c fiber.Ctx) error {
@@ -56,6 +55,22 @@ func getAssignmentTemplates(c fiber.Ctx) error {
 	}
 
 	templates, err := service.GetAssignmentTemplates(userID)
+	if err != nil {
+		return SendError(c, err)
+	}
+
+	return c.JSON(templates)
+}
+
+func getShortAssignmentTemplates(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
+
+	if !models.HasPermission(role, "template:view") {
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	templates, err := service.GetShortAssignmentTemplates(userID)
 	if err != nil {
 		return SendError(c, err)
 	}

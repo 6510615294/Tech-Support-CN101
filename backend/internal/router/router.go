@@ -16,6 +16,7 @@ func SetupRoutes(app *fiber.App) {
 	protected.Use(middleware.AuthMiddleware)
 
 	handler.RegisterMeRoutes(protected)
+	handler.RegisterRunRoutes(protected)
 
 	attachments := protected.Group("/attachments")
 	handler.RegisterAttachmentRoutes(attachments)

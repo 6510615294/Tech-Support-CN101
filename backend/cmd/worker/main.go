@@ -5,7 +5,7 @@ import (
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/worker"
+	// "github.com/6510615294/Tech-Support-CN101/backend/internal/worker"
 )
 
 func main() {
@@ -16,8 +16,7 @@ func main() {
 
 	log.Println("Worker is starting...")
 
-	worker.Start(
-		"",
-		"",
-	)
+	// worker.Start(
+
+	// )
 }
