@@ -9,6 +9,7 @@ import {
 import SummaryChart from "./summary-chart";
 import { DataTable } from "@/components/data-table"
 import { columns } from "./columns";
+import { useAuth } from "@/lib/auth-context"
 
 interface Distribution {
   range_start: number;
@@ -49,13 +50,13 @@ export default function Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { course_id, assignment_id } = useParams();
+  const { user } = useAuth();
 
   useEffect(() => {
     async function loadSummary() {
-      const token = localStorage.getItem("token");
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/summary`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${user?.token}` } }
       );
       if (!res.ok) {
         setError("Failed to load assignment data");

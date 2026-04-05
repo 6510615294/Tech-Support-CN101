@@ -49,7 +49,6 @@ export function CodeSection({
     const fetchAnswerContent = async () => {
       setIsLoading(true)
       setError(null)
-      const token = localStorage.getItem("token")
       
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}/read`,
@@ -57,7 +56,7 @@ export function CodeSection({
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${user?.token}`,
             },
           }
         )
