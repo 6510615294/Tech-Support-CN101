@@ -20,7 +20,7 @@ func GetAIConfig(userID string) (*models.AIConfig, error) {
 
 	err := database.DB.
 		Where("user_id = ?", userID).
-		Find(&config).Error
+		First(&config).Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.ErrAIConfigNotFound
@@ -34,7 +34,7 @@ func GetAIConfigByID(id string) (*models.AIConfig, error) {
 
 	err := database.DB.
 		Where("id = ?", id).
-		Find(&config).Error
+		First(&config).Error
 
 	return config, err
 }

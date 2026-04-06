@@ -100,7 +100,17 @@ func UpdateAIConfig(
 	}
 
 	if form.APIKey != "" {
-		updates["api_key"] = form.APIKey
+		key, err := getEncryptionKey()
+		if err != nil {
+			return nil, err
+		}
+
+		encryptedKey, err := security.Encrypt(form.APIKey, key)
+		if err != nil {
+			return nil, err
+		}
+
+		updates["encrypted_api_key"] = encryptedKey
 	}
 
 	if form.BaseURL != "" {

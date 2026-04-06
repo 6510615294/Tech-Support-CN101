@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { Settings } from "lucide-react"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 import { Fragment } from "react"
 
 interface BreadcrumbNavProps {
@@ -21,15 +23,15 @@ interface BreadcrumbNavProps {
 
 export function BreadcrumbNav({ courseName, assignmentName }: BreadcrumbNavProps) {
   const pathname = usePathname()
-  
+
   const pathSegments = pathname.split("/").filter(Boolean)
-  
+
   const breadcrumbs = pathSegments.map((segment, index) => {
     const href = "/" + pathSegments.slice(0, index + 1).join("/")
     const isLast = index === pathSegments.length - 1
-    
+
     let label = segment.charAt(0).toUpperCase() + segment.slice(1)
-    
+
     // Handle special cases
     if (segment === "courses") {
       label = "Courses"
@@ -40,10 +42,10 @@ export function BreadcrumbNav({ courseName, assignmentName }: BreadcrumbNavProps
     } else if (pathSegments[index - 1] === "assignments" && assignmentName) {
       label = assignmentName
     }
-    
+
     return { href, label, isLast }
   })
-  
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger className="-ml-1" />
@@ -66,6 +68,11 @@ export function BreadcrumbNav({ courseName, assignmentName }: BreadcrumbNavProps
           ))}
         </BreadcrumbList>
       </Breadcrumb>
+      <Button asChild variant="ghost" size="icon" className="ml-auto" aria-label="Open settings">
+        <Link href="/settings">
+          <Settings className="h-4 w-4" />
+        </Link>
+      </Button>
     </header>
   )
 }
