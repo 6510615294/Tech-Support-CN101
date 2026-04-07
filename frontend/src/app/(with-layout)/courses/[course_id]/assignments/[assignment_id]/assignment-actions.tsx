@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { EyeOff, ClipboardCheck, Pencil, Trash2 } from "lucide-react"
+import { EyeOff, ClipboardCheck, BarChart3, Pencil, Trash2 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import {
   AlertDialog,
@@ -113,6 +113,16 @@ export function AssignmentActions({
         >
           <ClipboardCheck className="h-4 w-4" />
           Evaluate Mode
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => router.push(`/courses/${courseId}/assignments/${assignment.id}/summary`)}
+          className="w-full justify-start gap-2"
+        >
+          <BarChart3 className="h-4 w-4" />
+          Summary
         </Button>
 
         <Separator />
