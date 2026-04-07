@@ -4,32 +4,64 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Code, Play, Upload, FileText, X, Pencil, HatGlasses } from "lucide-react"
+import { Code, Play, Upload, FileText, X, Pencil, HatGlasses, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
 import { useAuth } from "@/lib/auth-context"
 import Editor from "@monaco-editor/react"
 import { Toggle } from "@/components/ui/toggle"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface CodeSectionProps {
   courseId: string
   assignmentId: string
   submissionId: string
+  submissions?: { id: string; submitter: string }[]
   hasSubmission: boolean
   isAnonymous: boolean
   toggleAnonymous?: (isAnonymous: boolean) => void
   leaveEvaluate?: () => void
+  onPreviousSubmission?: () => void
+  onNextSubmission?: () => void
+  onSelectSubmission?: (submissionId: string) => void
+  onToggleGradingPanel?: () => void
+  canGoPrevious?: boolean
+  canGoNext?: boolean
+  currentSubmissionOrder?: number
+  totalSubmissions?: number
+  answerContent: string
+  isContentLoading: boolean
+  contentError: string | null
 }
 
 export function CodeSection({
   courseId,
   assignmentId,
   submissionId,
+  submissions = [],
   hasSubmission,
   isAnonymous,
   toggleAnonymous,
   leaveEvaluate,
+  onPreviousSubmission,
+  onNextSubmission,
+  onSelectSubmission,
+  onToggleGradingPanel,
+  canGoPrevious = false,
+  canGoNext = false,
+  currentSubmissionOrder = 0,
+  totalSubmissions = 0,
+  answerContent,
+  isContentLoading,
+  contentError,
 }: CodeSectionProps) {
   const [code, setCode] = useState("")
   const [stdin, setStdin] = useState<string>("")
@@ -37,46 +69,16 @@ export function CodeSection({
   const [isEditing, setIsEditing] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  
-  useEffect(() => {
-    const resetRunCode = async () => {
-      setOutput(null)
-      setRunError(null)
-    }
-    const fetchAnswerContent = async () => {
-      setIsLoading(true)
-      setError(null)
-      
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}/read`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${user?.token}`,
-            },
-          }
-        )
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch answer content")
-        }
-        
-        const content = await response.json()
-        setCode(content)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    resetRunCode()
-    fetchAnswerContent()
-  }, [courseId, assignmentId, submissionId])
+  useEffect(() => {
+    setCode(answerContent)
+  }, [answerContent])
+
+  useEffect(() => {
+    setOutput(null)
+    setRunError(null)
+  }, [submissionId])
 
   const handleCodeChange = (newCode: string | undefined) => {
     setCode(newCode ?? "")
@@ -88,7 +90,7 @@ export function CodeSection({
     setIsRunning(true)
     setOutput(null)
     setRunError(null)
-    
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/run/python3`, {
         method: "POST",
@@ -101,13 +103,13 @@ export function CodeSection({
           stdin: stdin,
         }),
       })
-      
+
       if (!response.ok) {
         throw new Error("Failed to run code")
       } else {
         console.log("222")
       }
-      
+
       const result = await response.json()
       setOutput(result.stdout || result.output || "")
       if (result.stderr) {
@@ -127,16 +129,16 @@ export function CodeSection({
     )
   }
 
-  if (error) {
+  if (contentError) {
     return (
       <div className="p-6">
         <Empty className="py-16">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              
+
             </EmptyMedia>
             <EmptyTitle>Failed to load assignment</EmptyTitle>
-            <EmptyDescription>{error || "Assignment not found"}</EmptyDescription>
+            <EmptyDescription>{contentError || "Assignment not found"}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
@@ -146,9 +148,7 @@ export function CodeSection({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex flex-wrap gap-1 border-b p-2 bg-muted/40">
-        <Button
-          onClick={handleRunCode}
-        >
+        <Button onClick={handleRunCode}>
           <Play />
           Run code
         </Button>
@@ -161,38 +161,87 @@ export function CodeSection({
         </Toggle>
         <Toggle
           pressed={isAnonymous}
-          onPressedChange={toggleAnonymous || (() => {})}
+          onPressedChange={toggleAnonymous || (() => { })}
         >
           <HatGlasses />
           Anonymous Mode
         </Toggle>
-        <Button
-          onClick={leaveEvaluate}
-          variant="ghost"
-        >
-          <X />
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          <Button
+            onClick={onPreviousSubmission}
+            variant="ghost"
+            size="icon"
+            disabled={!canGoPrevious}
+            aria-label="Previous submission"
+            className="h-8 w-8"
+          >
+            <ChevronLeft />
+          </Button>
+          <span className="min-w-14 text-center text-sm text-muted-foreground">
+            {currentSubmissionOrder}/{totalSubmissions}
+          </span>
+          <Button
+            onClick={onNextSubmission}
+            variant="ghost"
+            size="icon"
+            disabled={!canGoNext}
+            aria-label="Next submission"
+            className="h-8 w-8"
+          >
+            <ChevronRight />
+          </Button>
+          <Select value={submissionId} onValueChange={onSelectSubmission}>
+            <SelectTrigger className="w-32 h-8 shrink-0">
+              <SelectValue placeholder={currentSubmissionOrder ? `#${currentSubmissionOrder}` : "Select"} />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              <SelectGroup>
+                {submissions.map((submission, index) => (
+                  <SelectItem key={submission.id} value={submission.id} title={submission.id}>
+                    {isAnonymous ? `#${index + 1}` : submission.submitter.split("|")[0]}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={onToggleGradingPanel}
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Toggle grading panel"
+            title="Toggle Grading Panel"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={leaveEvaluate}
+            variant="ghost"
+          >
+            <X />
+          </Button>
+        </div>
       </div>
       <div className="flex-1 overflow-hidden">
-      {isLoading ? (
-        <Skeleton className="h-full"/>
-      ) : (
-        <Editor
-          height="100%"
-          defaultLanguage={"python"}
-          value={code}
-          theme={"vs-dark"}
-          onChange={handleCodeChange}
-          options={{
-            readOnly: !isEditing,
-            minimap: { enabled: false },
-            fontSize: 14,
-            automaticLayout: true,
-            tabSize: 4,
-            wordWrap: "on",
-          }}
-        />
-      )}
+        {isContentLoading ? (
+          <Skeleton className="h-full" />
+        ) : (
+          <Editor
+            height="100%"
+            defaultLanguage={"python"}
+            value={code}
+            theme={"vs-dark"}
+            onChange={handleCodeChange}
+            options={{
+              readOnly: !isEditing,
+              minimap: { enabled: false },
+              fontSize: 14,
+              automaticLayout: true,
+              tabSize: 4,
+              wordWrap: "on",
+            }}
+          />
+        )}
       </div>
       <Textarea
         value={stdin}

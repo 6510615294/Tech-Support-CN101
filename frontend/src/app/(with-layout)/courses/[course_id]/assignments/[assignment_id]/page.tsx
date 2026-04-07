@@ -76,6 +76,10 @@ export default function AssignmentDetailPage() {
   const [gradingError, setGradingError] = useState<string | null>(null)
   const [isGrading, setIsGrading] = useState(false)
   const [isEvaluate, setIsEvaluate] = useState(false)
+  const [isGradingPanelVisible, setIsGradingPanelVisible] = useState(true)
+  const [submissionContent, setSubmissionContent] = useState("")
+  const [isContentLoading, setIsContentLoading] = useState(false)
+  const [contentError, setContentError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user?.token) {
@@ -96,7 +100,7 @@ export default function AssignmentDetailPage() {
         setSubmissions(data.submissions || [])
         setIsStudent(data.role == "student")
         setCourseRole(data.role)
-        
+
         // For students, find their own submission
         if (data.role == "student" && data.submissions?.length > 0) {
           const mySubmission = data.submissions[0]
@@ -119,6 +123,72 @@ export default function AssignmentDetailPage() {
     setSelectedSubmission(submission)
   }
 
+  const selectedSubmissionIndex = selectedSubmission
+    ? submissions.findIndex((submission) => submission.id === selectedSubmission.id)
+    : -1
+
+  const handlePreviousSubmission = () => {
+    if (selectedSubmissionIndex <= 0) return
+    setSelectedSubmission(submissions[selectedSubmissionIndex - 1])
+  }
+
+  const handleNextSubmission = () => {
+    if (selectedSubmissionIndex < 0 || selectedSubmissionIndex >= submissions.length - 1) return
+    setSelectedSubmission(submissions[selectedSubmissionIndex + 1])
+  }
+
+  useEffect(() => {
+    if (!user?.token || !selectedSubmission?.id) {
+      setSubmissionContent("")
+      setContentError(null)
+      setIsContentLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchSubmissionContent = async () => {
+      setIsContentLoading(true)
+      setContentError(null)
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/submissions/${selectedSubmission.id}/read`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${user.token}`,
+            },
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch answer content")
+        }
+
+        const content = await response.json()
+        if (!cancelled) {
+          setSubmissionContent(content)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setContentError(err instanceof Error ? err.message : "An error occurred")
+        }
+      } finally {
+        if (!cancelled) {
+          setIsContentLoading(false)
+        }
+      }
+    }
+
+    fetchSubmissionContent()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user, course_id, assignment_id, selectedSubmission?.id])
+
   const handleSubmitGrade = async (
     grade: number,
     comment: string,
@@ -127,7 +197,7 @@ export default function AssignmentDetailPage() {
     if (!selectedSubmission || !user) return
     setIsGrading(true)
     setGradingError(null)
-  
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/submissions/${selectedSubmission.id}/grade-with-comment`,
@@ -144,60 +214,60 @@ export default function AssignmentDetailPage() {
           }),
         }
       )
-  
+
       if (!response.ok) {
         throw new Error("Failed to submit grade")
       }
-  
+
       const result = await response.json()
       setSelectedSubmission((prev) => {
         if (!prev) return prev
-      
+
         const newComment = {
           id: result.comment_id,
           comment: result.comment,
           commentator: result.graded_by,
           visible: result.visible,
         }
-      
+
         const exists = prev.comments.some(
           (c) => c.commentator === newComment.commentator
         )
-      
+
         return {
           ...prev,
           point: result.point,
           graded_by: result.graded_by,
           comments: exists
             ? prev.comments.map((c) =>
-                c.commentator === newComment.commentator ? newComment : c
-              )
+              c.commentator === newComment.commentator ? newComment : c
+            )
             : [newComment, ...prev.comments],
         }
       })
       setSubmissions((prevList) =>
         prevList.map((s) => {
           if (s.id !== result.submission_id) return s;
-      
+
           const newComment = {
             id: result.comment_id,
             comment: result.comment,
             commentator: result.graded_by,
             visible: result.visible,
           };
-      
+
           const exists = s.comments.some(
             (c) => c.commentator === newComment.commentator
           );
-      
+
           return {
             ...s,
             point: result.point,
             graded_by: result.graded_by,
             comments: exists
               ? s.comments.map((c) =>
-                  c.commentator === newComment.commentator ? newComment : c
-                )
+                c.commentator === newComment.commentator ? newComment : c
+              )
               : [newComment, ...s.comments],
           };
         })
@@ -252,24 +322,75 @@ export default function AssignmentDetailPage() {
       </div>
     )
   }
-  
-  if (isEvaluate) {
-    return (
-      <div className="h-screen flex flex-col">
-        <BreadcrumbNav/>
+
+  // if (isEvaluate) {
+  //   return (
+  //     <div className="h-screen flex flex-col">
+  //       <BreadcrumbNav />
+  //       <div className="grid grid-cols-4 flex-1">
+  //         <div className="col-span-3 flex flex-col">
+  //           <CodeSection
+  //             courseId={`${course_id}`}
+  //             assignmentId={`${assignment_id}`}
+  //             submissionId={selectedSubmission?.id || ""}
+  //             hasSubmission={true}
+  //             isAnonymous={isAnonymous}
+  //             toggleAnonymous={setIsAnonymous}
+  //             leaveEvaluate={() => setIsEvaluate(false)}
+  //           />
+  //         </div>
+  //         <div className="">
+  //           <GradingPanel
+  //             submissions={submissions}
+  //             selectedId={selectedSubmission?.id ?? ""}
+  //             onSelect={setSelectedSubmission}
+  //             isAnonymous={isAnonymous}
+  //             role={courseRole}
+  //             comments={selectedSubmission?.comments || []}
+  //             maxPoints={assignment.point}
+  //             currentGrade={selectedSubmission?.point || 0}
+  //             gradedBy={selectedSubmission?.graded_by || ""}
+  //             onSubmitGrade={handleSubmitGrade}
+  //           />
+  //         </div>
+  //       </div>
+  //     </div>
+  //   )
+  // }
+
+  return (
+    <div className="space-y-6">
+      {/* Breadcrumb */}
+      <BreadcrumbNav assignmentName={assignment.title} />
+      {isEvaluate ? (
         <div className="grid grid-cols-4 flex-1">
-          <div className="col-span-3 flex flex-col">
+          <div className={isGradingPanelVisible ? "col-span-3 flex flex-col" : "col-span-4 flex flex-col"}>
             <CodeSection
               courseId={`${course_id}`}
               assignmentId={`${assignment_id}`}
               submissionId={selectedSubmission?.id || ""}
-              hasSubmission={true}
+              submissions={submissions}
+              hasSubmission={!!selectedSubmission}
               isAnonymous={isAnonymous}
               toggleAnonymous={setIsAnonymous}
               leaveEvaluate={() => setIsEvaluate(false)}
+              onPreviousSubmission={handlePreviousSubmission}
+              onNextSubmission={handleNextSubmission}
+              onSelectSubmission={(submissionId) => {
+                const submission = submissions.find((item) => item.id === submissionId)
+                if (submission) setSelectedSubmission(submission)
+              }}
+              canGoPrevious={selectedSubmissionIndex > 0}
+              canGoNext={selectedSubmissionIndex >= 0 && selectedSubmissionIndex < submissions.length - 1}
+              currentSubmissionOrder={selectedSubmissionIndex >= 0 ? selectedSubmissionIndex + 1 : 0}
+              totalSubmissions={submissions.length}
+              answerContent={submissionContent}
+              isContentLoading={isContentLoading}
+              contentError={contentError}
+              onToggleGradingPanel={() => setIsGradingPanelVisible(!isGradingPanelVisible)}
             />
           </div>
-          <div className="">
+          {isGradingPanelVisible && <div className="col-span-1">
             <GradingPanel
               submissions={submissions}
               selectedId={selectedSubmission?.id ?? ""}
@@ -282,86 +403,88 @@ export default function AssignmentDetailPage() {
               gradedBy={selectedSubmission?.graded_by || ""}
               onSubmitGrade={handleSubmitGrade}
             />
-          </div>
+          </div>}
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <BreadcrumbNav assignmentName={assignment.title} />
-      
-      <div className="grid gap-6 lg:grid-cols-3 px-6">
-        <div className={isStudent ? "lg:col-span-3" : "lg:col-span-2"}>
-          {/* 1. Assignment Info */}
-          <AssignmentInfo assignment={assignment} />
-        </div>
-        {/* 2. Submission List - Only for non-students */}
-        {!isStudent && (
-          <div className="flex flex-col gap-4">
-            <AssignmentActions
-              courseId={`${course_id}`}
-              assignment={assignment}
-              evaluateMode={() => setIsEvaluate(true)}
-              onAssignmentUpdated={setAssignment}
-            />
-            <SubmissionList
-              submissions={submissions}
-              selectedId={selectedSubmission?.id || null}
-              onSelect={handleSelectSubmission}
-              maxPoints={assignment.point}
-              isAnonymous={isAnonymous}
-            />
+      ) : (<>
+        <div className="grid gap-6 lg:grid-cols-3 px-6">
+          <div className={isStudent ? "lg:col-span-3" : "lg:col-span-2"}>
+            {/* 1. Assignment Info */}
+            <AssignmentInfo assignment={assignment} />
           </div>
-        )}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3 px-6">
-        {/* 3. Answer Box */}
-        <div className="lg:col-span-2">
-          {isStudent ? (
-            <AnswerBox
-              courseId={`${course_id}`}
-              assignmentId={`${assignment_id}`}
-              submissionId={selectedSubmission?.id || ""}
-              attachmentId={selectedSubmission?.attachment_id}
-              fileName={selectedSubmission?.file_name}
-              isStudent={true}
-              hasSubmission={!!studentHasSubmission}
-              onSubmit={handleSubmit}
-            />
-          ) : selectedSubmission ? (
-            <AnswerBox
-              courseId={`${course_id}`}
-              assignmentId={`${assignment_id}`}
-              submissionId={selectedSubmission.id || ""}
-              attachmentId={selectedSubmission.attachment_id}
-              fileName={selectedSubmission.file_name}
-              isStudent={false}
-              hasSubmission={true}
-            />
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Select a submission to view
-              </CardContent>
-            </Card>
+          {/* 2. Submission List - Only for non-students */}
+          {!isStudent && (
+            <div className="flex flex-col gap-4">
+              <AssignmentActions
+                courseId={`${course_id}`}
+                assignment={assignment}
+                evaluateMode={() => setIsEvaluate(true)}
+                onAssignmentUpdated={setAssignment}
+              />
+              <SubmissionList
+                submissions={submissions}
+                selectedId={selectedSubmission?.id || null}
+                onSelect={handleSelectSubmission}
+                maxPoints={assignment.point}
+                isAnonymous={isAnonymous}
+              />
+            </div>
           )}
         </div>
-        {(isStudent && studentHasSubmission) || (!isStudent && selectedSubmission) ? (
-          <CommentGrade
-            role={courseRole}
-            comments={selectedSubmission?.comments || []}
-            currentGrade={selectedSubmission?.point || 0}
-            maxPoints={assignment.point}
-            gradedBy={selectedSubmission?.graded_by || ""}
-            isStudent={isStudent}
-            onSubmitGrade={handleSubmitGrade}
-          />
-        ) : null}
-      </div>
+
+        <div className="grid gap-6 lg:grid-cols-3 px-6">
+          {/* 3. Answer Box */}
+          <div className="lg:col-span-2">
+            {isStudent ? (
+              <AnswerBox
+                courseId={`${course_id}`}
+                assignmentId={`${assignment_id}`}
+                submissionId={selectedSubmission?.id || ""}
+                attachmentId={selectedSubmission?.attachment_id}
+                fileName={selectedSubmission?.file_name}
+                isStudent={true}
+                hasSubmission={!!studentHasSubmission}
+                onSubmit={handleSubmit}
+                answerContent={submissionContent}
+                isContentLoading={isContentLoading}
+                contentError={contentError}
+              />
+            ) : selectedSubmission ? (
+              <AnswerBox
+                courseId={`${course_id}`}
+                assignmentId={`${assignment_id}`}
+                submissionId={selectedSubmission.id || ""}
+                attachmentId={selectedSubmission.attachment_id}
+                fileName={selectedSubmission.file_name}
+                isStudent={false}
+                hasSubmission={true}
+                answerContent={submissionContent}
+                isContentLoading={isContentLoading}
+                contentError={contentError}
+              />
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Select a submission to view
+                </CardContent>
+              </Card>
+            )}
+          </div>
+          {(isStudent && studentHasSubmission) || (!isStudent && selectedSubmission) ? (
+            <CommentGrade
+              role={courseRole}
+              comments={selectedSubmission?.comments || []}
+              currentGrade={selectedSubmission?.point || 0}
+              maxPoints={assignment.point}
+              gradedBy={selectedSubmission?.graded_by || ""}
+              isStudent={isStudent}
+              onSubmitGrade={handleSubmitGrade}
+            />
+          ) : null}
+        </div>
+      </>
+
+      )}
+
     </div>
   )
 }

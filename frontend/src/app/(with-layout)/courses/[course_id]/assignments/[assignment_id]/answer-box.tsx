@@ -21,6 +21,9 @@ interface AnswerBoxProps {
   hasSubmission: boolean
   onRunCode?: (code: string) => Promise<string>
   onSubmit?: (answer: string, file?: File) => void
+  answerContent: string
+  isContentLoading: boolean
+  contentError: string | null
 }
 
 export function AnswerBox({
@@ -33,6 +36,9 @@ export function AnswerBox({
   hasSubmission,
   onRunCode,
   onSubmit,
+  answerContent,
+  isContentLoading,
+  contentError,
 }: AnswerBoxProps) {
   const [code, setCode] = useState("")
   const [stdin, setStdin] = useState<string>("")
@@ -41,46 +47,16 @@ export function AnswerBox({
   const [runError, setRunError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  
-  useEffect(() => {
-    const resetRunCode = async () => {
-      setOutput(null)
-      setRunError(null)
-    }
-    const fetchAnswerContent = async () => {
-      setIsLoading(true)
-      setError(null)
-      
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments/${assignmentId}/submissions/${submissionId}/read`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${user?.token}`,
-            },
-          }
-        )
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch answer content")
-        }
-        
-        const content = await response.json()
-        setCode(content)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    
-    resetRunCode()
-    fetchAnswerContent()
-  }, [courseId, assignmentId, submissionId])
+  useEffect(() => {
+    setCode(answerContent)
+  }, [answerContent])
+
+  useEffect(() => {
+    setOutput(null)
+    setRunError(null)
+  }, [submissionId])
 
   const handleCodeChange = (newCode: string) => {
     setCode(newCode)
@@ -91,7 +67,7 @@ export function AnswerBox({
     setIsRunning(true)
     setOutput(null)
     setRunError(null)
-    
+
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/run/python3`, {
         method: "POST",
@@ -104,11 +80,11 @@ export function AnswerBox({
           stdin: stdin,
         }),
       })
-      
+
       if (!response.ok) {
         throw new Error("Failed to run code")
       }
-      
+
       const result = await response.json()
       setOutput(result.stdout || result.output || "")
       if (result.stderr) {
@@ -186,16 +162,16 @@ export function AnswerBox({
     )
   }
 
-  if (error) {
+  if (contentError) {
     return (
       <div className="p-6">
         <Empty className="py-16">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              
+
             </EmptyMedia>
             <EmptyTitle>Failed to load assignment</EmptyTitle>
-            <EmptyDescription>{error || "Assignment not found"}</EmptyDescription>
+            <EmptyDescription>{contentError || "Assignment not found"}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
@@ -227,7 +203,7 @@ export function AnswerBox({
               </a>
             </div>
           )}
-          {isLoading ? (
+          {isContentLoading ? (
             <div>
               <Skeleton className="h-48" />
             </div>
@@ -262,8 +238,8 @@ export function AnswerBox({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isLoading ? (
-          <Skeleton className="h-48"/>
+        {isContentLoading ? (
+          <Skeleton className="h-48" />
         ) : (
           <Textarea
             value={code}

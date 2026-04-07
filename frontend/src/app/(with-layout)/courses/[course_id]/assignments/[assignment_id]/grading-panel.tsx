@@ -7,15 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { User, CheckCircle, Clock, MessageSquare, Eye, EyeOff, Send } from "lucide-react"
 import { useMemo, useState, useEffect } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SelectLabel } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -72,20 +64,20 @@ export function GradingPanel({
       ? comments.find(c => c.commentator === role)
       : undefined;
   }, [comments, role]);
-  
+
   const [sortBy, setSortBy] = useState<SortBy>("id")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
   const [grade, setGrade] = useState("");
   const [comment, setComment] = useState("");
   const [visibleToStudent, setVisibleToStudent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   useEffect(() => {
     setGrade(currentGrade?.toString() ?? "");
     setComment(existingComment?.comment ?? "");
     setVisibleToStudent(existingComment?.visible ?? true);
   }, [currentGrade, existingComment]);
-  
+
   const handleSubmit = async () => {
     if (!comment.trim() && !grade) return
     setIsSubmitting(true)
@@ -96,7 +88,7 @@ export function GradingPanel({
       setIsSubmitting(false)
     }
   }
-  
+
   const isGraded = (submission: Submission) => {
     return submission.graded_by && submission.graded_by.length > 0
   }
@@ -105,7 +97,7 @@ export function GradingPanel({
     const [id = "", enName = "", thName = ""] = submitter.split("|")
     return { id, enName, thName }
   }
-  
+
   const sortedSubmissions = useMemo(() => {
     // When showName is false, force sort by point in ascending order
     const effectiveSortBy = isAnonymous ? "point" : sortBy
@@ -113,44 +105,29 @@ export function GradingPanel({
 
     return [...submissions].sort((a, b) => {
       let result = 0
-  
+
       if (effectiveSortBy === "point") {
         result = a.point - b.point
       } else {
         const parsedA = parseSubmitter(a.submitter)
         const parsedB = parseSubmitter(b.submitter)
-  
+
         result = parsedA[effectiveSortBy].localeCompare(parsedB[effectiveSortBy], "th")
       }
-  
+
       return effectiveSortOrder === "asc" ? result : -result
     })
   }, [submissions, sortBy, sortOrder, isAnonymous])
-  
+
   const changeSubmission = (submissionId: string) => {
     const selectedSubmission = submissions.find((s) => s.id === submissionId)
     if (selectedSubmission) {
       onSelect(selectedSubmission)
     }
   }
-  
+
   return (
     <>
-      <Select value={selectedId} onValueChange={(value) => changeSubmission(value)}>
-        <SelectTrigger className="w-full max-w-48">
-          <SelectValue placeholder="Select a submission" />
-        </SelectTrigger>
-      
-        <SelectContent className="max-h-60 overflow-y-auto">
-          <SelectGroup>
-            {submissions.map((submission: Submission) => (
-              <SelectItem key={submission.id} value={submission.id}>
-                {submission.submitter.split("|")[0]}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -171,7 +148,7 @@ export function GradingPanel({
               </div>
             </div>
           )}
-  
+
           {/* Comments List */}
           {comments.length > 0 && (
             <div className="space-y-3">
@@ -205,7 +182,7 @@ export function GradingPanel({
               </div>
             </div>
           )}
-  
+
           <Separator />
           <FieldGroup>
             <Field>
