@@ -289,11 +289,11 @@ export default function AssignmentDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Breadcrumb */}
       <BreadcrumbNav assignmentName={assignment.title} />
       
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 px-6">
         <div className={isStudent ? "lg:col-span-3" : "lg:col-span-2"}>
           {/* 1. Assignment Info */}
           <AssignmentInfo assignment={assignment} />
@@ -318,7 +318,7 @@ export default function AssignmentDetailPage() {
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 px-6">
         {/* 3. Answer Box */}
         <div className="lg:col-span-2">
           {isStudent ? (

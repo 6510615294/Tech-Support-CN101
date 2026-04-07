@@ -112,6 +112,17 @@ export default function CourseDetailPage() {
     })
   }
 
+  const toPlainTextDescription = (html: string) => {
+    return html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
   return (
     <>
       <BreadcrumbNav courseName={course?.name} />
@@ -185,7 +196,7 @@ export default function CourseDetailPage() {
                   />
                 )}
               </div>
-              
+
               {assignments.length === 0 ? (
                 <Empty className="py-12">
                   <EmptyHeader>
@@ -209,9 +220,6 @@ export default function CourseDetailPage() {
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
                                 <CardTitle className="text-base">{assignment.title}</CardTitle>
-                                <CardDescription className="mt-1">
-                                  {assignment.description}
-                                </CardDescription>
                               </div>
                               <div className="flex flex-col items-end gap-2">
                                 {getStatusBadge(status)}
@@ -221,30 +229,32 @@ export default function CourseDetailPage() {
                           </CardHeader>
                           <CardContent>
                             <div className="flex flex-col gap-3">
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-4 w-4" />
                                   <span>Start: {formatDate(assignment.start_date)}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <span className={status === "overdue" ? "text-red-600 font-medium" : ""}>
-                                    Due: {formatDate(assignment.due_date)}
-                                  </span>
+                                  <span className="inline-block h-4 w-4" aria-hidden="true" />
+                                  <span className={status === "overdue" ? "text-red-600 font-medium" : ""}>Due: {formatDate(assignment.due_date)}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
+                                  <span className="inline-block h-4 w-4" aria-hidden="true" />
                                   <span>Close: {formatDate(assignment.close_date)}</span>
                                 </div>
                               </div>
-                              {assignment.tags.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-                                  {assignment.tags.map((tag) => (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                                {assignment.tags.length > 0 ? (
+                                  assignment.tags.map((tag) => (
                                     <Badge key={tag} variant="outline" className="text-xs">
                                       {tag}
                                     </Badge>
-                                  ))}
-                                </div>
-                              )}
+                                  ))
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">No tag</span>
+                                )}
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
