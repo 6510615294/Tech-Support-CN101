@@ -132,7 +132,7 @@ export function AssignmentActions({
           courseId={courseId}
           onUpdated={onAssignmentUpdated}
         />
-     
+
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
