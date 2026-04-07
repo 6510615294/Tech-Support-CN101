@@ -124,7 +124,7 @@ func UpdateAIConfig(
 	updates["temperature"] = form.Temperature
 
 	if len(updates) > 0 {
-		if err := repository.UpdateAIConfig(config.ID, updates); err != nil {
+		if err := repository.UpdateAIConfig(userID, updates); err != nil {
 			return nil, err
 		}
 

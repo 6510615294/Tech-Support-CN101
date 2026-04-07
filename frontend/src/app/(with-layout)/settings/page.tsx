@@ -8,13 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { Bot, CircleCheck, Settings, TriangleAlert } from "lucide-react"
@@ -38,22 +31,13 @@ type AIConfigResponse = {
 }
 
 const DEFAULT_FORM: AIConfigForm = {
-    provider: "openai",
+    provider: "",
     model: "",
     api_key: "",
     base_url: "",
-    temperature: "0.2",
+    temperature: "",
     prompt_template: "",
 }
-
-const PROVIDER_OPTIONS = [
-    { label: "OpenAI", value: "openai" },
-    { label: "Anthropic", value: "anthropic" },
-    { label: "Google", value: "google" },
-    { label: "Groq", value: "groq" },
-    { label: "Ollama", value: "ollama" },
-    { label: "Custom", value: "custom" },
-]
 
 export default function SettingsPage() {
     const { user } = useAuth()
@@ -247,18 +231,12 @@ export default function SettingsPage() {
                             <form onSubmit={handleSave} className="grid gap-5">
                                 <Field>
                                     <FieldLabel htmlFor="provider">Provider</FieldLabel>
-                                    <Select value={form.provider} onValueChange={(value) => setField("provider", value)}>
-                                        <SelectTrigger id="provider" className="w-full">
-                                            <SelectValue placeholder="Select provider" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {PROVIDER_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Input
+                                        id="provider"
+                                        placeholder="openai, anthropic, google, groq, ollama"
+                                        value={form.provider}
+                                        onChange={(e) => setField("provider", e.target.value)}
+                                    />
                                     <FieldError>{errors.provider}</FieldError>
                                 </Field>
 
