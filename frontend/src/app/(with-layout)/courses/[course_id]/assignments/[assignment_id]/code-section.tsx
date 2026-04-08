@@ -146,7 +146,7 @@ export function CodeSection({
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden">
       <div className="flex flex-wrap gap-1 border-b p-2 bg-muted/40">
         <Button onClick={handleRunCode}>
           <Play />
@@ -222,7 +222,7 @@ export function CodeSection({
           </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {isContentLoading ? (
           <Skeleton className="h-full" />
         ) : (
@@ -243,28 +243,35 @@ export function CodeSection({
           />
         )}
       </div>
-      <Textarea
-        value={stdin}
-        onChange={(e) => setStdin(e.target.value)}
-        placeholder="Enter input for your Python code..."
-        className="w-full rounded-sm border p-2 text-sm min-h-30 bg-gray-900"
-      />
-      {output !== null && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Output</label>
-          <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
-            <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+      <div className="shrink-0 border-t bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">Input (stdin)</label>
+        <Textarea
+          value={stdin}
+          onChange={(e) => setStdin(e.target.value)}
+          placeholder="Enter input for your Python code..."
+          className="w-full h-20 resize-none rounded-md text-sm"
+        />
+        {(output !== null || runError !== null) && (
+          <div className="mt-2 grid gap-2 md:grid-cols-2">
+            {output !== null && (
+              <div className="rounded-md border bg-muted/40 p-2">
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Output</label>
+                <div className="max-h-28 overflow-auto font-mono text-xs">
+                  <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+                </div>
+              </div>
+            )}
+            {runError !== null && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2">
+                <label className="mb-1 block text-xs font-medium text-destructive">Error</label>
+                <div className="max-h-28 overflow-auto font-mono text-xs text-destructive">
+                  <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
-      {runError !== null && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Error</label>
-          <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
-            <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

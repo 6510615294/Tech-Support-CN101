@@ -71,6 +71,7 @@ export function GradingPanel({
   const [comment, setComment] = useState("");
   const [visibleToStudent, setVisibleToStudent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     setGrade(currentGrade?.toString() ?? "");
@@ -87,6 +88,13 @@ export function GradingPanel({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const toggleCommentExpanded = (commentId: string) => {
+    setExpandedCommentIds((prev) => ({
+      ...prev,
+      [commentId]: !prev[commentId],
+    }))
   }
 
   const isGraded = (submission: Submission) => {
@@ -176,7 +184,27 @@ export function GradingPanel({
                         )}
                       </Badge>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{c.comment}</p>
+                    <p
+                      className="text-sm whitespace-pre-wrap break-words overflow-hidden"
+                      style={
+                        expandedCommentIds[c.id]
+                          ? undefined
+                          : {
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                          }
+                      }
+                    >
+                      {c.comment}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => toggleCommentExpanded(c.id)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      {expandedCommentIds[c.id] ? "Show less" : "Show more"}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -203,6 +231,7 @@ export function GradingPanel({
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Add a comment..."
                 rows={3}
+                className="resize-none"
               />
             </Field>
             <div className="flex items-center gap-2">

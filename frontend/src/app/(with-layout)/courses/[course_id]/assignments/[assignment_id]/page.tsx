@@ -11,6 +11,7 @@ import { CommentGrade } from "./comment-grade"
 import { AnswerBox } from "./answer-box"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
 import { AlertCircle } from "lucide-react"
 import { AssignmentActions } from "./assignment-actions"
@@ -369,12 +370,12 @@ export default function AssignmentDetailPage() {
   // }
 
   return (
-    <div className="space-y-6">
+    <div className={isEvaluate ? "flex h-screen flex-col overflow-hidden" : "space-y-6"}>
       {/* Breadcrumb */}
       <BreadcrumbNav assignmentName={assignment.title} />
       {isEvaluate ? (
-        <div className="grid grid-cols-4 flex-1">
-          <div className={isGradingPanelVisible ? "col-span-3 flex flex-col" : "col-span-4 flex flex-col"}>
+        <div className="grid grid-cols-4 flex-1 min-h-0 overflow-hidden">
+          <div className={isGradingPanelVisible ? "col-span-3 min-h-0 flex flex-col" : "col-span-4 min-h-0 flex flex-col"}>
             <CodeSection
               courseId={`${course_id}`}
               assignmentId={`${assignment_id}`}
@@ -400,19 +401,25 @@ export default function AssignmentDetailPage() {
               onToggleGradingPanel={() => setIsGradingPanelVisible(!isGradingPanelVisible)}
             />
           </div>
-          {isGradingPanelVisible && <div className="col-span-1">
-            <GradingPanel
-              submissions={submissions}
-              selectedId={selectedSubmission?.id ?? ""}
-              onSelect={setSelectedSubmission}
-              isAnonymous={isAnonymous}
-              role={courseRole}
-              comments={selectedSubmission?.comments || []}
-              maxPoints={assignment.point}
-              currentGrade={selectedSubmission?.point || 0}
-              gradedBy={selectedSubmission?.graded_by || ""}
-              onSubmitGrade={handleSubmitGrade}
-            />
+          {isGradingPanelVisible && <div className="col-span-1 min-h-0 pr-2">
+            <ScrollArea className="h-full min-h-0">
+              <div className="flex justify-end">
+                <div className="w-full max-w-sm">
+                  <GradingPanel
+                    submissions={submissions}
+                    selectedId={selectedSubmission?.id ?? ""}
+                    onSelect={setSelectedSubmission}
+                    isAnonymous={isAnonymous}
+                    role={courseRole}
+                    comments={selectedSubmission?.comments || []}
+                    maxPoints={assignment.point}
+                    currentGrade={selectedSubmission?.point || 0}
+                    gradedBy={selectedSubmission?.graded_by || ""}
+                    onSubmitGrade={handleSubmitGrade}
+                  />
+                </div>
+              </div>
+            </ScrollArea>
           </div>}
         </div>
       ) : (<>
