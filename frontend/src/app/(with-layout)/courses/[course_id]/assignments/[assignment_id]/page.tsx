@@ -137,6 +137,16 @@ export default function AssignmentDetailPage() {
     setSelectedSubmission(submissions[selectedSubmissionIndex + 1])
   }
 
+  const handleEnterEvaluateMode = () => {
+    setIsGradingPanelVisible(true)
+    setIsEvaluate(true)
+  }
+
+  const handleLeaveEvaluateMode = () => {
+    setIsEvaluate(false)
+    setIsGradingPanelVisible(true)
+  }
+
   useEffect(() => {
     if (!user?.token || !selectedSubmission?.id) {
       setSubmissionContent("")
@@ -373,7 +383,7 @@ export default function AssignmentDetailPage() {
               hasSubmission={!!selectedSubmission}
               isAnonymous={isAnonymous}
               toggleAnonymous={setIsAnonymous}
-              leaveEvaluate={() => setIsEvaluate(false)}
+              leaveEvaluate={handleLeaveEvaluateMode}
               onPreviousSubmission={handlePreviousSubmission}
               onNextSubmission={handleNextSubmission}
               onSelectSubmission={(submissionId) => {
@@ -417,7 +427,7 @@ export default function AssignmentDetailPage() {
               <AssignmentActions
                 courseId={`${course_id}`}
                 assignment={assignment}
-                evaluateMode={() => setIsEvaluate(true)}
+                evaluateMode={handleEnterEvaluateMode}
                 onAssignmentUpdated={setAssignment}
               />
               <SubmissionList
