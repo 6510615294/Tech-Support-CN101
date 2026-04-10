@@ -117,6 +117,15 @@ export function AssignmentActions({
 
         <Button
           size="sm"
+          variant="secondary"
+          className="w-full justify-start gap-2"
+        >
+          <ClipboardCheck className="h-4 w-4" />
+          AI Grading
+        </Button>
+
+        <Button
+          size="sm"
           variant="outline"
           onClick={() => router.push(`/courses/${courseId}/assignments/${assignment.id}/summary`)}
           className="w-full justify-start gap-2"

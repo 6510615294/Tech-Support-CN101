@@ -185,14 +185,21 @@ export function GradingPanel({
                       </Badge>
                     </div>
                     <p
-                      className="text-sm whitespace-pre-wrap break-words overflow-hidden"
+                      className="text-sm whitespace-pre-wrap overflow-hidden w-full"
                       style={
                         expandedCommentIds[c.id]
-                          ? undefined
+                          ? {
+                            wordBreak: "break-word",
+                            overflowWrap: "break-word",
+                            maxHeight: "200px",
+                            overflowY: "auto",
+                          }
                           : {
                             display: "-webkit-box",
                             WebkitLineClamp: 3,
                             WebkitBoxOrient: "vertical",
+                            wordBreak: "break-word",
+                            overflowWrap: "break-word",
                           }
                       }
                     >

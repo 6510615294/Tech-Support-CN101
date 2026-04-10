@@ -9,6 +9,7 @@ import { Code, Play, Upload, FileText, X } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/lib/auth-context"
 
 interface AnswerBoxProps {
@@ -208,9 +209,11 @@ export function AnswerBox({
               <Skeleton className="h-48" />
             </div>
           ) : (
-            <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
-              <pre className="whitespace-pre-wrap">{code}</pre>
-            </div>
+            <ScrollArea className="max-h-64 rounded-md bg-muted">
+              <div className="p-4 font-mono text-sm">
+                <pre className="whitespace-pre-wrap">{code}</pre>
+              </div>
+            </ScrollArea>
           )}
         </CardContent>
       </Card>
@@ -263,17 +266,21 @@ export function AnswerBox({
         {output !== null && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Output</label>
-            <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
-              <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
-            </div>
+            <ScrollArea className="max-h-64 rounded-md bg-muted">
+              <div className="p-4 font-mono text-sm">
+                <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+              </div>
+            </ScrollArea>
           </div>
         )}
         {runError !== null && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Error</label>
-            <div className="rounded-md bg-muted p-4 font-mono text-sm overflow-x-auto">
-              <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
-            </div>
+            <ScrollArea className="max-h-64 rounded-md bg-muted">
+              <div className="p-4 font-mono text-sm">
+                <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
+              </div>
+            </ScrollArea>
           </div>
         )}
       </CardContent>
