@@ -172,7 +172,7 @@ export default function CourseDetailPage() {
               <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <GraduationCap className="h-4 w-4" />
-                  <span>{course.teacher}</span>
+                  <span className="capitalize">{course.teacher}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />

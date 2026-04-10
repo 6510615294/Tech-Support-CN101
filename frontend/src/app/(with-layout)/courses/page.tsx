@@ -178,7 +178,7 @@ export default function Page() {
                         <div className="flex flex-col gap-3 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
                             <GraduationCap className="h-4 w-4 shrink-0" />
-                            <span>{course.teacher}</span>
+                            <span className="capitalize">{course.teacher}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 shrink-0" />
