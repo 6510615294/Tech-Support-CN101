@@ -15,6 +15,7 @@ func RegisterAttachmentRoutes(app fiber.Router) {
 	app.Get("", getAttachments)
 	app.Get("/:attachment_id/download", downloadAttachment)
 	app.Delete("/:attachment_id", deleteAttachment)
+	app.Get("/:attachment_id", getAttachmentDetail)
 }
 
 func createAttachments(c fiber.Ctx) error {
@@ -95,4 +96,21 @@ func deleteAttachment(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "attachment deleted",
 	})
+}
+
+func getAttachmentDetail(c fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
+	attachmentID := c.Params("attachment_id")
+
+	if !models.HasPermission(role, "template:view") {
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	attachmentDetail, err := service.GetAttachmentDetail(userID, attachmentID)
+	if err != nil {
+		return SendError(c, err)
+	}
+
+	return c.JSON(attachmentDetail)
 }

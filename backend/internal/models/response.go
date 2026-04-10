@@ -198,3 +198,8 @@ type LoginResponse struct {
 type ErrorResponse struct {
 	Error string `json:"error" example:"invalid_credentials"`
 }
+
+type ResponseAttachmentDetail struct {
+	RelatedAssignments	[]string	`json:"related_assignments"`
+	RelatedTemplates	[]string	`json:"related_templates"`
+}

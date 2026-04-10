@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"io"
 	"mime/multipart"
 
@@ -85,4 +86,43 @@ func DeleteAttachment(userID, attachmentID string) error {
 	}
 
 	return nil
+}
+
+func GetAttachmentDetail(userID, attachmentID string) (*models.ResponseAttachmentDetail, error) {
+	// Verify the attachment exists and belongs to the user
+	_, err := repository.GetAttachment(userID, attachmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get assignments that use this attachment
+	assignments, err := repository.GetAssignmentsByAttachmentID(attachmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get templates that use this attachment
+	templates, err := repository.GetTemplatesByAttachmentID(attachmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Format assignments as "Title (Course ID)"
+	relatedAssignments := make([]string, len(assignments))
+	for i, a := range assignments {
+		relatedAssignments[i] = fmt.Sprintf("%s (%s)", a["title"], a["course_id"])
+	}
+
+	// Format templates as "Title"
+	relatedTemplates := make([]string, len(templates))
+	for i, t := range templates {
+		relatedTemplates[i] = t["title"].(string)
+	}
+
+	response := models.ResponseAttachmentDetail{
+		RelatedAssignments: relatedAssignments,
+		RelatedTemplates:   relatedTemplates,
+	}
+
+	return &response, nil
 }

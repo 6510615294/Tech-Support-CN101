@@ -68,3 +68,31 @@ func GetAttachmentsByIDs(userID string, attachmentIDs []string) ([]models.Attach
 func DeleteAttachment(attachment *models.Attachment) error {
 	return database.DB.Delete(attachment).Error
 }
+
+func GetAssignmentsByAttachmentID(attachmentID string) ([]map[string]interface{}, error) {
+	var results []map[string]interface{}
+	
+	err := database.DB.
+		Table("assignments").
+		Select("assignments.title, assignments.course_id").
+		Joins("INNER JOIN assignment_attachments ON assignment_attachments.assignment_id = assignments.id").
+		Where("assignment_attachments.attachment_id = ?", attachmentID).
+		Find(&results).
+		Error
+	
+	return results, err
+}
+
+func GetTemplatesByAttachmentID(attachmentID string) ([]map[string]interface{}, error) {
+	var results []map[string]interface{}
+	
+	err := database.DB.
+		Table("assignment_templates").
+		Select("assignment_templates.title").
+		Joins("INNER JOIN assignment_template_attachments ON assignment_template_attachments.assignment_template_id = assignment_templates.id").
+		Where("assignment_template_attachments.attachment_id = ?", attachmentID).
+		Find(&results).
+		Error
+	
+	return results, err
+}
