@@ -201,7 +201,7 @@ type AssignmentTemplate struct {
 
 type AIConfig struct {
 	ID              string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	UserID          string    `gorm:"not null;index" json:"user_id"`
+	UserID          string    `gorm:"not null;uniqueIndex" json:"user_id"`
 	User            User      `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	Provider        string    `json:"provider"`
 	EncryptedAPIKey string    `json:"encrypted_api_key"`

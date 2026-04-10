@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"time"
+	stderrors "errors"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
@@ -15,6 +16,74 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/security"
 )
+
+// removePythonComments removes Python-style comments from code
+// It removes both single-line comments (#) and multi-line comments (""" and ''')
+func removePythonComments(code string) string {
+	var result []rune
+	runes := []rune(code)
+	n := len(runes)
+	i := 0
+
+	// Quote states
+	inSingleQuote := false
+	inDoubleQuote := false
+	inTripleSingle := false
+	inTripleDouble := false
+
+	for i < n {
+		// Check for triple single quotes
+		if i+2 < n && runes[i] == '\'' && runes[i+1] == '\'' && runes[i+2] == '\'' {
+			if inTripleSingle {
+				inTripleSingle = false
+			} else if !inDoubleQuote && !inTripleDouble {
+				inTripleSingle = true
+			}
+			i += 3
+			continue
+		}
+
+		// Check for triple double quotes
+		if i+2 < n && runes[i] == '"' && runes[i+1] == '"' && runes[i+2] == '"' {
+			if inTripleDouble {
+				inTripleDouble = false
+			} else if !inSingleQuote && !inTripleSingle {
+				inTripleDouble = true
+			}
+			i += 3
+			continue
+		}
+
+		// If we're inside triple quotes, skip content (don't add to result)
+		if inTripleSingle || inTripleDouble {
+			i++
+			continue
+		}
+
+		// Check for # comments (but not inside strings)
+		if runes[i] == '#' && !inSingleQuote && !inDoubleQuote {
+			// Skip to end of line
+			for i < n && runes[i] != '\n' {
+				i++
+			}
+			continue
+		}
+
+		// Track regular quotes
+		if runes[i] == '\'' && !inDoubleQuote {
+			inSingleQuote = !inSingleQuote
+		}
+		if runes[i] == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+		}
+
+		// Add character to result
+		result = append(result, runes[i])
+		i++
+	}
+
+	return string(result)
+}
 
 func getEncryptionKey() ([]byte, error) {
 	key := config.GetEnv("AI_SECRET_KEY")
@@ -27,6 +96,15 @@ func getEncryptionKey() ([]byte, error) {
 }
 
 func CreateAIConfig(userID string, form *models.AIConfigForm) (*models.ResponseAIConfig, error) {
+	// Check if config already exists for this user
+	_, err := repository.GetAIConfig(userID)
+	if err == nil {
+		return nil, errors.ErrAIConfigAlreadyExists
+	}
+	if !stderrors.Is(err, errors.ErrAIConfigNotFound) {
+		return nil, err
+	}
+
 	key, err := getEncryptionKey()
 	if err != nil {
 		return nil, err
@@ -162,6 +240,10 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 	}
 	total := len(submissions)
 
+	if total == 0 {
+		return errors.ErrSubmissionNotFound
+	}
+
 	err = repository.GradingJobStart(assignmentID, teacherID, total)
 	if err != nil {
 		return err
@@ -194,14 +276,11 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 	// Process in batches of 10
 	batchSize := 10
 	for i := 0; i < len(submissions); i += batchSize {
-		end := i + batchSize
-		if end > len(submissions) {
-			end = len(submissions)
-		}
-		batch := submissions[i:end]
+		end := min(i+batchSize, len(submissions))
+    	batch := submissions[i:end]
 
-		// Prepare N8NSubmission list
-		n8nSubmissions := make([]models.AISubmissionForm, 0, len(batch))
+		// Prepare aiSubmissionForm list
+		aiSubmissionForm := make([]models.AISubmissionForm, 0, len(batch))
 		for _, submission := range batch {
 			answer := submission.Answer
 
@@ -210,17 +289,17 @@ func RunAutoGrading(assignmentID string, teacherID string) error {
 				if err != nil {
 					return err
 				}
-				answer = string(fileBytes)
+				answer = removePythonComments(string(fileBytes))
 			}
 
-			n8nSubmissions = append(n8nSubmissions, models.AISubmissionForm{
+			aiSubmissionForm = append(aiSubmissionForm, models.AISubmissionForm{
 				SubmissionID: submission.ID,
 				Answer:       answer,
 			})
 		}
 
 		// Serialize submissions for the prompt
-		submissionsJSON, err := json.Marshal(n8nSubmissions)
+		submissionsJSON, err := json.Marshal(aiSubmissionForm)
 		if err != nil {
 			repository.FailGradingJob(assignmentID, teacherID, "Failed to marshal submissions: "+err.Error())
 			return err
