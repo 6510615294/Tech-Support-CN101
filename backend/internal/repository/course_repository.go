@@ -59,7 +59,7 @@ func GetCoursesByUser(userID string) ([]models.Course, error) {
 	err := database.DB.
 		Preload("Teacher").
 		Joins("JOIN course_members ON course_members.course_id = courses.id").
-		Where("course_members.user_id = ?", userID).
+		Where("course_members.user_id = ? AND course_members.status = ?", userID, "active").
 		Find(&courses).Error
 
 	return courses, err

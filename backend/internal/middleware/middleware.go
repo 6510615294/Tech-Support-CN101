@@ -82,7 +82,7 @@ func CourseMiddleware(c fiber.Ctx) error {
 	err := database.DB.
 		Model(&models.CourseMember{}).
 		Select("role").
-		Where("user_id = ? AND course_id = ?", userID, courseID).
+		Where("user_id = ? AND course_id = ? AND status = ?", userID, courseID, "active").
 		Take(&role).Error
 
 	if err != nil {

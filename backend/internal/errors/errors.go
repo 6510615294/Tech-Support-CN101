@@ -14,6 +14,7 @@ var (
 	ErrAIGradingLimit         = &AppError{429, "ai grading reach limit(1)"}
 	ErrUserNotFound           = &AppError{404, "user not found"}
 	ErrAIConfigNotFound       = &AppError{404, "ai config not found"}
+	ErrAIConfigAlreadyExists  = &AppError{409, "ai config already exists"}
 	ErrAttachmentNotFound     = &AppError{404, "attachment not found"}
 	ErrCommentNotFound        = &AppError{404, "comment not found"}
 	ErrSubmissionNotFound     = &AppError{404, "submission not found"}
