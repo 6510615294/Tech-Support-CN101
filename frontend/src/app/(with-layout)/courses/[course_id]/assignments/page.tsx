@@ -10,7 +10,16 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Calendar, FileText, GraduationCap, Plus, Tag } from "lucide-react"
+import {
+  AlertCircle,
+  Calendar,
+  CalendarClock,
+  CalendarOff,
+  CalendarPlus,
+  FileText,
+  GraduationCap,
+  Tag
+} from "lucide-react"
 import { CreateAssignmentDialog } from "@/components/create-assignment-dialog"
 
 interface Course {
@@ -172,7 +181,7 @@ export default function CourseDetailPage() {
               <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <GraduationCap className="h-4 w-4" />
-                  <span>{course.teacher}</span>
+                  <span className="capitalize">{course.teacher}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
@@ -231,15 +240,15 @@ export default function CourseDetailPage() {
                             <div className="flex flex-col gap-3">
                               <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1">
-                                  <Calendar className="h-4 w-4" />
+                                  <CalendarPlus className="h-4 w-4" />
                                   <span>Start: {formatDate(assignment.start_date)}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <span className="inline-block h-4 w-4" aria-hidden="true" />
+                                  <CalendarClock className="h-4 w-4" />
                                   <span className={status === "overdue" ? "text-red-600 font-medium" : ""}>Due: {formatDate(assignment.due_date)}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <span className="inline-block h-4 w-4" aria-hidden="true" />
+                                  <CalendarOff className="h-4 w-4" />
                                   <span>Close: {formatDate(assignment.close_date)}</span>
                                 </div>
                               </div>

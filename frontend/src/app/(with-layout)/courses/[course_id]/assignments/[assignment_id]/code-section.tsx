@@ -11,6 +11,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/
 import { useAuth } from "@/lib/auth-context"
 import Editor from "@monaco-editor/react"
 import { Toggle } from "@/components/ui/toggle"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -194,7 +195,7 @@ export function CodeSection({
             <SelectTrigger className="w-32 h-8 shrink-0">
               <SelectValue placeholder={currentSubmissionOrder ? `#${currentSubmissionOrder}` : "Select"} />
             </SelectTrigger>
-            <SelectContent className="max-h-60 overflow-y-auto">
+            <SelectContent className="max-h-60">
               <SelectGroup>
                 {submissions.map((submission, index) => (
                   <SelectItem key={submission.id} value={submission.id} title={submission.id}>
@@ -256,17 +257,21 @@ export function CodeSection({
             {output !== null && (
               <div className="rounded-md border bg-muted/40 p-2">
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">Output</label>
-                <div className="max-h-28 overflow-auto font-mono text-xs">
-                  <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
-                </div>
+                <ScrollArea className="max-h-28">
+                  <div className="font-mono text-xs">
+                    <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+                  </div>
+                </ScrollArea>
               </div>
             )}
             {runError !== null && (
               <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2">
                 <label className="mb-1 block text-xs font-medium text-destructive">Error</label>
-                <div className="max-h-28 overflow-auto font-mono text-xs text-destructive">
-                  <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
-                </div>
+                <ScrollArea className="max-h-28">
+                  <div className="font-mono text-xs text-destructive">
+                    <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
+                  </div>
+                </ScrollArea>
               </div>
             )}
           </div>
