@@ -3,10 +3,12 @@ package service
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
+
 	"time"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
@@ -450,4 +452,175 @@ func DownloadSubmissions(courseID, assignmentID string) ([]byte, error) {
 	}
 
 	return zipBuffer.Bytes(), nil
+}
+
+func GetAssignmentsExport(courseID string) ([]byte, error) {
+	// Get all active students in the course
+	courseMembers, err := repository.GetActiveStudents(courseID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all assignments in the course
+	assignments, err := repository.GetAssignmentsByCourse(courseID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map of studentID -> courseMember for easy lookup
+	studentMap := make(map[string]*models.CourseMember)
+	for i := range courseMembers {
+		studentMap[courseMembers[i].UserID] = &courseMembers[i]
+	}
+
+	// Create a map of assignmentID -> assignment for easy lookup
+	assignmentMap := make(map[string]*models.Assignment)
+	for i := range assignments {
+		assignmentMap[assignments[i].ID] = &assignments[i]
+	}
+
+	// Create a map of assignmentID -> submissions
+	submissionsMap := make(map[string][]models.Submission)
+	for _, assignment := range assignments {
+		submissions, err := repository.GetAssignmentSubmissions(assignment.ID)
+		if err != nil {
+			return nil, err
+		}
+		submissionsMap[assignment.ID] = submissions
+	}
+
+	// Calculate total max points for all assignments
+	var totalMaxPoints int16
+	for _, assignment := range assignments {
+		totalMaxPoints += assignment.Point
+	}
+
+	// Create CSV buffer
+	csvBuffer := new(bytes.Buffer)
+	csvWriter := csv.NewWriter(csvBuffer)
+
+	// Build header row
+	header := []string{"username", "EnName", "ThName", "Email"}
+	for _, assignment := range assignments {
+		header = append(header, fmt.Sprintf("%s (%d)", assignment.Title, assignment.Point))
+	}
+	header = append(header, "total point", "percentage")
+
+	// Write header
+	if err := csvWriter.Write(header); err != nil {
+		return nil, err
+	}
+
+	// Write each student's row
+	for _, member := range courseMembers {
+		row := []string{
+			member.User.Username,
+			member.User.EnName,
+			member.User.ThName,
+			member.User.Email,
+		}
+
+		var totalPoints int16
+		for _, assignment := range assignments {
+			// Find submission for this student and assignment
+			submissions := submissionsMap[assignment.ID]
+			var earnedPoint *int16
+			for _, submission := range submissions {
+				if submission.StudentID == member.UserID {
+					earnedPoint = submission.Point
+					break
+				}
+			}
+
+			if earnedPoint != nil {
+				row = append(row, fmt.Sprintf("%d", *earnedPoint))
+				totalPoints += *earnedPoint
+			} else {
+				row = append(row, "")
+			}
+		}
+
+		// Calculate percentage
+		percentage := 0.0
+		if totalMaxPoints > 0 {
+			percentage = float64(totalPoints) / float64(totalMaxPoints) * 100
+		}
+
+		row = append(row, fmt.Sprintf("%d", totalPoints), fmt.Sprintf("%.2f", percentage))
+
+		if err := csvWriter.Write(row); err != nil {
+			return nil, err
+		}
+	}
+
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, err
+	}
+
+	return csvBuffer.Bytes(), nil
+}
+
+func GetAssignmentExport(courseID, assignmentID string) ([]byte, error) {
+	// Get assignment details
+	assignment, err := repository.GetAssignment(courseID, assignmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get assignment summary which includes all submission data
+	summary, err := GetAssignmentSummary(courseID, assignmentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create CSV buffer
+	csvBuffer := new(bytes.Buffer)
+	csvWriter := csv.NewWriter(csvBuffer)
+
+	// Build header row
+	header := []string{
+		"username",
+		"EnName",
+		"ThName",
+		"Email",
+		fmt.Sprintf("%s (%d)", assignment.Title, assignment.Point),
+		"Percentage",
+		"Status",
+	}
+
+	// Write header
+	if err := csvWriter.Write(header); err != nil {
+		return nil, err
+	}
+
+	// Write each student's row
+	for _, submission := range summary.SubmissionList {
+		row := []string{
+			submission.StudentID,
+			submission.EnName,
+			submission.ThName,
+			submission.Email,
+			"", // Assignment title + max point column
+			"", // Percentage column will be filled below
+			submission.SubmissionStatus,
+		}
+
+		// Fill point and percentage if submitted
+		if submission.SubmissionStatus != "no submitted" {
+			row[4] = fmt.Sprintf("%d", submission.Point)
+			row[5] = fmt.Sprintf("%.2f", submission.Percentage)
+		}
+
+		if err := csvWriter.Write(row); err != nil {
+			return nil, err
+		}
+	}
+
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return nil, err
+	}
+
+	return csvBuffer.Bytes(), nil
 }

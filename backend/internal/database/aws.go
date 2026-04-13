@@ -77,9 +77,24 @@ func (r *BytesReader) Seek(offset int64, whence int) (int64, error) {
 func ReadPythonFileFromS3ByKey(fileKey string) (string, error) {
 	ctx := context.TODO()
 
-	// Validate that the file is a .py file
-	if len(fileKey) < 3 || fileKey[len(fileKey)-3:] != ".py" {
-		return "", fmt.Errorf("invalid file: only .py files are allowed")
+	// Extract file extension
+	lastDot := -1
+	for i := len(fileKey) - 1; i >= 0; i-- {
+		if fileKey[i] == '.' {
+			lastDot = i
+			break
+		}
+	}
+
+	if lastDot == -1 {
+		return "", fmt.Errorf("UnsupportedFileType:(no extension)")
+	}
+
+	fileType := fileKey[lastDot:]
+
+	// Validate that the file is a .py or .txt file
+	if fileType != ".py" && fileType != ".txt" {
+		return "", fmt.Errorf("UnsupportedFileType:(%s)", fileType)
 	}
 
 	result, err := S3Client.GetObject(ctx, &s3.GetObjectInput{

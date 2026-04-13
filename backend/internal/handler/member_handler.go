@@ -33,6 +33,11 @@ func updateMember(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 	memberID := c.Params("member_id")
+	userID := c.Locals("user_id").(string)
+
+	if userID == memberID {
+		return SendError(c, errors.ErrBadRequest)
+	}
 
 	if !models.HasPermission(role, "member:update") {
 		return SendError(c, errors.ErrForbidden)
@@ -55,6 +60,11 @@ func deleteMember(c fiber.Ctx) error {
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 	memberID := c.Params("member_id")
+	userID := c.Locals("user_id").(string)
+
+	if userID == memberID {
+		return SendError(c, errors.ErrBadRequest)
+	}
 
 	if !models.HasPermission(role, "member:delete") {
 		return SendError(c, errors.ErrForbidden)
