@@ -11,6 +11,17 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
+func stringifyValue(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case []byte:
+		return string(val)
+	default:
+		return fmt.Sprint(val)
+	}
+}
+
 func CreateAttachments(
 	userID string,
 	files []*multipart.FileHeader,
@@ -38,7 +49,7 @@ func CreateAttachments(
 			FileName: file.Filename,
 			FileType: file.Header.Get("Content-Type"),
 			FileKey:  fileKey,
-			Size: 	  file.Size,
+			Size:     file.Size,
 			UserID:   userID,
 		}
 
@@ -110,13 +121,15 @@ func GetAttachmentDetail(userID, attachmentID string) (*models.ResponseAttachmen
 	// Format assignments as "Title (Course ID)"
 	relatedAssignments := make([]string, len(assignments))
 	for i, a := range assignments {
-		relatedAssignments[i] = fmt.Sprintf("%s (%s)", a["title"], a["course_id"])
+		title := stringifyValue(a["title"])
+		courseID := stringifyValue(a["course_id"])
+		relatedAssignments[i] = fmt.Sprintf("%s (%s)", title, courseID)
 	}
 
 	// Format templates as "Title"
 	relatedTemplates := make([]string, len(templates))
 	for i, t := range templates {
-		relatedTemplates[i] = t["title"].(string)
+		relatedTemplates[i] = stringifyValue(t["title"])
 	}
 
 	response := models.ResponseAttachmentDetail{
