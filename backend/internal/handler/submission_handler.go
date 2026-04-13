@@ -117,9 +117,9 @@ func readSubmission(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	submissionID := c.Params("submission_id")
-	print("test1")
+	
 	content, err := service.ReadSubmission(submissionID, userID, role)
-	print("test2")
+	
 	if err != nil {
 		return err
 	}

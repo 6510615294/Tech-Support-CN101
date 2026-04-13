@@ -19,6 +19,8 @@ func RegisterAssignmentRoutes(app fiber.Router) {
 	app.Post("/:assignment_id/override", createAssignmentOverride)
 	app.Get("/:assignment_id/auto-grading", autoGradingAssignment)
 	app.Get("/:assignment_id/submissions/download", downloadSubmissions)
+	app.Get("/export", getAssignmentsExport)
+	app.Get("/:assignment_id/export", getAssignmentExport)
 }
 
 func createAssignment(c fiber.Ctx) error {
@@ -211,4 +213,43 @@ func downloadSubmissions(c fiber.Ctx) error {
 	c.Set("Content-Disposition", "attachment; filename=submissions.zip")
 
 	return c.Send(zipData)
+}
+
+func getAssignmentsExport(c fiber.Ctx) error {
+	role := c.Locals("course_role").(string)
+	courseID := c.Params("course_id")
+	
+	if !models.HasPermission(role, "course:export") {
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	csv, err := service.GetAssignmentsExport(courseID)
+	if err != nil {
+		return SendError(c, err)
+	}
+
+	c.Set("Content-Type", "text/csv")
+	c.Set("Content-Disposition", "attachment; filename=assignments_export.csv")
+
+	return c.Send(csv)
+}
+
+func getAssignmentExport(c fiber.Ctx) error {
+	role := c.Locals("course_role").(string)
+	courseID := c.Params("course_id")
+	assignmentID := c.Params("assignment_id")
+	
+	if !models.HasPermission(role, "assignment:export") {
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	csv, err := service.GetAssignmentExport(courseID, assignmentID)
+	if err != nil {
+		return SendError(c, err)
+	}
+
+	c.Set("Content-Type", "text/csv")
+	c.Set("Content-Disposition", "attachment; filename=assignment_export.csv")
+
+	return c.Send(csv)
 }
