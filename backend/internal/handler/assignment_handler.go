@@ -17,9 +17,6 @@ func RegisterAssignmentRoutes(app fiber.Router) {
 	app.Delete("/:assignment_id", deleteAssignment)
 	app.Get("/:assignment_id/summary", getAssignmentSummary)
 	app.Post("/:assignment_id/override", createAssignmentOverride)
-	app.Post("/:assignment_id/prompt", createAssignmentPrompt)
-	app.Get("/:assignment_id/prompt", getAssignmentPrompt)
-	app.Put("/:assignment_id/prompt", updateAssignmentPrompt)
 	app.Get("/:assignment_id/auto-grading", autoGradingAssignment)
 	app.Get("/:assignment_id/submissions/download", downloadSubmissions)
 }
@@ -159,69 +156,6 @@ func createAssignmentOverride(c fiber.Ctx) error {
 	return c.JSON(override)
 }
 
-func createAssignmentPrompt(c fiber.Ctx) error {
-	courseID := c.Params("course_id")
-	assignmentID := c.Params("assignment_id")
-	role := c.Locals("course_role").(string)
-
-	if !models.HasPermission(role, "ai") {
-		return SendError(c, errors.ErrForbidden)
-	}
-
-	var form models.AssignmentPromptForm
-	if err := c.Bind().Body(&form); err != nil {
-		return SendError(c, errors.ErrBadRequest)
-	}
-
-	prompt, err := service.CreateAssignmentPrompt(courseID, assignmentID, form)
-	if err != nil {
-		return SendError(c, err)
-	}
-
-	return c.JSON(prompt)
-}
-
-func getAssignmentPrompt(c fiber.Ctx) error {
-	courseID := c.Params("course_id")
-	assignmentID := c.Params("assignment_id")
-	role := c.Locals("course_role").(string)
-
-	if !models.HasPermission(role, "ai") {
-		return SendError(c, errors.ErrForbidden)
-	}
-
-	prompt, err := service.GetAssignmentPrompt(courseID, assignmentID)
-	if err != nil {
-		return SendError(c, err)
-	}
-
-	return c.JSON(prompt)
-}
-
-func updateAssignmentPrompt(c fiber.Ctx) error {
-	courseID := c.Params("course_id")
-	assignmentID := c.Params("assignment_id")
-	role := c.Locals("course_role").(string)
-
-	if !models.HasPermission(role, "ai") {
-		return SendError(c, errors.ErrForbidden)
-	}
-
-	var form models.AssignmentPromptForm
-	if err := c.Bind().Body(&form); err != nil {
-		return SendError(c, errors.ErrBadRequest)
-	}
-
-	err := service.UpdateAssignmentPrompt(courseID, assignmentID, &form)
-	if err != nil {
-		return SendError(c, err)
-	}
-
-	return c.JSON(fiber.Map{
-		"message": "prompt updated",
-	})
-}
-
 func getAssignmentSummary(c fiber.Ctx) error {
 	courseID := c.Params("course_id")
 	role := c.Locals("course_role").(string)
@@ -238,26 +172,6 @@ func getAssignmentSummary(c fiber.Ctx) error {
 
 	return c.JSON(summary)
 }
-
-// func autoGradingAssignment(c fiber.Ctx) error {
-// 	userID := c.Locals("user_id").(string)
-// 	role := c.Locals("course_role").(string)
-// 	courseID := c.Params("course_id")
-// 	assignmentID := c.Params("assignment_id")
-
-// 	if !models.HasPermission(role, "ai") {
-// 		return SendError(c, errors.ErrForbidden)
-// 	}
-
-// 	err := service.AutoGradingAssignment(userID, courseID, assignmentID)
-// 	if err != nil {
-// 		return SendError(c, err)
-// 	}
-
-// 	return c.JSON(fiber.Map{
-// 		"message": "auto-grading in queue",
-// 	})
-// }
 
 func autoGradingAssignment(c fiber.Ctx) error {
 	userID := c.Locals("user_id").(string)

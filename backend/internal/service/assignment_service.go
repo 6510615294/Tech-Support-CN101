@@ -255,78 +255,6 @@ func CreateAssignmentOverride(
 	return repository.CreateAssignmentOverride(&override)
 }
 
-func CreateAssignmentPrompt(
-	courseID string,
-	assignmentID string,
-	form models.AssignmentPromptForm,
-) (*models.ResponsePrompt, error) {
-
-	assignment, err := repository.GetAssignment(courseID, assignmentID)
-	if err != nil {
-		return nil, err
-	}
-
-	if assignment.ID == "" {
-		return nil, errors.ErrAssignmentNotFound
-	}
-
-	prompt := models.AssignmentPrompt{
-		AssignmentID: assignmentID,
-		Prompt:       form.Prompt,
-	}
-
-	Assignmentprompt, err := repository.CreateAssignmentPrompt(&prompt)
-	if err != nil {
-		return nil, err
-	}
-
-	response := models.ResponsePrompt{
-		Prompt: Assignmentprompt.Prompt,
-	}
-
-	return &response, nil
-}
-
-func GetAssignmentPrompt(
-	courseID string,
-	assignmentID string,
-) (*models.ResponsePrompt, error) {
-	prompt, err := repository.GetAssignmentPromptByCourseID(courseID, assignmentID)
-	if err != nil {
-		return nil, err
-	}
-
-	response := models.ResponsePrompt{
-		Prompt: prompt.Prompt,
-	}
-
-	return &response, nil
-}
-
-func UpdateAssignmentPrompt(
-	courseID,
-	assignmentID string,
-	form *models.AssignmentPromptForm,
-) error {
-	prompt, err := repository.GetAssignmentPromptByCourseID(courseID, assignmentID)
-	if err != nil {
-		return err
-	}
-
-	updates := map[string]any{}
-
-	if form.Prompt != "" {
-		updates["prompt"] = form.Prompt
-	}
-
-	err = repository.UpdateAssignmentPrompt(prompt.ID, updates)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func GetAssignmentSummary(courseID, assignmentID string) (*models.ResponseAssignmentSummary, error) {
 
 	assignment, err := repository.GetAssignment(courseID, assignmentID)
@@ -398,13 +326,6 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 		return err
 	}
 
-	// Get assignment prompt (optional)
-	assignmentPrompt := ""
-	prompt, err := repository.GetAssignmentPromptByCourseID(courseID, assignmentID)
-	if err == nil && prompt != nil {
-		assignmentPrompt = prompt.Prompt
-	}
-
 	// Get submissions with attachments
 	submissions, err := repository.GetSubmissionsWithAttachments(assignmentID)
 	if err != nil {
@@ -443,7 +364,7 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 			PromptTemplate: aiConfig.PromptTemplate,
 		},
 		MaxPoint:         assignment.Point,
-		AssignmentPrompt: assignmentPrompt,
+		AssignmentPrompt: assignment.AssignmentPrompt,
 		Submissions:      n8nSubmissions,
 	}
 

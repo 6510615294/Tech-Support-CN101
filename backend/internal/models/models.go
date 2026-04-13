@@ -213,15 +213,6 @@ type AIConfig struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-type AssignmentPrompt struct {
-	ID           string     `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	AssignmentID string     `gorm:"not null;index" json:"assignment_id"`
-	Assignment   Assignment `gorm:"foreignKey:AssignmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Prompt       string     `json:"prompt"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-}
-
 type GradingJob struct {
 	ID                   string     `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	AssignmentID         string     `gorm:"not null;index;uniqueIndex:uniq_assignment_teacher" json:"assignment_id"`

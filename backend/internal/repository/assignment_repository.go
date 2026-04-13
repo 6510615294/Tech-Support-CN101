@@ -121,56 +121,6 @@ func CreateAssignmentOverride(
 	return override, nil
 }
 
-func CreateAssignmentPrompt(
-	prompt *models.AssignmentPrompt,
-) (*models.AssignmentPrompt, error) {
-
-	if err := database.DB.Create(prompt).Error; err != nil {
-		return nil, err
-	}
-
-	return prompt, nil
-}
-
-func GetAssignmentPrompt(assignmentID string) (*models.AssignmentPrompt, error) {
-	var prompt models.AssignmentPrompt
-
-	err := database.DB.
-		Where("assignment_id = ?", assignmentID).
-		First(&prompt).
-		Error
-
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.ErrAssignmentNotFound
-	}
-
-	return &prompt, err
-}
-
-func GetAssignmentPromptByCourseID(courseID, assignmentID string) (*models.AssignmentPrompt, error) {
-	var prompt models.AssignmentPrompt
-
-	err := database.DB.
-		Joins("JOIN assignments ON assignments.id = assignment_prompts.assignment_id").
-		Where("assignments.course_id = ? AND assignment_prompts.assignment_id = ?", courseID, assignmentID).
-		First(&prompt).
-		Error
-
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.ErrAssignmentNotFound
-	}
-
-	return &prompt, err
-}
-
-func UpdateAssignmentPrompt(id string, updates map[string]any) error {
-	return database.DB.
-		Model(&models.AssignmentPrompt{}).
-		Where("id = ?", id).
-		Updates(updates).
-		Error
-}
-
 func GetOverridesByStudent(userID string) ([]models.AssignmentOverride, error) {
 	var overrides []models.AssignmentOverride
 
