@@ -53,6 +53,7 @@ function MemberTableSkeleton() {
 
 export default function Page() {
   const [members, setMembers] = useState<CourseMember[]>([]);
+  const [courseName, setCourseName] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [isUpdating, setIsUpdating] = useState(false)
@@ -65,6 +66,16 @@ export default function Page() {
       if (!user) return
       setIsLoading(true);
       try {
+        const courseRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`,
+          { headers: { Authorization: `Bearer ${user.token}` } }
+        )
+
+        if (courseRes.ok) {
+          const courseData = await courseRes.json()
+          setCourseName(courseData.name || "")
+        }
+
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/members`,
           { headers: { Authorization: `Bearer ${user.token}` } }
@@ -90,7 +101,7 @@ export default function Page() {
   const handleChangeStatus = async (userId: string, newStatus: string) => {
     if (isUpdating || !user) return
     setIsUpdating(true)
-    
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/members/${userId}`, {
         method: "PUT",
@@ -102,14 +113,14 @@ export default function Page() {
           new_status: newStatus,
         }),
       });
-  
+
       if (!res.ok) {
         toast.error("Failed to change status", {
           description: "Something went wrong. Please try again.",
         });
         return;
       }
-  
+
       setMembers((prev) => prev.map((m) => m.user_id === userId ? { ...m, status: newStatus } : m));
       toast.success("Status changed", {
         description: "The member status was updated successfully.",
@@ -122,11 +133,11 @@ export default function Page() {
       setIsUpdating(false)
     }
   };
-  
+
   const handleChangeRole = async (userId: string, newRole: string) => {
     if (isUpdating || !user) return
     setIsUpdating(true)
-    
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/members/${userId}`, {
         method: "PUT",
@@ -138,14 +149,14 @@ export default function Page() {
           new_role: newRole,
         }),
       });
-  
+
       if (!res.ok) {
         toast.error("Failed to change role", {
           description: "Something went wrong. Please try again.",
         });
         return;
       }
-  
+
       setMembers((prev) => prev.map((m) => m.user_id === userId ? { ...m, role: newRole } : m));
       toast.success("Role changed", {
         description: "The member role was updated successfully.",
@@ -158,15 +169,15 @@ export default function Page() {
       setIsUpdating(false)
     }
   };
-  
+
   const handleDeleteMember = (userId: string) => {
     const target = members.find((m) => m.user_id === userId)
     setDeleteTarget(target ?? null)
   }
-  
+
   const handleDelete = async () => {
     if (isUpdating || !user || !deleteTarget) return
-    
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/members/${deleteTarget.user_id}`, {
         method: "DELETE",
@@ -174,14 +185,14 @@ export default function Page() {
           "Authorization": `Bearer ${user.token}`,
         },
       });
-  
+
       if (!res.ok) {
         toast.error("Failed to delete member", {
           description: "Something went wrong. Please try again.",
         });
         return;
       }
-  
+
       setMembers((prev) => prev.filter((m) => m.user_id !== deleteTarget.user_id))
       toast.success("Member deleted", {
         description: "The member was removed from the course successfully.",
@@ -194,10 +205,10 @@ export default function Page() {
       setDeleteTarget(null)
     }
   };
-  
+
   return (
     <div className="flex flex-col">
-      <BreadcrumbNav />
+      <BreadcrumbNav courseName={courseName} />
       <div className="flex-1 space-y-8 p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -227,7 +238,7 @@ export default function Page() {
             </EmptyHeader>
           </Empty>
         )}
-        
+
         {!error && (
           <div className="space-y-8">
             {/* Staff Table */}
@@ -344,7 +355,7 @@ export default function Page() {
           </div>
         )}
       </div>
-      
+
       {/* Delete Confirm Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -31,7 +31,7 @@ export function CourseCards({
 }
 ) {
   const router = useRouter()
-  
+
   const handleEdit = () => {
     router.push(`/courses/${course.id}/edit`)
   }
@@ -41,7 +41,7 @@ export function CourseCards({
       <Card className="rounded-sm">
         <CardHeader>
           <Link
-            href={`/courses/${course.id}/assignments`}
+            href={`/courses/${course.id}`}
             className="flex-1"
           >
             <div>

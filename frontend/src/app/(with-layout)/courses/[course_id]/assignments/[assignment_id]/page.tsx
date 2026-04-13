@@ -67,6 +67,7 @@ export default function AssignmentDetailPage() {
   const router = useRouter()
 
   const [courseRole, setCourseRole] = useState<string | undefined>();
+  const [courseName, setCourseName] = useState("")
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
@@ -92,6 +93,14 @@ export default function AssignmentDetailPage() {
       setIsLoading(true)
       setError(null)
       try {
+        const courseRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        })
+        if (courseRes.ok) {
+          const courseData = await courseRes.json()
+          setCourseName(courseData.name || "")
+        }
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`, {
           headers: { Authorization: `Bearer ${user.token}` },
         })
@@ -372,7 +381,7 @@ export default function AssignmentDetailPage() {
   return (
     <div className={isEvaluate ? "flex h-screen flex-col overflow-hidden" : "space-y-6"}>
       {/* Breadcrumb */}
-      <BreadcrumbNav assignmentName={assignment.title} />
+      <BreadcrumbNav courseName={courseName} assignmentName={assignment.title} />
       {isEvaluate ? (
         <div className="grid grid-cols-4 flex-1 min-h-0 overflow-hidden">
           <div className={isGradingPanelVisible ? "col-span-3 min-h-0 flex flex-col" : "col-span-4 min-h-0 flex flex-col"}>
