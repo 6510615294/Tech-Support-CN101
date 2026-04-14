@@ -41,7 +41,7 @@ export default function Page() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  
+
   const handleDelete = async () => {
     if (!deletingCourse || !user?.token) return
     setIsDeleting(true)
@@ -50,14 +50,14 @@ export default function Page() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user.token}` },
       })
-      
+
       if (!res.ok) {
         toast.error("Failed to delete Course", {
           description: "Something went wrong. Please try again.",
         })
         return;
       }
-      
+
       setCourses((prev) => prev.filter((c) => c.id !== deletingCourse.id))
       setDeletingCourse(null)
       toast.success("Course deleted", {
@@ -78,11 +78,11 @@ export default function Page() {
             Authorization: `Bearer ${user.token}`,
           },
         });
-        
+
         if (!res.ok) {
           throw new Error("Failed to fetch courses")
         }
-        
+
         const data = await res.json()
         setCourses(data)
       } catch (err) {
@@ -102,13 +102,13 @@ export default function Page() {
   }, [user])
 
   return (
-      <>
-        <BreadcrumbNav />
-        <div className="flex-1 p-6">
-          <div className="mb-8 flex items-start justify-between gap-4">
+    <>
+      <BreadcrumbNav />
+      <div className="flex-1 p-6">
+        <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <BookOpen className="h-6 w-6 text-primary"/>
+              <BookOpen className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-bold">Your Courses</h1>
             </div>
             <p className="mt-1 text-muted-foreground">
@@ -120,131 +120,131 @@ export default function Page() {
               onCreated={(course) => setCourses((prev) => [...prev, course])}
             />
           )}
-          </div>
+        </div>
 
-          
-          {/* Loading State */}
-          {isLoading && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="mt-2 h-4 w-1/3" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="mt-2 h-4 w-full" />
-                  </CardContent>
-                  <CardFooter>
-                    <Skeleton className="h-10 w-full" />
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-  
-          {/* Error State */}
-          {error && !isLoading && (
-            <Empty className="py-16">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <AlertCircle className="h-5 w-5" />
-                </EmptyMedia>
-                <EmptyTitle>Failed to load courses</EmptyTitle>
-                <EmptyDescription>{error}</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => window.location.reload()}>Try Again</Button>
-              </EmptyContent>
-            </Empty>
-          )}
-  
-          {/* Courses Grid */}
-          {!isLoading && !error && courses && courses.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => (
-                <div key={course.id} className="relative">
-                  <Link href={`/courses/${course.id}/assignments`}>
-                    <Card className="flex h-full flex-col transition-shadow hover:shadow-lg cursor-pointer">
-                      <CardHeader className={user?.role === "admin" ? "pr-12" : ""}>
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="line-clamp-2 text-lg">{course.name}</CardTitle>
-                          <Badge variant="outline">Section {course.section}</Badge>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="mt-2 h-4 w-1/3" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="mt-2 h-4 w-full" />
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-10 w-full" />
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <Empty className="py-16">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <AlertCircle className="h-5 w-5" />
+              </EmptyMedia>
+              <EmptyTitle>Failed to load courses</EmptyTitle>
+              <EmptyDescription>{error}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
+            </EmptyContent>
+          </Empty>
+        )}
+
+        {/* Courses Grid */}
+        {!isLoading && !error && courses && courses.length > 0 && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {courses.map((course) => (
+              <div key={course.id} className="relative">
+                <Link href={`/courses/${course.id}`}>
+                  <Card className="flex h-full flex-col transition-shadow hover:shadow-lg cursor-pointer">
+                    <CardHeader className={user?.role === "admin" ? "pr-12" : ""}>
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="line-clamp-2 text-lg">{course.name}</CardTitle>
+                        <Badge variant="outline">Section {course.section}</Badge>
+                      </div>
+                      <CardDescription>{course.semester}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4 shrink-0" />
+                          <span className="capitalize">{course.teacher}</span>
                         </div>
-                        <CardDescription>{course.semester}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-1">
-                        <div className="flex flex-col gap-3 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <GraduationCap className="h-4 w-4 shrink-0" />
-                            <span className="capitalize">{course.teacher}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 shrink-0" />
-                            <span>{course.schedule}</span>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 shrink-0" />
+                          <span>{course.schedule}</span>
                         </div>
-                      </CardContent>
-                      <CardFooter className="flex items-center gap-2 border-t bg-muted/50 pt-4">
-                        <Button className="flex-1">
-                          View Assignments
-                        </Button>
-                      
-                        {user?.role === "teacher" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="bg-background/80 backdrop-blur-sm hover:bg-background border"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setEditingCourse(course);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                              <span className="sr-only">Edit course</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="bg-background/80 backdrop-blur-sm hover:bg-background text-destructive hover:text-destructive"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                setDeletingCourse(course)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete course</span>
-                            </Button>
-                          </>
-                        )}
-                      </CardFooter>
-                    </Card>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-  
-          {/* Empty State */}
-          {!isLoading && !error && courses?.length === 0 && (
-            <Empty className="py-16">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <BookOpen className="h-5 w-5" />
-                </EmptyMedia>
-                <EmptyTitle>No courses available</EmptyTitle>
-                <EmptyDescription>
-                  Check back later for new courses
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex items-center gap-2 border-t bg-muted/50 pt-4">
+                      <Button className="flex-1">
+                        View Course
+                      </Button>
+
+                      {user?.role === "teacher" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-background/80 backdrop-blur-sm hover:bg-background border"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEditingCourse(course);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Edit course</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-background/80 backdrop-blur-sm hover:bg-background text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setDeletingCourse(course)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete course</span>
+                          </Button>
+                        </>
+                      )}
+                    </CardFooter>
+                  </Card>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && courses?.length === 0 && (
+          <Empty className="py-16">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BookOpen className="h-5 w-5" />
+              </EmptyMedia>
+              <EmptyTitle>No courses available</EmptyTitle>
+              <EmptyDescription>
+                Check back later for new courses
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
       </div>
-      
+
       <AlertDialog open={!!deletingCourse} onOpenChange={(open) => { if (!open) setDeletingCourse(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -265,7 +265,7 @@ export default function Page() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {editingCourse && (
         <EditCourseDialog
           course={editingCourse}
@@ -277,6 +277,6 @@ export default function Page() {
           }}
         />
       )}
-      </>
-    )
+    </>
+  )
 }

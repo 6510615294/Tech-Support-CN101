@@ -217,7 +217,7 @@ export function EditAssignmentDialog({
       }
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments/${assignment.id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${user?.token}`,
         },
@@ -225,7 +225,7 @@ export function EditAssignmentDialog({
       })
 
       if (!res.ok) {
-        toast.error("Failed to create Assignment", {
+        toast.error("Failed to save Assignment", {
           description: "Something went wrong. Please try again.",
         })
         return;
@@ -240,7 +240,7 @@ export function EditAssignmentDialog({
       })
     } catch (err) {
       setErrors({ submit: err instanceof Error ? err.message : "Something went wrong" })
-      toast.error("Failed to create Assignment", {
+      toast.error("Failed to save Assignment", {
         description: "Something went wrong. Please try again.",
       })
     } finally {

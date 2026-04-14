@@ -53,6 +53,11 @@ type Attachment = {
   created_at: string
 }
 
+type AttachmentDetail = {
+  related_assignments: string[]
+  related_templates: string[]
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -87,6 +92,9 @@ export default function AttachmentsPage() {
   const [search, setSearch] = useState("")
   const [uploading, setUploading] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Attachment | null>(null)
+  const [deleteTargetDetail, setDeleteTargetDetail] = useState<AttachmentDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [detailError, setDetailError] = useState("")
 
   useEffect(() => {
     if (!user?.token) return
@@ -101,7 +109,7 @@ export default function AttachmentsPage() {
         }
         const data = await res.json()
         setAttachments(data ?? [])
-      } catch(err) {
+      } catch (err) {
         toast.error("Error", {
           description: err instanceof Error ? err.message : "Something went wrong. Please try again.",
         })
@@ -113,6 +121,44 @@ export default function AttachmentsPage() {
     }
     load()
   }, [user])
+
+  useEffect(() => {
+    if (!deleteTarget || !user?.token) {
+      setDeleteTargetDetail(null)
+      setDetailError("")
+      setLoadingDetail(false)
+      return
+    }
+
+    const fetchDetail = async () => {
+      setLoadingDetail(true)
+      setDetailError("")
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/attachments/${deleteTarget.id}`,
+          {
+            headers: { Authorization: `Bearer ${user.token}` },
+          }
+        )
+        if (!res.ok) {
+          throw new Error("Failed to fetch attachment details")
+        }
+        const data = (await res.json()) as Partial<AttachmentDetail>
+        setDeleteTargetDetail({
+          related_assignments: data.related_assignments ?? [],
+          related_templates: data.related_templates ?? [],
+        })
+      } catch (err) {
+        console.error(err)
+        setDeleteTargetDetail(null)
+        setDetailError("Unable to load usage information.")
+      } finally {
+        setLoadingDetail(false)
+      }
+    }
+
+    fetchDetail()
+  }, [deleteTarget, user])
 
   const filtered = attachments.filter((a) =>
     a.file_name.toLowerCase().includes(search.toLowerCase())
@@ -162,7 +208,7 @@ export default function AttachmentsPage() {
       })
       const data = await reloadRes.json()
       setAttachments(data ?? [])
-      
+
       toast.success(`Attachment${files.length > 1 ? "s" : ""} Uploaded`, {
         description: `The attachment${files.length > 1 ? "s" : ""} was uploaded successfully.`,
       })
@@ -176,23 +222,23 @@ export default function AttachmentsPage() {
       e.target.value = ""
     }
   }
-  
+
   // add downloading state or no
   const handleDownload = async (attachment: Attachment) => {
     if (!user) return
-    
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attachments/${attachment.id}/download`, {
         headers: { Authorization: `Bearer ${user.token}` },
       })
-      
-      if (!res.ok) { 
+
+      if (!res.ok) {
         toast.error("Download failed", {
           description: "Something went wrong. Please try again.",
         })
         return
-      } 
-      
+      }
+
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -217,14 +263,14 @@ export default function AttachmentsPage() {
         method: "DELETE",
         headers: { Authorization: `Bearer ${user?.token}` },
       })
-      
+
       if (!res.ok) {
         toast.error("Failed to delete Attachment", {
           description: "Something went wrong. Please try again.",
         })
         return;
       }
-      
+
       setAttachments((prev) => prev.filter((a) => a.id !== deleteTarget.id))
       toast.success("Attachment deleted", {
         description: "The attachment was deleted successfully.",
@@ -301,7 +347,7 @@ export default function AttachmentsPage() {
             ))}
           </div>
         )}
-        
+
         {/* Error State */}
         {error && !isLoading && (
           <Empty className="py-16">
@@ -387,7 +433,6 @@ export default function AttachmentsPage() {
         )}
       </div>
 
-      {/* Delete Confirm Dialog */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -396,11 +441,55 @@ export default function AttachmentsPage() {
               <span className="font-medium">{deleteTarget?.file_name}</span> will be permanently
               deleted. This cannot be undone.
             </AlertDialogDescription>
+
+            {loadingDetail ? (
+              <div className="mt-3 text-sm text-muted-foreground">Loading usage information...</div>
+            ) : detailError ? (
+              <div className="mt-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {detailError}
+              </div>
+            ) : deleteTargetDetail ? (
+              <div className="mt-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="mb-2 font-semibold">Usage impact:</p>
+                {deleteTargetDetail.related_assignments.length === 0 &&
+                  deleteTargetDetail.related_templates.length === 0 ? (
+                  <p className="text-xs">No linked assignments or templates found.</p>
+                ) : (
+                  <>
+                    {deleteTargetDetail.related_assignments.length > 0 && (
+                      <div>
+                        <p className="font-medium">Assignments (Course):</p>
+                        <ul className="ml-1 list-inside list-disc">
+                          {deleteTargetDetail.related_assignments.map((assignment, i) => (
+                            <li key={i} className="text-xs">
+                              {assignment}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {deleteTargetDetail.related_templates.length > 0 && (
+                      <div className="mt-2">
+                        <p className="font-medium">Templates:</p>
+                        <ul className="ml-1 list-inside list-disc">
+                          {deleteTargetDetail.related_templates.map((template, i) => (
+                            <li key={i} className="text-xs">
+                              {template}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={loadingDetail}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete

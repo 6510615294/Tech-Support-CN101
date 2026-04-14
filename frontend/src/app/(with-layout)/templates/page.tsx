@@ -32,7 +32,6 @@ import {
 import {
   LayoutTemplate,
   Search,
-  Code,
   Star,
   Trash2,
   Pencil,
@@ -165,7 +164,6 @@ export default function TemplatesPage() {
       result = result.filter(
         (t) =>
           t.title.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q) ||
           t.tags.some((tag) => tag.toLowerCase().includes(q))
       )
     }
@@ -332,7 +330,7 @@ export default function TemplatesPage() {
         <div className="relative mb-6 max-w-lg">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search templates by title, description or tag..."
+            placeholder="Search templates by title or tag"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -435,10 +433,6 @@ export default function TemplatesPage() {
                     </span>
                   </div>
 
-                  {/* Prompt preview */}
-                  <p className="text-xs text-muted-foreground line-clamp-2 italic border-l-2 pl-2">
-                    {tpl.assignment_prompt}
-                  </p>
                 </CardContent>
 
                 <CardFooter className="border-t pt-3 flex items-center gap-1">
@@ -552,20 +546,6 @@ export default function TemplatesPage() {
                   </>
                 )}
                 
-                {/*Assignment Prompt*/}
-                {selected.ai_agent && (
-                  <div className="rounded-md bg-background border overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 py-1.5 border-b bg-muted/60">
-                      <Code className="h-4 w-4 text-muted-foreground px-0" />
-                      <span className="text-xs text-muted-foreground">Assignment Instruction/Prompt</span>
-                    </div>
-                    <div className="max-h-[250px] min-h-[100px] overflow-y-auto border rounded-md p-2 no-scrollbar">
-                      <pre>
-                        {selected.assignment_prompt}
-                      </pre>
-                    </div>
-                  </div>
-                )}
                 {/* Dates */}
                 <div className="flex flex-col gap-2 pt-4 border-t">
                   <div className="flex flex-col gap-1.5">
