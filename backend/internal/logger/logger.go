@@ -20,5 +20,7 @@ func Init() {
 		})
 	}
 
-	Log = slog.New(handler)
+	Log = slog.New(handler).With(
+		"service", os.Getenv("SERVICE_NAME"),
+	)
 }
