@@ -4,6 +4,7 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -12,13 +13,23 @@ func RegisterAuthRoutes(app fiber.Router) {
 }
 
 func login(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("login_attempt")
+	
 	var form models.LoginForm
 	if err := c.Bind().Body(&form); err != nil {
+		log.Error("login_failed",
+			"error", err,
+		)
 		return SendError(c, errors.ErrBadRequest)
 	}
 
 	user, err := service.AuthenticateUser(&form)
 	if err != nil {
+		log.Error("login_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
@@ -31,6 +42,10 @@ func login(c fiber.Ctx) error {
 		ThName: 	user.ThName,
 		Role: 		string(user.Role),	
 	}
+	
+	log.Info("login_success",
+		"username", user.Username,
+	)
 	
 	return c.JSON(response)
 }

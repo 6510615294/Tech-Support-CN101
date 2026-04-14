@@ -5,6 +5,7 @@ import (
 	"mime/multipart"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
 	"github.com/gofiber/fiber/v3"
@@ -19,10 +20,17 @@ func RegisterAttachmentRoutes(app fiber.Router) {
 }
 
 func createAttachments(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("attachments_create_attempt")
+	
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 
 	if !models.HasPermission(role, "template:create") {
+		log.Error("attachments_create_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
@@ -35,9 +43,14 @@ func createAttachments(c fiber.Ctx) error {
 
 	err := service.CreateAttachments(userID, files)
 	if err != nil {
+		log.Error("attachments_create_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("attachments_create_success")
+	
 	return c.JSON(fiber.Map{
 		"message": "attachments created",
 	})
@@ -80,19 +93,31 @@ func downloadAttachment(c fiber.Ctx) error {
 }
 
 func deleteAttachment(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("attachment_delete_attempt")
+	
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	attachmentID := c.Params("attachment_id")
 
 	if !models.HasPermission(role, "template:delete") {
+		log.Error("attachment_delete_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	err := service.DeleteAttachment(userID, attachmentID)
 	if err != nil {
+		log.Error("attachment_delete_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("attachment_delete_success")
+	
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "attachment deleted",
 	})

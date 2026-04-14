@@ -4,6 +4,7 @@ import (
 	"mime/multipart"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/service"
 	"github.com/gofiber/fiber/v3"
@@ -24,17 +25,26 @@ func RegisterAssignmentRoutes(app fiber.Router) {
 }
 
 func createAssignment(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("assignment_create_attempt")
+	
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 
 	if !models.HasPermission(role, "assignment:create") {
+		log.Error("assignment_create_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	var form models.AssignmentForm
 	if err := c.Bind().Body(&form); err != nil {
-		print(string(c.Body()))
+		log.Error("assignment_create_failed",
+			"error", err,
+		)
 		return SendError(c, errors.ErrBadRequest)
 	}
 
@@ -47,9 +57,16 @@ func createAssignment(c fiber.Ctx) error {
 
 	assignment, err := service.CreateAssignment(courseID, userID, &form, files)
 	if err != nil {
+		log.Error("assignment_create_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("assignment_create_success",
+		"course_id", courseID,
+	)
+	
 	return c.JSON(assignment)
 }
 
@@ -88,12 +105,19 @@ func getAssignment(c fiber.Ctx) error {
 }
 
 func updateAssignment(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("assignment_update_attempt")
+	
 	courseID := c.Params("course_id")
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("course_role").(string)
 	assignmentID := c.Params("assignment_id")
 
 	if !models.HasPermission(role, "assignment:update") {
+		log.Error("assignment_update_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
@@ -106,59 +130,103 @@ func updateAssignment(c fiber.Ctx) error {
 
 	var form models.AssignmentForm
 	if err := c.Bind().Body(&form); err != nil {
+		log.Error("assignment_update_failed",
+			"error", err,
+		)
 		return SendError(c, errors.ErrBadRequest)
 	}
 
 	data, err := service.UpdateAssignment(courseID, assignmentID, userID, &form, files)
 	if err != nil {
+		log.Error("assignment_update_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("assignment_update_success",
+		"course_id", courseID,
+		"assignment_id", assignmentID,
+	)
+	
 	return c.JSON(data)
 }
 
 func deleteAssignment(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("assignment_delete_attempt")
+	
 	courseID := c.Params("course_id")
 	role := c.Locals("course_role").(string)
 	assignmentID := c.Params("assignment_id")
 
 	if !models.HasPermission(role, "assignment:delete") {
+		log.Error("assignment_delete_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	err := service.DeleteAssignment(courseID, assignmentID)
 	if err != nil {
+		log.Error("assignment_delete_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("assignment_delete_success",
+		"course_id", courseID,
+		"assignment_id", assignmentID,
+	)
+	
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "assignment deleted",
 	})
 }
 
 func createAssignmentOverride(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("assignment_override_create_attempt")
+	
 	courseID := c.Params("course_id")
 	assignmentID := c.Params("assignment_id")
 	role := c.Locals("course_role").(string)
 
 	if !models.HasPermission(role, "assignment:update") {
+		log.Error("assignment_override_create_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	var form models.AssignmentOverrideForm
 	if err := c.Bind().Body(&form); err != nil {
+		log.Error("assignment_override_create_failed",
+			"error", err,
+		)
 		return SendError(c, errors.ErrBadRequest)
 	}
 
 	override, err := service.CreateAssignmentOverride(courseID, assignmentID, form)
 	if err != nil {
+		log.Error("assignment_override_create_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("assignment_override_create_success",
+		"course_id", courseID,
+		"assignment_id", assignmentID,
+	)
+	
 	return c.JSON(override)
 }
 
-func getAssignmentSummary(c fiber.Ctx) error {
+func getAssignmentSummary(c fiber.Ctx) error {	
 	courseID := c.Params("course_id")
 	role := c.Locals("course_role").(string)
 	assignmentID := c.Params("assignment_id")
@@ -176,42 +244,69 @@ func getAssignmentSummary(c fiber.Ctx) error {
 }
 
 func autoGradingAssignment(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("assignment_auto_grading_attempt")
+	
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 	assignmentID := c.Params("assignment_id")
 
 	if !models.HasPermission(role, "ai") {
+		log.Error("assignment_auto_grading_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	err := service.AutoGradingAssignment(userID, courseID, assignmentID)
 	if err != nil {
+		log.Error("assignment_auto_grading_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
+	log.Info("assignment_auto_grading_success",
+		"course_id", courseID,
+		"assignment_id", assignmentID,
+	)
+	
 	return c.JSON(fiber.Map{
 		"message": "auto grading started",
 	})
 }
 
 func downloadSubmissions(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("assignment_download_submissions")
+	
 	role := c.Locals("course_role").(string)
 	courseID := c.Params("course_id")
 	assignmentID := c.Params("assignment_id")
 
 	if !models.HasPermission(role, "file:download_all") {
+		log.Error("assignment_download_submissions_failed",
+			"error", errors.ErrForbidden,
+		)
 		return SendError(c, errors.ErrForbidden)
 	}
 
 	zipData, err := service.DownloadSubmissions(courseID, assignmentID)
 	if err != nil {
+		log.Error("assignment_download_submissions_failed",
+			"error", err,
+		)
 		return SendError(c, err)
 	}
 
 	c.Set("Content-Type", "application/zip")
 	c.Set("Content-Disposition", "attachment; filename=submissions.zip")
-
+	
+	log.Info("assignment_download_submissions_success")
+	
 	return c.Send(zipData)
 }
 
