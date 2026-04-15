@@ -4,10 +4,13 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Clock, FileText, Tag } from "lucide-react"
 import { TipTapTextEditor } from "@/components/ui/tiptap"
+import { useAuth } from "@/lib/auth-context"
+import { toast } from "sonner"
 
 type Attachment = {
   id: string
   file_name: string
+  file_type?: string
 }
 
 type Assignment = {
@@ -29,6 +32,8 @@ interface AssignmentInfoProps {
 }
 
 export function AssignmentInfo({ assignment }: AssignmentInfoProps) {
+  const { user } = useAuth()
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -37,6 +42,38 @@ export function AssignmentInfo({ assignment }: AssignmentInfoProps) {
       hour: "2-digit",
       minute: "2-digit",
     })
+  }
+
+  const handleDownloadAttachment = async (attachment: Attachment) => {
+    if (!user?.token) return
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attachments/${attachment.id}/download`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+
+      if (!res.ok) {
+        toast.error("Download failed", {
+          description: "Something went wrong. Please try again.",
+        })
+        return
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = attachment.file_name
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error(err)
+      toast.error("Download failed", {
+        description: "Something went wrong. Please try again.",
+      })
+    }
   }
 
   const getStatus = (): AssignmentStatus => {
@@ -112,14 +149,16 @@ export function AssignmentInfo({ assignment }: AssignmentInfoProps) {
             <h4 className="text-sm font-medium">Attachments</h4>
             <div className="flex flex-wrap gap-2">
               {assignment.attachments.map((attachment) => (
-                <a
+                <button
                   key={attachment.id}
-                  href={`/api/attachments/${attachment.id}`}
+                  type="button"
+                  onClick={() => handleDownloadAttachment(attachment)}
+                  title={`Download ${attachment.file_name}`}
                   className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted transition-colors"
                 >
                   <FileText className="h-4 w-4" />
                   {attachment.file_name}
-                </a>
+                </button>
               ))}
             </div>
           </div>
