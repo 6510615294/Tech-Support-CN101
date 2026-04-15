@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   AlertCircle,
   Calendar,
@@ -18,6 +19,7 @@ import {
   CalendarPlus,
   FileText,
   GraduationCap,
+  Search,
   Tag
 } from "lucide-react"
 import { CreateAssignmentDialog } from "@/components/create-assignment-dialog"
@@ -49,6 +51,7 @@ export default function CourseDetailPage() {
   const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -132,6 +135,24 @@ export default function CourseDetailPage() {
       .trim()
   }
 
+  const filteredAssignments = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase()
+
+    if (!normalizedQuery) {
+      return assignments
+    }
+
+    return assignments.filter((assignment) => {
+      const titleMatches = assignment.title.toLowerCase().includes(normalizedQuery)
+      const tagMatches = assignment.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery))
+
+      return titleMatches || tagMatches
+    })
+  }, [assignments, searchTerm])
+
+  const hasAssignments = assignments.length > 0
+  const hasSearchResults = filteredAssignments.length > 0
+
   return (
     <>
       <BreadcrumbNav courseName={course?.name} />
@@ -206,7 +227,19 @@ export default function CourseDetailPage() {
                 )}
               </div>
 
-              {assignments.length === 0 ? (
+              <div className="mb-4">
+                <div className="relative max-w-md">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by title or tag"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              {!hasAssignments ? (
                 <Empty className="py-12">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
@@ -218,9 +251,24 @@ export default function CourseDetailPage() {
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
+              ) : !hasSearchResults ? (
+                <Empty className="py-12">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Search className="h-5 w-5" />
+                    </EmptyMedia>
+                    <EmptyTitle>No matching assignments</EmptyTitle>
+                    <EmptyDescription>
+                      Try a different title or tag.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button variant="outline" onClick={() => setSearchTerm("")}>Clear search</Button>
+                  </EmptyContent>
+                </Empty>
               ) : (
                 <div className="grid gap-4">
-                  {assignments.map((assignment) => {
+                  {filteredAssignments.map((assignment) => {
                     const status = getAssignmentStatus(assignment)
                     return (
                       <Link key={assignment.id} href={`/courses/${course.id}/assignments/${assignment.id}`}>
