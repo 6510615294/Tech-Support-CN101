@@ -40,8 +40,9 @@ export const getColumns = (
   handleChangeStatus: (userId: string, status: string) => void,
   handleChangeRole: (userId: string, status: string) => void,
   handleDeleteMember: (userId: string) => void,
+  currentUsername?: string,
 ): ColumnDef<CourseMember>[] => {
-  
+
   return [
     {
       accessorKey: "username",
@@ -100,7 +101,7 @@ export const getColumns = (
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         const userId = row.original.user_id
-    
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -110,38 +111,38 @@ export const getColumns = (
                 {status}
               </Badge>
             </DropdownMenuTrigger>
-    
+
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-    
+
               <DropdownMenuItem
                 onClick={() => handleChangeStatus(userId, "active")}
                 disabled={status === "active"}
               >
                 Active
               </DropdownMenuItem>
-    
+
               <DropdownMenuItem
                 onClick={() => handleChangeStatus(userId, "inactive")}
                 disabled={status === "inactive"}
               >
                 Inactive
               </DropdownMenuItem>
-    
+
               <DropdownMenuItem
                 onClick={() => handleChangeStatus(userId, "withdraw")}
                 disabled={status === "withdraw"}
               >
                 Withdraw
               </DropdownMenuItem>
-              
+
               <DropdownMenuItem
                 onClick={() => handleChangeStatus(userId, "drop")}
                 disabled={status === "drop"}
               >
                 Drop
               </DropdownMenuItem>
-    
+
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -153,7 +154,9 @@ export const getColumns = (
       cell: ({ row }) => {
         const role = row.getValue("role") as string
         const userId = row.original.user_id
-    
+        const isCurrentUser = !!currentUsername && row.original.username === currentUsername
+        const isSelfTeacher = isCurrentUser && role === "teacher"
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -163,31 +166,31 @@ export const getColumns = (
                 {role == "ta" ? "TA" : role}
               </Badge>
             </DropdownMenuTrigger>
-    
+
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-    
+
               <DropdownMenuItem
                 onClick={() => handleChangeRole(userId, "student")}
-                disabled={role === "student"}
+                disabled={role === "student" || isSelfTeacher}
               >
                 Student
               </DropdownMenuItem>
-    
+
               <DropdownMenuItem
                 onClick={() => handleChangeRole(userId, "ta")}
-                disabled={role === "ta"}
+                disabled={role === "ta" || isSelfTeacher}
               >
                 TA
               </DropdownMenuItem>
-    
+
               <DropdownMenuItem
                 onClick={() => handleChangeRole(userId, "teacher")}
                 disabled={role === "teacher"}
               >
                 Teacher
               </DropdownMenuItem>
-    
+
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -198,7 +201,7 @@ export const getColumns = (
       header: "Remove",
       cell: ({ row }) => {
         const userId = row.original.user_id
-        
+
         return (
           <Button
             variant={"ghost"}
