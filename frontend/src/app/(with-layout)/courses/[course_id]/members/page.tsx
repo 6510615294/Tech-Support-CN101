@@ -138,6 +138,16 @@ export default function Page() {
 
   const handleChangeRole = async (userId: string, newRole: string) => {
     if (isUpdating || !user) return
+
+    const targetMember = members.find((m) => m.user_id === userId)
+    const isSelfTeacher = targetMember?.username === user.username && targetMember.role === "teacher"
+    if (isSelfTeacher && newRole !== "teacher") {
+      toast.error("You cannot change your own teacher role", {
+        description: "Only other teachers can change this teacher account's role.",
+      })
+      return
+    }
+
     setIsUpdating(true)
 
     try {
@@ -291,7 +301,8 @@ export default function Page() {
                       course_id as string,
                       handleChangeStatus,
                       handleChangeRole,
-                      handleDeleteMember
+                      handleDeleteMember,
+                      user?.username
                     )}
                     data={staffMembers}
                     filterProps={[
@@ -347,7 +358,8 @@ export default function Page() {
                       course_id as string,
                       handleChangeStatus,
                       handleChangeRole,
-                      handleDeleteMember
+                      handleDeleteMember,
+                      user?.username
                     )}
                     data={studentMembers}
                     filterProps={[
