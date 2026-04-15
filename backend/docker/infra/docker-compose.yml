@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+  
+  #this not save when docker down
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    # command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    # volumes:
+    #       - redis_data:/data
+
+  loki:
+    image: grafana/loki:main-7550b17
+    container_name: loki
+    ports:
+      - "127.0.0.1:3100:3100"
+
+  promtail:
+    image: grafana/promtail:3.6.10
+    container_name: promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:12.4-ubuntu
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+networks:
+  default:
+    name: app-network
+    external: true
+
+volumes:
+  pgdata:
+  # redis_data:
+  grafana_data:

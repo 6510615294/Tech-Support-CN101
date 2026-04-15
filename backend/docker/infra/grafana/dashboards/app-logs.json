@@ -1,0 +1,94 @@
+{
+  "title": "🚀 API + Worker Observability",
+  "schemaVersion": 39,
+  "version": 10,
+  "panels": [
+    {
+      "type": "logs",
+      "title": "📊 HTTP Requests",
+      "targets": [
+        {
+          "expr": "{service=\"api\"} | json | msg=\"http_request\""
+        }
+      ],
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 }
+    },
+    {
+      "type": "logs",
+      "title": "🧩 Application Logs",
+      "targets": [
+        {
+          "expr": "{service=\"api\"} | json | msg!=\"http_request\""
+        }
+      ],
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 }
+    },
+    {
+      "type": "logs",
+      "title": "⚙️ Worker Logs",
+      "targets": [
+        {
+          "expr": "{service=\"worker\"} | json"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true
+      },
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 }
+    },
+    {
+      "type": "logs",
+      "title": "🚨 Errors (API + Worker)",
+      "targets": [
+        {
+          "expr": "{service=~\"api|worker\", level=\"ERROR\"} | json"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true
+      },
+      "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 }
+    },
+    {
+      "type": "logs",
+      "title": "⚡ Slow Requests (>500ms)",
+      "targets": [
+        {
+          "expr": "{service=\"api\"} | json | duration_ms > 500"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true
+      },
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 }
+    },
+
+    {
+      "type": "timeseries",
+      "title": "📈 API Request Rate (req/sec)",
+      "targets": [
+        {
+          "expr": "rate({service=\"api\"}[1m])"
+        }
+      ],
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "🚨 Error Rate",
+      "targets": [
+        {
+          "expr": "rate({service=~\"api|worker\", level=\"ERROR\"}[1m])"
+        }
+      ],
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 }
+    }
+  ]
+}

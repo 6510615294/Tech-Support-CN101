@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"crypto/tls"
 	"log"
 
 	"github.com/hibiken/asynq"
@@ -12,9 +11,10 @@ func Start(redisAddr, redisPassword string) {
 		asynq.RedisClientOpt{
 			Addr:     redisAddr,
 			Password: redisPassword,
-			TLSConfig: &tls.Config{
-				MinVersion: tls.VersionTLS12,
-			},
+			// For external redis
+			// TLSConfig: &tls.Config{
+			// 	MinVersion: tls.VersionTLS12,
+			// },
 		},
 		asynq.Config{
 			Concurrency: 3,
