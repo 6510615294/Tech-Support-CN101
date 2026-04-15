@@ -177,6 +177,38 @@ export default function TemplatesPage() {
     setDialogOpen(true)
   }
 
+  const handleDownloadAttachment = async (attachment: Attachment) => {
+    if (!user) return
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attachments/${attachment.id}/download`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+
+      if (!res.ok) {
+        toast.error("Download failed", {
+          description: "Something went wrong. Please try again.",
+        })
+        return
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = attachment.file_name
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error(err)
+      toast.error("Download failed", {
+        description: "Something went wrong. Please try again.",
+      })
+    }
+  }
+
   const handleDialogOpenChange = (open: boolean) => {
     setForm(DEFAULT_FORM)
     setErrors({})
@@ -422,13 +454,16 @@ export default function TemplatesPage() {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex flex-col gap-1">
                       {tpl.attachments.map((attachment) => (
-                        <div
+                        <button
                           key={attachment.id}
+                          type="button"
                           className="flex items-center gap-2 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
+                          onClick={() => handleDownloadAttachment(attachment)}
+                          title={`Download ${attachment.file_name}`}
                         >
                           {getFileIcon(attachment.file_type, 4)}
                           {attachment.file_name}
-                        </div>
+                        </button>
                       ))}
                     </span>
                   </div>
