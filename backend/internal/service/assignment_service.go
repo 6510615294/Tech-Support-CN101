@@ -40,18 +40,18 @@ func CreateAssignment(
 	}
 
 	assignment := models.Assignment{
-		CourseID:    		courseID,
-		Title:       		form.Title,
-		Description: 		form.Description,
-		Point:       		form.Point,
-		StartDate:   		form.StartDate,
-		DueDate:     		form.DueDate,
-		CloseDate:   		form.CloseDate,
-		Attachments: 		attachments,
-		Tags:        		tags,
-		AIAgent:     		form.AIAgent,
-		AssignmentPrompt: 	form.AssignmentPrompt,
-		Visible:     		form.Visible,
+		CourseID:         courseID,
+		Title:            form.Title,
+		Description:      form.Description,
+		Point:            form.Point,
+		StartDate:        form.StartDate,
+		DueDate:          form.DueDate,
+		CloseDate:        form.CloseDate,
+		Attachments:      attachments,
+		Tags:             tags,
+		AIAgent:          form.AIAgent,
+		AssignmentPrompt: form.AssignmentPrompt,
+		Visible:          form.Visible,
 	}
 
 	if err := repository.CreateAssignment(&assignment); err != nil {
@@ -504,7 +504,7 @@ func GetAssignmentsExport(courseID string) ([]byte, error) {
 	for _, assignment := range assignments {
 		header = append(header, fmt.Sprintf("%s (%d)", assignment.Title, assignment.Point))
 	}
-	header = append(header, "total point", "percentage")
+	header = append(header, fmt.Sprintf("total point (%d)", totalMaxPoints), "percentage")
 
 	// Write header
 	if err := csvWriter.Write(header); err != nil {
