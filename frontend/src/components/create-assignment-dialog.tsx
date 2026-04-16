@@ -116,6 +116,13 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
 
   const MAX_FILES = 5
   const totalAttachments = selectedAttachments.length + uploadedFiles.length
+  const normalizedTemplateSearch = templateSearch.toLowerCase()
+  const filteredTemplates = templates.filter((t) =>
+    t.title.toLowerCase().includes(normalizedTemplateSearch) ||
+    t.description.toLowerCase().includes(normalizedTemplateSearch) ||
+    t.tags.some((tag) => tag.toLowerCase().includes(normalizedTemplateSearch))
+  )
+  const templateDropdownHeight = Math.min(Math.max(filteredTemplates.length * 92 + 8, 120), 420)
 
   const set = <K extends keyof AssignmentForm>(
     key: K,
@@ -369,62 +376,52 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
                         />
                       </div>
                     </div>
-                    <ScrollArea className="max-h-72">
+                    <ScrollArea className="max-h-[70vh]" style={{ height: `${templateDropdownHeight}px` }}>
                       {isLoadingTemplates ? (
                         <div className="flex items-center justify-center py-8">
                           <Spinner className="h-5 w-5" />
                         </div>
-                      ) : templates.filter((t) =>
-                        t.title.toLowerCase().includes(templateSearch.toLowerCase()) ||
-                        t.description.toLowerCase().includes(templateSearch.toLowerCase()) ||
-                        t.tags.some((tag) => tag.toLowerCase().includes(templateSearch.toLowerCase()))
-                      ).length === 0 ? (
+                      ) : filteredTemplates.length === 0 ? (
                         <p className="py-6 text-center text-sm text-muted-foreground">No templates found</p>
                       ) : (
                         <div className="p-1">
-                          {templates
-                            .filter((t) =>
-                              t.title.toLowerCase().includes(templateSearch.toLowerCase()) ||
-                              t.description.toLowerCase().includes(templateSearch.toLowerCase()) ||
-                              t.tags.some((tag) => tag.toLowerCase().includes(templateSearch.toLowerCase()))
-                            )
-                            .map((tpl) => (
-                              <button
-                                key={tpl.id}
-                                type="button"
-                                onClick={() => applyTemplate(tpl)}
-                                className={`flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted ${selectedTemplate?.id === tpl.id ? "bg-primary/5" : ""
-                                  }`}
-                              >
-                                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
-                                  {selectedTemplate?.id === tpl.id ? (
-                                    <Check className="h-4 w-4 text-primary" />
-                                  ) : (
-                                    <LayoutTemplate className="h-4 w-4 text-muted-foreground" />
+                          {filteredTemplates.map((tpl) => (
+                            <button
+                              key={tpl.id}
+                              type="button"
+                              onClick={() => applyTemplate(tpl)}
+                              className={`flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted ${selectedTemplate?.id === tpl.id ? "bg-primary/5" : ""
+                                }`}
+                            >
+                              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+                                {selectedTemplate?.id === tpl.id ? (
+                                  <Check className="h-4 w-4 text-primary" />
+                                ) : (
+                                  <LayoutTemplate className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{tpl.title}</span>
+                                  <span className="text-xs text-muted-foreground">{tpl.point} pts</span>
+                                  {tpl.ai_agent && (
+                                    <Badge variant="secondary" className="h-4 px-1 text-[10px]">AI</Badge>
                                   )}
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{tpl.title}</span>
-                                    <span className="text-xs text-muted-foreground">{tpl.point} pts</span>
-                                    {tpl.ai_agent && (
-                                      <Badge variant="secondary" className="h-4 px-1 text-[10px]">AI</Badge>
+                                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{tpl.description}</p>
+                                {tpl.tags.length > 0 && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {tpl.tags.slice(0, 3).map((tag) => (
+                                      <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{tag}</span>
+                                    ))}
+                                    {tpl.tags.length > 3 && (
+                                      <span className="text-[10px] text-muted-foreground">+{tpl.tags.length - 3}</span>
                                     )}
                                   </div>
-                                  <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{tpl.description}</p>
-                                  {tpl.tags.length > 0 && (
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                      {tpl.tags.slice(0, 3).map((tag) => (
-                                        <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{tag}</span>
-                                      ))}
-                                      {tpl.tags.length > 3 && (
-                                        <span className="text-[10px] text-muted-foreground">+{tpl.tags.length - 3}</span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
+                                )}
+                              </div>
+                            </button>
+                          ))}
                         </div>
                       )}
                     </ScrollArea>
@@ -642,10 +639,10 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
                                           disabled={isDisabled}
                                           onClick={() => toggleExistingAttachment(att)}
                                           className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${isSelected
-                                              ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                              : isDisabled
-                                                ? "cursor-not-allowed opacity-40"
-                                                : "hover:bg-muted"
+                                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                            : isDisabled
+                                              ? "cursor-not-allowed opacity-40"
+                                              : "hover:bg-muted"
                                             }`}
                                         >
                                           <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />

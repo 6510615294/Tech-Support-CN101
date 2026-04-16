@@ -42,18 +42,19 @@ export function CommentGrade({
       ? comments.find(c => c.commentator === role)
       : undefined;
   }, [comments, role]);
-  
+
   const [grade, setGrade] = useState("");
   const [comment, setComment] = useState("");
   const [visibleToStudent, setVisibleToStudent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
     setGrade(currentGrade?.toString() ?? "");
     setComment(existingComment?.comment ?? "");
     setVisibleToStudent(existingComment?.visible ?? true);
   }, [currentGrade, existingComment]);
-  
+
   const handleSubmit = async () => {
     if (!comment.trim() && !grade) return
     setIsSubmitting(true)
@@ -63,6 +64,13 @@ export function CommentGrade({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const toggleCommentExpanded = (commentId: string) => {
+    setExpandedCommentIds((prev) => ({
+      ...prev,
+      [commentId]: !prev[commentId],
+    }))
   }
 
   // Filter comments for student - only show visible ones
@@ -121,7 +129,34 @@ export function CommentGrade({
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{c.comment}</p>
+                  <p
+                    className="text-sm whitespace-pre-wrap overflow-hidden w-full"
+                    style={
+                      expandedCommentIds[c.id]
+                        ? {
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
+                          maxHeight: "200px",
+                          overflowY: "auto",
+                        }
+                        : {
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word",
+                        }
+                    }
+                  >
+                    {c.comment}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => toggleCommentExpanded(c.id)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {expandedCommentIds[c.id] ? "Show less" : "Show more"}
+                  </button>
                 </div>
               ))}
             </div>

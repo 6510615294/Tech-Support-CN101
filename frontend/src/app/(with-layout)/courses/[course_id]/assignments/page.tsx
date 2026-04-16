@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { BreadcrumbNav } from "@/components/breadcrumb-nav"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,14 +10,17 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   AlertCircle,
   Calendar,
   CalendarClock,
   CalendarOff,
   CalendarPlus,
+  Download,
   FileText,
   GraduationCap,
+  Search,
   Tag
 } from "lucide-react"
 import { CreateAssignmentDialog } from "@/components/create-assignment-dialog"
@@ -49,8 +52,49 @@ export default function CourseDetailPage() {
   const { user } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isDownloadingAllSubmissions, setIsDownloadingAllSubmissions] = useState(false)
   const [error, setError] = useState("")
+
+  const handleDownloadAllSubmissionsCsv = async () => {
+    if (!user?.token) return
+
+    try {
+      setIsDownloadingAllSubmissions(true)
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/export`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error("Failed to export submissions")
+      }
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      const safeCourseName = (course?.name || "course")
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, "_")
+        .replace(/\s+/g, "_")
+
+      link.href = url
+      link.download = `${safeCourseName}_all_submissions.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("Failed to download submissions csv", err)
+      alert("Failed to download submissions csv")
+    } finally {
+      setIsDownloadingAllSubmissions(false)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -132,6 +176,24 @@ export default function CourseDetailPage() {
       .trim()
   }
 
+  const filteredAssignments = useMemo(() => {
+    const normalizedQuery = searchTerm.trim().toLowerCase()
+
+    if (!normalizedQuery) {
+      return assignments
+    }
+
+    return assignments.filter((assignment) => {
+      const titleMatches = assignment.title.toLowerCase().includes(normalizedQuery)
+      const tagMatches = assignment.tags.some((tag) => tag.toLowerCase().includes(normalizedQuery))
+
+      return titleMatches || tagMatches
+    })
+  }, [assignments, searchTerm])
+
+  const hasAssignments = assignments.length > 0
+  const hasSearchResults = filteredAssignments.length > 0
+
   return (
     <>
       <BreadcrumbNav courseName={course?.name} />
@@ -197,16 +259,38 @@ export default function CourseDetailPage() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Assignments</h2>
                 {user?.role === "teacher" && (
-                  <CreateAssignmentDialog
-                    courseId={course_id as string}
-                    onCreated={(assignment) => {
-                      setAssignments(prev => [...prev, assignment])
-                    }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadAllSubmissionsCsv}
+                      disabled={isDownloadingAllSubmissions}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {isDownloadingAllSubmissions ? "Downloading..." : "Download all submissions from all assignments"}
+                    </Button>
+                    <CreateAssignmentDialog
+                      courseId={course_id as string}
+                      onCreated={(assignment) => {
+                        setAssignments(prev => [...prev, assignment])
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 
-              {assignments.length === 0 ? (
+              <div className="mb-4">
+                <div className="relative max-w-md">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by title or tag"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              {!hasAssignments ? (
                 <Empty className="py-12">
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
@@ -218,9 +302,24 @@ export default function CourseDetailPage() {
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
+              ) : !hasSearchResults ? (
+                <Empty className="py-12">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Search className="h-5 w-5" />
+                    </EmptyMedia>
+                    <EmptyTitle>No matching assignments</EmptyTitle>
+                    <EmptyDescription>
+                      Try a different title or tag.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button variant="outline" onClick={() => setSearchTerm("")}>Clear search</Button>
+                  </EmptyContent>
+                </Empty>
               ) : (
                 <div className="grid gap-4">
-                  {assignments.map((assignment) => {
+                  {filteredAssignments.map((assignment) => {
                     const status = getAssignmentStatus(assignment)
                     return (
                       <Link key={assignment.id} href={`/courses/${course.id}/assignments/${assignment.id}`}>

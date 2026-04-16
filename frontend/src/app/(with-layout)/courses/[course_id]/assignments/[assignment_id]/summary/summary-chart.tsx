@@ -119,6 +119,20 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
 };
 
 export default function SummaryChartSummaryChart({ statistic }: SummaryChartProps) {
+  const toOptionalNumber = (value: unknown) => {
+    if (value === null || value === undefined || value === "") {
+      return null
+    }
+
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  const avgScore = toOptionalNumber(statistic.avg_score)
+  const medianScore = toOptionalNumber(statistic.median_score)
+  const highestScore = toOptionalNumber(statistic.highest_score)
+  const lowestScore = toOptionalNumber(statistic.lowest_score)
+
   const chartData = statistic.distribution.map((d) => ({
     name: `${d.range_start}–${d.range_end}`,
     count: d.count,
@@ -162,10 +176,10 @@ export default function SummaryChartSummaryChart({ statistic }: SummaryChartProp
 
       {/* Score Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Average Score" value={statistic.avg_score.toFixed(2)} accent="#f97316" />
-        <StatCard label="Median Score" value={statistic.median_score} accent="#8b5cf6" />
-        <StatCard label="Highest Score" value={statistic.highest_score} accent="#22c55e" sub="Top performer" />
-        <StatCard label="Lowest Score" value={statistic.lowest_score} accent="#ef4444" sub="Needs attention" />
+        <StatCard label="Average Score" value={avgScore !== null ? avgScore.toFixed(2) : "-"} accent="#f97316" />
+        <StatCard label="Median Score" value={medianScore ?? "-"} accent="#8b5cf6" />
+        <StatCard label="Highest Score" value={highestScore ?? "-"} accent="#22c55e" sub="Top performer" />
+        <StatCard label="Lowest Score" value={lowestScore ?? "-"} accent="#ef4444" sub="Needs attention" />
       </div>
 
       {/* Grading Status */}

@@ -1,10 +1,10 @@
 "use client"
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { EyeOff, ClipboardCheck, BarChart3, Pencil, Trash2 } from "lucide-react"
+import { ClipboardCheck, BarChart3, Trash2, Download } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import {
   AlertDialog,
@@ -60,6 +60,50 @@ export function AssignmentActions({
 }: AssignmentActionsProps) {
   const { user } = useAuth()
   const router = useRouter();
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false)
+
+  async function handleDownloadAllSubmissions() {
+    if (!user?.token) {
+      return
+    }
+
+    try {
+      setIsDownloadingAll(true)
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments/${assignment.id}/submissions/download`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+
+      if (!res.ok) {
+        console.error("Failed to download submissions")
+        alert("Failed to download submissions")
+        return
+      }
+
+      const blob = await res.blob()
+      const safeAssignmentName = assignment.title
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, "_")
+        .replace(/\s+/g, "_")
+      const fileName = `${safeAssignmentName || "assignment"}_submissions.zip`
+
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error("Error downloading submissions", err)
+      alert("Something went wrong.")
+    } finally {
+      setIsDownloadingAll(false)
+    }
+  }
 
   async function handleDelete() {
     if (!user) {
@@ -122,6 +166,17 @@ export function AssignmentActions({
         >
           <ClipboardCheck className="h-4 w-4" />
           AI Grading
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleDownloadAllSubmissions}
+          disabled={isDownloadingAll}
+          className="w-full justify-start gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {isDownloadingAll ? "Downloading..." : "Download all submissions"}
         </Button>
 
         <Button

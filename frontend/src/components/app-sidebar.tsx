@@ -18,18 +18,13 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, Home, LogOut, Settings, File, BookDashed, LayoutTemplate } from "lucide-react"
+import { BookOpen, LogOut, Settings, File, BookDashed, LayoutTemplate } from "lucide-react"
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
 
   const navItems = [
-    {
-      title: "Home",
-      href: "/",
-      icon: Home,
-    },
     {
       title: "Courses",
       href: "/courses",
@@ -46,6 +41,14 @@ export function AppSidebar() {
       icon: File,
     },
   ]
+
+  const isItemActive = (title: string, href: string) => {
+    if (title === "Courses") {
+      return pathname === href || pathname.startsWith("/courses/")
+    }
+
+    return pathname === href || pathname.startsWith(href + "/")
+  }
 
   return (
     <Sidebar>
@@ -65,7 +68,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+                    isActive={isItemActive(item.title, item.href)}
                   >
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4" />
