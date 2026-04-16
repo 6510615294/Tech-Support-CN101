@@ -11,6 +11,7 @@ import (
 
 	"time"
 
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
@@ -224,6 +225,24 @@ func DeleteAssignment(courseID, assignmentID string) error {
 	assignment, err := repository.GetAssignment(courseID, assignmentID)
 	if err != nil {
 		return err
+	}
+
+	// Get all submissions for this assignment with their attachments
+	submissions, err := repository.GetSubmissionsWithAttachments(assignment.ID)
+	if err != nil {
+		return err
+	}
+
+	// Delete all submission attachment files from S3
+	for _, submission := range submissions {
+		if submission.Attachment != nil {
+			if err := database.DeleteFileFromS3(submission.Attachment.FileKey); err != nil {
+				logger.Log.Error("error_delete_file_from_s3",
+					"submission_id", submission.ID,
+				)
+				continue
+			}
+		}
 	}
 
 	if err := repository.DeleteAssignment(assignment); err != nil {

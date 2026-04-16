@@ -92,6 +92,11 @@ func DeleteAttachment(userID, attachmentID string) error {
 		return err
 	}
 
+	// Delete the file from S3
+	if err := database.DeleteFileFromS3(attachment.FileKey); err != nil {
+		return err
+	}
+
 	if err := repository.DeleteAttachment(attachment); err != nil {
 		return err
 	}

@@ -79,6 +79,7 @@ func GetAssignmentsByCourse(courseID string) ([]models.Assignment, error) {
 
 	err := database.DB.
 		Preload("Tags").
+		Preload("Attachments").
 		Where("course_id = ?", courseID).
 		Find(&assignments).
 		Error

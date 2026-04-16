@@ -4,7 +4,9 @@ import (
 	stderrors "errors"
 	"math/rand"
 
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
@@ -128,6 +130,38 @@ func DeleteCourse(courseID string) error {
 	course, err := repository.GetCourseByID(courseID)
 	if err != nil {
 		return err
+	}
+
+	// Get all assignments for the course
+	assignments, err := repository.GetAssignmentsByCourse(courseID)
+	if err != nil {
+		return err
+	}
+
+	// Delete all submission attachment files from S3
+	for _, assignment := range assignments {
+		// Get all submissions for this assignment with their attachments
+		submissions, err := repository.GetSubmissionsWithAttachments(assignment.ID)
+		if err != nil {
+			// Log error but continue with deletion
+			logger.Log.Error("error_get_submissions_with_attachment",
+				"assignment_id", assignment.ID,
+			)
+			continue
+		}
+
+		// Delete submission attachment files from S3
+		for _, submission := range submissions {
+			if submission.Attachment != nil {
+				if err := database.DeleteFileFromS3(submission.Attachment.FileKey); err != nil {
+					// Log error but continue with deletion
+					logger.Log.Error("error_delete_file_from_s3",
+						"submission_id", submission.ID,
+					)
+					continue
+				}
+			}
+		}
 	}
 
 	return repository.DeleteCourse(course.ID)
