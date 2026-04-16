@@ -13,11 +13,11 @@ import (
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
 func CreateAssignment(
@@ -236,7 +236,7 @@ func DeleteAssignment(courseID, assignmentID string) error {
 	// Delete all submission attachment files from S3
 	for _, submission := range submissions {
 		if submission.Attachment != nil {
-			if err := database.DeleteFileFromS3(submission.Attachment.FileKey); err != nil {
+			if err := storage.DeleteFile(submission.Attachment.FileKey); err != nil {
 				logger.Log.Error("error_delete_file_from_s3",
 					"submission_id", submission.ID,
 				)
@@ -361,7 +361,7 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 
 		// If submission has an attachment, download and read the text from S3
 		if submission.Attachment != nil {
-			fileBytes, err := database.DownloadFileFromS3ByKey(submission.Attachment.FileKey)
+			fileBytes, err := storage.DownloadFile(submission.Attachment.FileKey)
 			if err != nil {
 				return err
 			}
@@ -441,7 +441,7 @@ func DownloadSubmissions(courseID, assignmentID string) ([]byte, error) {
 			continue
 		}
 
-		fileBytes, err := database.DownloadFileFromS3ByKey(submission.Attachment.FileKey)
+		fileBytes, err := storage.DownloadFile(submission.Attachment.FileKey)
 		if err != nil {
 			continue
 		}

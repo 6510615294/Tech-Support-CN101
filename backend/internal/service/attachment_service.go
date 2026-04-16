@@ -5,10 +5,10 @@ import (
 	"io"
 	"mime/multipart"
 
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
 func stringifyValue(v interface{}) string {
@@ -40,7 +40,7 @@ func CreateAttachments(
 		data, _ := io.ReadAll(src)
 		src.Close()
 
-		fileKey, err := database.UploadFileToS3(data, file.Filename)
+		fileKey, err := storage.UploadFile(data, file.Filename)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func DownloadAttachment(userID, attachmentID string) ([]byte, string, string, er
 		return nil, "", "", err
 	}
 
-	fileBytes, err := database.DownloadFileFromS3ByKey(attachment.FileKey)
+	fileBytes, err := storage.DownloadFile(attachment.FileKey)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -92,8 +92,8 @@ func DeleteAttachment(userID, attachmentID string) error {
 		return err
 	}
 
-	// Delete the file from S3
-	if err := database.DeleteFileFromS3(attachment.FileKey); err != nil {
+	// Delete the file from storage
+	if err := storage.DeleteFile(attachment.FileKey); err != nil {
 		return err
 	}
 

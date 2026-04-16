@@ -5,10 +5,10 @@ import (
 	"mime/multipart"
 	"time"
 
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
 func CreateSubmission(
@@ -229,7 +229,7 @@ func ReadSubmission(
 		return "", errors.ErrAttachmentNotFound
 	}
 
-	content, err := database.ReadPythonFileFromS3ByKey(submission.Attachment.FileKey)
+	content, err := storage.ReadFile(submission.Attachment.FileKey)
 	if err != nil {
 		return "", err
 	}
@@ -250,7 +250,7 @@ func uploadSubmissionFile(userID string, file *multipart.FileHeader) (*models.At
 		return nil, err
 	}
 
-	fileKey, err := database.UploadFileToS3(data, file.Filename)
+	fileKey, err := storage.UploadFile(data, file.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func handleAttachmentUpdate(
 ) (*string, error) {
 
 	if submission.AttachmentID != nil && submission.Attachment != nil {
-		err := database.DeleteFileFromS3(submission.Attachment.FileKey)
+		err := storage.DeleteFile(submission.Attachment.FileKey)
 		if err != nil {
 			return nil, err
 		}
@@ -298,7 +298,7 @@ func handleAttachmentUpdate(
 		return nil, err
 	}
 
-	fileKey, err := database.UploadFileToS3(data, file.Filename)
+	fileKey, err := storage.UploadFile(data, file.Filename)
 	if err != nil {
 		return nil, err
 	}

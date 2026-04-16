@@ -9,6 +9,7 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/router"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/middleware"
@@ -19,7 +20,9 @@ func main() {
 	config.LoadEnv()
 	logger.Init() // Moved up to ensure logging starts immediately
 	database.Connect()
-	database.ConnectS3("cnproject-6510615120")
+	if err := storage.Init(); err != nil {
+		log.Fatalf("Failed to initialize storage: %v", err)
+	}
 
 	// 2. Initialize Redis/Queue
 	redisAddr := config.GetEnv("REDIS_ADDRESS")

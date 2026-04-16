@@ -13,7 +13,7 @@ import (
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/database"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
@@ -128,7 +128,7 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			answer := submission.Answer
 
 			if submission.Attachment != nil {
-				fileBytes, err := database.DownloadFileFromS3ByKey(submission.Attachment.FileKey)
+				fileBytes, err := storage.DownloadFile(submission.Attachment.FileKey)
 				if err != nil {
 					log.Error("auto_grading_failed",
 						"error", err,
