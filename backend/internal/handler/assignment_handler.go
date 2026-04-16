@@ -13,6 +13,7 @@ import (
 func RegisterAssignmentRoutes(app fiber.Router) {
 	app.Post("", createAssignment)
 	app.Get("", getAssignments)
+	app.Get("/export", getAssignmentsExport)
 	app.Get("/:assignment_id", getAssignment)
 	app.Put("/:assignment_id", updateAssignment)
 	app.Delete("/:assignment_id", deleteAssignment)
@@ -20,7 +21,6 @@ func RegisterAssignmentRoutes(app fiber.Router) {
 	app.Post("/:assignment_id/override", createAssignmentOverride)
 	app.Get("/:assignment_id/auto-grading", autoGradingAssignment)
 	app.Get("/:assignment_id/submissions/download", downloadSubmissions)
-	app.Get("/export", getAssignmentsExport)
 	app.Get("/:assignment_id/export", getAssignmentExport)
 }
 
