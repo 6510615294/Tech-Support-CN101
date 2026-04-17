@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-
+	"slices"
+	
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
-func stringifyValue(v interface{}) string {
+func stringifyValue(v any) string {
 	switch val := v.(type) {
 	case string:
 		return val
@@ -73,11 +74,72 @@ func GetAttachments(userID string) (*[]models.ResponseAttachment, error) {
 }
 
 func DownloadAttachment(userID, attachmentID string) ([]byte, string, string, error) {
-	attachment, err := repository.GetAttachment(userID, attachmentID)
+	// Get the attachment details
+	attachment, err := repository.GetAttachmentByID(attachmentID)
 	if err != nil {
 		return nil, "", "", err
 	}
 
+	// Check if user owns the attachment
+	if attachment.UserID == userID {
+		// User owns the attachment, allow download
+		fileBytes, err := storage.DownloadFile(attachment.FileKey)
+		if err != nil {
+			return nil, "", "", err
+		}
+		return fileBytes, attachment.FileName, attachment.FileType, nil
+	}
+
+	// Check if attachment is from a submission
+	submission, err := repository.GetSubmissionByAttachmentID(attachmentID)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	if submission != nil {
+		// Attachment is from a submission
+		// Check if user has non-student role in the submission's course
+		hasPermission, err := repository.HasNonStudentRoleInCourse(userID, submission.Assignment.CourseID)
+		if err != nil {
+			return nil, "", "", err
+		}
+		if !hasPermission {
+			return nil, "", "", errors.ErrForbidden
+		}
+	} else {
+		// Attachment is not from a submission, check if it's from assignments
+		courseIDs, err := repository.GetCourseIDsByAttachmentID(attachmentID)
+		if err != nil {
+			return nil, "", "", err
+		}
+
+		if len(courseIDs) > 0 {
+			// Attachment is from assignments
+			// Check if user is a member of any course that uses this attachment
+			userCourseIDs, err := repository.GetUserCourseIDs(userID)
+			if err != nil {
+				return nil, "", "", err
+			}
+
+			// Check if any of the user's courses match the assignment courses
+			hasCourseAccess := false
+			for _, userCourseID := range userCourseIDs {
+			    if slices.Contains(courseIDs, userCourseID) {
+			        hasCourseAccess = true
+			        break
+			    }
+			}
+
+			if !hasCourseAccess {
+				return nil, "", "", errors.ErrForbidden
+			}
+		} else {
+			// Attachment is neither from submission nor assignment, forbid
+			return nil, "", "", errors.ErrForbidden
+		}
+	}
+
+	// User has permission, download the file
 	fileBytes, err := storage.DownloadFile(attachment.FileKey)
 	if err != nil {
 		return nil, "", "", err

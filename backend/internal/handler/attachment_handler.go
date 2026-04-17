@@ -73,18 +73,33 @@ func getAttachments(c fiber.Ctx) error {
 }
 
 func downloadAttachment(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
 	userID := c.Locals("user_id").(string)
-	role := c.Locals("user_role").(string)
 	attachmentID := c.Params("attachment_id")
 
-	if !models.HasPermission(role, "template:view") {
-		return SendError(c, errors.ErrForbidden)
-	}
+	log.Info("attachment_download_attempt",
+		"user_id", userID,
+		"attachment_id", attachmentID,
+	)
 
 	attachment, filename, contentType, err := service.DownloadAttachment(userID, attachmentID)
 	if err != nil {
+		log.Error("attachment_download_failed",
+			"error", err,
+			"user_id", userID,
+			"attachment_id", attachmentID,
+		)
 		return SendError(c, err)
 	}
+
+	log.Info("attachment_download_success",
+		"user_id", userID,
+		"attachment_id", attachmentID,
+		"filename", filename,
+		"content_type", contentType,
+		"file_size", len(attachment),
+	)
 
 	c.Set("Content-Type", contentType)
 	c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))

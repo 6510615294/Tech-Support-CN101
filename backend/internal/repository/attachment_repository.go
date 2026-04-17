@@ -43,6 +43,21 @@ func GetAttachment(userID, attachmentID string) (*models.Attachment, error) {
 	return &attachment, err
 }
 
+func GetAttachmentByID(attachmentID string) (*models.Attachment, error) {
+	var attachment models.Attachment
+
+	err := database.DB.
+		Where("id = ?", attachmentID).
+		First(&attachment).
+		Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrAttachmentNotFound
+	}
+
+	return &attachment, err
+}
+
 func GetAttachments(userID string) ([]models.Attachment, error) {
 	var attachments []models.Attachment
 
@@ -69,8 +84,8 @@ func DeleteAttachment(attachment *models.Attachment) error {
 	return database.DB.Delete(attachment).Error
 }
 
-func GetAssignmentsByAttachmentID(attachmentID string) ([]map[string]interface{}, error) {
-	var results []map[string]interface{}
+func GetAssignmentsByAttachmentID(attachmentID string) ([]map[string]any, error) {
+	var results []map[string]any
 	
 	err := database.DB.
 		Table("assignments").
@@ -83,8 +98,8 @@ func GetAssignmentsByAttachmentID(attachmentID string) ([]map[string]interface{}
 	return results, err
 }
 
-func GetTemplatesByAttachmentID(attachmentID string) ([]map[string]interface{}, error) {
-	var results []map[string]interface{}
+func GetTemplatesByAttachmentID(attachmentID string) ([]map[string]any, error) {
+	var results []map[string]any
 	
 	err := database.DB.
 		Table("assignment_templates").
@@ -95,4 +110,35 @@ func GetTemplatesByAttachmentID(attachmentID string) ([]map[string]interface{}, 
 		Error
 	
 	return results, err
+}
+
+// GetSubmissionByAttachmentID checks if an attachment is from a submission and returns the submission with its assignment
+func GetSubmissionByAttachmentID(attachmentID string) (*models.Submission, error) {
+	var submission models.Submission
+
+	err := database.DB.
+		Preload("Assignment").
+		Where("attachment_id = ?", attachmentID).
+		First(&submission).Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+
+	return &submission, err
+}
+
+// GetCourseIDsByAttachmentID returns all course IDs from assignments that use this attachment
+func GetCourseIDsByAttachmentID(attachmentID string) ([]string, error) {
+	var courseIDs []string
+
+	err := database.DB.
+		Table("assignments").
+		Select("DISTINCT assignments.course_id").
+		Joins("INNER JOIN assignment_attachments ON assignment_attachments.assignment_id = assignments.id").
+		Where("assignment_attachments.attachment_id = ?", attachmentID).
+		Pluck("course_id", &courseIDs).
+		Error
+
+	return courseIDs, err
 }
