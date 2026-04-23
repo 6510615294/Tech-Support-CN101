@@ -175,7 +175,6 @@ type Submission struct {
 	ID           string      `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
 	AssignmentID string      `gorm:"not null;index" json:"assignment_id"`
 	Assignment   Assignment  `gorm:"foreignKey:AssignmentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Answer       string      `json:"answer"`
 	Point        *int16      `gorm:"null" json:"point,omitempty"`
 	GradedBy     *string     `gorm:"type:VARCHAR(20);null" json:"graded_by,omitempty"`
 	AttachmentID *string     `gorm:"null" json:"attachment_id,omitempty"`

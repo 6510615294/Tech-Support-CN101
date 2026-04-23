@@ -15,7 +15,6 @@ func CreateSubmission(
 	courseID,
 	assignmentID,
 	userID string,
-	form *models.SubmissionForm,
 	file *multipart.FileHeader,
 ) (*models.ResponseSubmission, error) {
 
@@ -32,7 +31,7 @@ func CreateSubmission(
 	effectiveCloseDate := assignment.CloseDate
 
 	override, err := repository.GetAssignmentOverride(assignmentID, userID)
-	if err == nil {
+	if err == nil && override != nil {
 		effectiveCloseDate = override.ExtendedDueDate
 	}
 
@@ -52,7 +51,6 @@ func CreateSubmission(
 
 	submission := models.Submission{
 		AssignmentID: assignmentID,
-		Answer:       form.Answer,
 		StudentID:    userID,
 		AttachmentID: attachmentID,
 	}
@@ -69,7 +67,6 @@ func CreateSubmission(
 func UpdateSubmission(
 	submissionID string,
 	userID string,
-	form *models.SubmissionForm,
 	file *multipart.FileHeader,
 ) (*models.ResponseSubmission, error) {
 
@@ -85,24 +82,12 @@ func UpdateSubmission(
 	effectiveClose := submission.Assignment.CloseDate
 
 	override, err := repository.GetAssignmentOverride(submission.AssignmentID, userID)
-	if err == nil {
+	if err == nil && override != nil {
 		effectiveClose = override.ExtendedDueDate
 	}
 
 	if effectiveClose.Before(time.Now()) {
 		return nil, errors.ErrAssignmentNotAvailable
-	}
-
-	updates := map[string]any{}
-
-	if form.Answer != "" {
-		updates["answer"] = form.Answer
-	}
-
-	if len(updates) > 0 {
-		if err := repository.UpdateSubmission(submission.ID, updates); err != nil {
-			return nil, err
-		}
 	}
 
 	attachmentID, err := handleAttachmentUpdate(submission, file, userID)

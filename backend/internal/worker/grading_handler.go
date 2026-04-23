@@ -125,7 +125,7 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 		// Prepare aiSubmissionForm list
 		aiSubmissionForm := make([]models.AISubmissionForm, 0, len(batch))
 		for _, submission := range batch {
-			answer := submission.Answer
+			answer := ""
 
 			if submission.Attachment != nil {
 				fileBytes, err := storage.DownloadFile(submission.Attachment.FileKey)

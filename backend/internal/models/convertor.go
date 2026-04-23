@@ -171,7 +171,6 @@ func ConvertDetailedAssignmentToResponse(
 		submissionResponses[i] = ResponseSubmission{
 			ID:           sub.ID,
 			Submitter:    sub.Student.Username + "|" + sub.Student.EnName + "|" + sub.Student.ThName,
-			Answer:       sub.Answer,
 			Point:        sub.Point,
 			AttachmentID: sub.AttachmentID,
 			FileName:     submissionFileName,
@@ -195,7 +194,6 @@ func ConvertSubmissionToResponse(s *Submission) ResponseSubmission {
 
 	return ResponseSubmission{
 		ID:           s.ID,
-		Answer:       s.Answer,
 		Point:        s.Point,
 		GradedBy:     (*string)(s.GradedBy),
 		AttachmentID: s.AttachmentID,

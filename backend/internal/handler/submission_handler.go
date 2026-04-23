@@ -33,17 +33,9 @@ func createSubmission(c fiber.Ctx) error {
 		return SendError(c, errors.ErrForbidden)
 	}
 
-	var form models.SubmissionForm
-	if err := c.Bind().Body(&form); err != nil {
-		log.Error("submission_create_failed",
-			"error", err,
-		)
-		return SendError(c, errors.ErrBadRequest)
-	}
-
 	file, _ := c.FormFile("file")
 
-	submission, err := service.CreateSubmission(courseID, assignmentID, userID, &form, file)
+	submission, err := service.CreateSubmission(courseID, assignmentID, userID, file)
 	if err != nil {
 		log.Error("submission_create_failed",
 			"error", err,
@@ -75,17 +67,9 @@ func updateSubmission(c fiber.Ctx) error {
 		return SendError(c, errors.ErrForbidden)
 	}
 
-	var form models.SubmissionForm
-	if err := c.Bind().Body(&form); err != nil {
-		log.Error("submission_update_failed",
-			"error", err,
-		)
-		return SendError(c, errors.ErrBadRequest)
-	}
-
 	file, _ := c.FormFile("file")
 
-	result, err := service.UpdateSubmission(submissionID, userID, &form, file)
+	result, err := service.UpdateSubmission(submissionID, userID, file)
 	if err != nil {
 		log.Error("submission_update_failed",
 			"error", err,

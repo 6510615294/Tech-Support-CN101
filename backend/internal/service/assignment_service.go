@@ -357,7 +357,7 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 	n8nSubmissions := []models.AISubmissionForm{}
 	for i, submission := range submissions {
 		print(i)
-		answer := submission.Answer
+		answer := ""
 
 		// If submission has an attachment, download and read the text from S3
 		if submission.Attachment != nil {
