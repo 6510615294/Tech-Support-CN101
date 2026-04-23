@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import {
   MoreHorizontal,
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
+import ExtendDueDateDialog from "@/components/extend-due-date-dialog"
 
 type SubmissionList = {
   user_id: string
@@ -26,6 +28,11 @@ type SubmissionList = {
   submission_status: string
 }
 
+interface CreateColumnsProps {
+  courseId: string
+  assignmentId: string
+}
+
 function handleSendReminder(userId : string) {
   console.log("handleSendReminder", userId)
 }
@@ -34,11 +41,19 @@ function handleCommentAndGrade(userId : string) {
   console.log("handleCommentAndGrade", userId)
 }
 
-function handleExtendDueDate(userId : string) {
-  console.log("handleExtendDueDate", userId)
-}
+export function createColumns({ courseId, assignmentId }: CreateColumnsProps): {
+  columns: ColumnDef<SubmissionList>[]
+  dialog: React.ReactNode
+} {
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string>("")
 
-export const columns: ColumnDef<SubmissionList>[] = [
+  const handleExtendDueDate = (userId: string) => {
+    setSelectedUserId(userId)
+    setDialogOpen(true)
+  }
+
+  const columns: ColumnDef<SubmissionList>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -182,3 +197,16 @@ export const columns: ColumnDef<SubmissionList>[] = [
     },
   },
 ]
+
+  const dialog = (
+    <ExtendDueDateDialog
+      open={dialogOpen}
+      onOpenChange={setDialogOpen}
+      userId={selectedUserId}
+      courseId={courseId}
+      assignmentId={assignmentId}
+    />
+  )
+
+  return { columns, dialog }
+}

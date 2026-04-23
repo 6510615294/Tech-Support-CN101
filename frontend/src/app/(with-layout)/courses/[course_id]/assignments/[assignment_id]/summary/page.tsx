@@ -7,9 +7,9 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
 import { Button } from "@/components/ui/button"
-import SummaryChart from "./summary-chart";
+import SummaryChart from "./summary-chart"
 import { DataTable } from "@/components/data-table"
-import { columns } from "./columns";
+import { createColumns } from "./columns";
 import { useAuth } from "@/lib/auth-context"
 import { BreadcrumbNav } from "@/components/breadcrumb-nav"
 import { Download } from "lucide-react"
@@ -64,6 +64,12 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const { course_id, assignment_id } = useParams();
   const { user } = useAuth();
+  
+  // Create columns and dialog with proper props
+  const { columns, dialog } = createColumns({
+    courseId: course_id as string,
+    assignmentId: assignment_id as string,
+  });
 
   const handleExportCsv = () => {
     if (submissionList.length === 0) {
@@ -116,64 +122,66 @@ export default function Page() {
     window.URL.revokeObjectURL(url)
   }
 
-  useEffect(() => {
-    async function loadSummary() {
-      if (!user?.token) {
-        return
-      }
-
-      setLoading(true)
-      setError(null)
-
-      const [summaryRes, assignmentRes, courseRes] = await Promise.all([
-        fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/summary`,
-          {
-            headers: { Authorization: `Bearer ${user.token}` },
-            cache: "no-store",
-          }
-        ),
-        fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`,
-          {
-            headers: { Authorization: `Bearer ${user.token}` },
-            cache: "no-store",
-          }
-        ),
-        fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`,
-          {
-            headers: { Authorization: `Bearer ${user.token}` },
-            cache: "no-store",
-          }
-        ),
-      ])
-
-      if (!summaryRes.ok) {
-        setError("Failed to load assignment data")
-        setLoading(false)
-        return
-      }
-
-      const summaryData = await summaryRes.json()
-      setStatistic(summaryData.statistic)
-      setSubmissionList(summaryData.submission_list)
-
-      if (assignmentRes.ok) {
-        const assignmentData = await assignmentRes.json()
-        const assignment = assignmentData.assignment as AssignmentDetail | undefined
-        setAssignmentName(assignment?.title || "")
-      }
-
-      if (courseRes.ok) {
-        const courseData = await courseRes.json()
-        const course = courseData as CourseDetail | undefined
-        setCourseName(course?.name || "")
-      }
-
-      setLoading(false)
+  const loadSummary = async () => {
+    if (!user?.token) {
+      return
     }
+
+    setLoading(true)
+    setError(null)
+
+    const [summaryRes, assignmentRes, courseRes] = await Promise.all([
+      fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/summary`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+          cache: "no-store",
+        }
+      ),
+      fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+          cache: "no-store",
+        }
+      ),
+      fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`,
+        {
+          headers: { Authorization: `Bearer ${user.token}` },
+          cache: "no-store",
+        }
+      ),
+    ])
+
+    if (!summaryRes.ok) {
+      setError("Failed to load assignment data")
+      setLoading(false)
+      return
+    }
+
+    const summaryData = await summaryRes.json()
+    setStatistic(summaryData.statistic)
+    setSubmissionList(summaryData.submission_list)
+
+    if (assignmentRes.ok) {
+      const assignmentData = await assignmentRes.json()
+      const assignment = assignmentData.assignment as AssignmentDetail | undefined
+      setAssignmentName(assignment?.title || "")
+    }
+
+    if (courseRes.ok) {
+      const courseData = await courseRes.json()
+      const course = courseData as CourseDetail | undefined
+      setCourseName(course?.name || "")
+    }
+
+    setLoading(false)
+  }
+
+  useEffect(() => {
     loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course_id, assignment_id, user?.token]);
 
   if (loading)
@@ -276,6 +284,7 @@ export default function Page() {
           </div>
         )}
       </div>
+      {dialog}
     </>
   )
 }

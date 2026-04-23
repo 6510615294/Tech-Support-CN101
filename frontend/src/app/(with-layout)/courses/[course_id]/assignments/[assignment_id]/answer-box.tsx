@@ -21,7 +21,7 @@ interface AnswerBoxProps {
   isStudent: boolean
   hasSubmission: boolean
   onRunCode?: (code: string) => Promise<string>
-  onSubmit?: (answer: string, file?: File) => void
+  onSubmit?: (file?: File | null) => void
   answerContent: string
   isContentLoading: boolean
   contentError: string | null
@@ -48,6 +48,8 @@ export function AnswerBox({
   const [runError, setRunError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [shouldRemoveFile, setShouldRemoveFile] = useState(false)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -113,7 +115,15 @@ export function AnswerBox({
     if (!onSubmit) return
     setIsSubmitting(true)
     try {
-      await onSubmit(code, selectedFile || undefined)
+      if (shouldRemoveFile) {
+        await onSubmit(null)
+      } else if (selectedFile) {
+        await onSubmit(selectedFile)
+      }
+      // Reset state after successful submission
+      setIsEditing(false)
+      setSelectedFile(null)
+      setShouldRemoveFile(false)
     } finally {
       setIsSubmitting(false)
     }
@@ -194,7 +204,7 @@ export function AnswerBox({
     )
   }
 
-  // Student view - has submission (read-only)
+  // Student view - has submission (read-only or edit mode)
   if (isStudent && hasSubmission) {
     return (
       <Card>
@@ -204,31 +214,121 @@ export function AnswerBox({
               <Code className="h-4 w-4" />
               Your Answer
             </span>
-            <Badge variant="outline">Submitted</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">Submitted</Badge>
+              {!isEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {attachmentId && fileName && (
-            <div className="flex items-center gap-2 rounded-md border p-3">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <a
-                href={`/api/attachments/${attachmentId}`}
-                className="text-sm hover:underline"
-              >
-                {fileName}
-              </a>
-            </div>
-          )}
-          {isContentLoading ? (
-            <div>
-              <Skeleton className="h-48" />
+          {isEditing ? (
+            // Edit mode
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Update File</label>
+                {selectedFile ? (
+                  <div className="flex items-center gap-2 rounded-md border p-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 text-sm truncate">{selectedFile.name}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedFile(null)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : shouldRemoveFile ? (
+                  <div className="flex items-center justify-center rounded-md border border-dashed p-6">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-sm text-muted-foreground">No Submission File</span>
+                    </div>
+                  </div>
+                ) : attachmentId && fileName ? (
+                  <div className="flex items-center gap-2 rounded-md border p-3">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 text-sm truncate">{fileName}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setShouldRemoveFile(true)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center rounded-md border border-dashed p-6">
+                    <label className="flex cursor-pointer flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Click to upload new file</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || (!selectedFile && !shouldRemoveFile)}
+                  className="flex-1"
+                >
+                  {isSubmitting ? <Spinner className="mr-2" /> : <Upload className="mr-2 h-4 w-4" />}
+                  Update
+                </Button>
+                <Button variant="outline" asChild>
+                  <label htmlFor="edit-file-input" className="cursor-pointer">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Browse
+                  </label>
+                </Button>
+                <input
+                  id="edit-file-input"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setIsEditing(false)
+                    setSelectedFile(null)
+                    setShouldRemoveFile(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           ) : (
-            <ScrollArea className="max-h-64 rounded-md bg-muted">
-              <div className="p-4 font-mono text-sm">
-                <pre className="whitespace-pre-wrap">{code}</pre>
-              </div>
-            </ScrollArea>
+            // View mode
+            <>
+              {attachmentId && fileName && (
+                <div className="flex items-center gap-2 rounded-md border p-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  {fileName}
+                </div>
+              )}
+              {isContentLoading ? (
+                <div>
+                  <Skeleton className="h-64" />
+                </div>
+              ) : (
+                <ScrollArea className="h-64 rounded-md bg-muted">
+                  <div className="p-4 font-mono text-sm">
+                    <pre className="whitespace-pre-wrap wrap-break-word overflow-hidden">{code}</pre>
+                  </div>
+                </ScrollArea>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -280,9 +380,9 @@ export function AnswerBox({
         {output !== null && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Output</label>
-            <ScrollArea className="max-h-64 rounded-md bg-muted">
+            <ScrollArea className="h-64 rounded-md bg-muted">
               <div className="p-4 font-mono text-sm">
-                <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+                <pre className="whitespace-pre-wrap wrap-break-word overflow-hidden">{output || "(no output)"}</pre>
               </div>
             </ScrollArea>
           </div>
@@ -290,9 +390,9 @@ export function AnswerBox({
         {runError !== null && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Error</label>
-            <ScrollArea className="max-h-64 rounded-md bg-muted">
+            <ScrollArea className="h-64 rounded-md bg-muted">
               <div className="p-4 font-mono text-sm">
-                <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
+                <pre className="whitespace-pre-wrap wrap-break-word overflow-hidden">{runError || "(unknown error)"}</pre>
               </div>
             </ScrollArea>
           </div>

@@ -17,6 +17,7 @@ import { AlertCircle, X, MessageSquare } from "lucide-react"
 import { AssignmentActions } from "./assignment-actions"
 import { CodeSection } from "./code-section"
 import { GradingPanel } from "./grading-panel"
+import { CommentSection } from "./comment-section"
 
 
 type Attachment = {
@@ -299,9 +300,51 @@ export default function AssignmentDetailPage() {
     }
   }
 
-  const handleSubmit = async (answer: string, file?: File) => {
-    // TODO: Implement API call
-    console.log("Submit:", { answer, file })
+  const handleSubmit = async (file?: File | null) => {
+    if (!user?.token) return
+
+    const isUpdate = !!selectedSubmission?.id
+
+    // For new submissions, file is required
+    if (!isUpdate && !file) return
+
+    const formData = new FormData()
+    if (file) {
+      formData.append("file", file)
+    }
+
+    try {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/submissions${isUpdate ? `/${selectedSubmission.id}` : ""}`
+
+      const response = await fetch(url, {
+        method: isUpdate ? "PUT" : "POST",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error(isUpdate ? "Failed to update submission" : "Failed to submit assignment")
+      }
+
+      const newSubmission = await response.json()
+
+      // Update submissions list
+      setSubmissions((prev) => {
+        if (isUpdate) {
+          return prev.map((s) => (s.id === newSubmission.id ? newSubmission : s))
+        } else {
+          return [newSubmission, ...prev]
+        }
+      })
+
+      // Set as selected submission
+      setSelectedSubmission(newSubmission)
+    } catch (err) {
+      console.error("Submission error:", err)
+      throw err // Re-throw so the AnswerBox component can handle the error
+    }
   }
 
   // Student has valid submission only if attachment exists
@@ -345,7 +388,7 @@ export default function AssignmentDetailPage() {
     <div className={isEvaluate ? "flex h-screen flex-col overflow-hidden" : "space-y-6"}>
       {/* Breadcrumb */}
       <BreadcrumbNav courseName={courseName} assignmentName={assignment.title} />
-      {isEvaluate ? (
+      {isEvaluate && !isStudent ? (
         <div className="flex-1 flex min-h-0 overflow-hidden">
           <div className={isGradingPanelCollapsed ? "flex-1" : "w-3/4 min-w-0"}>
             <CodeSection
@@ -403,19 +446,28 @@ export default function AssignmentDetailPage() {
             
             {/* 2. Answer Box */}
             {isStudent ? (
-              <AnswerBox
-                courseId={`${course_id}`}
-                assignmentId={`${assignment_id}`}
-                submissionId={selectedSubmission?.id || ""}
-                attachmentId={selectedSubmission?.attachment_id}
-                fileName={selectedSubmission?.file_name}
-                isStudent={true}
-                hasSubmission={!!studentHasSubmission}
-                onSubmit={handleSubmit}
-                answerContent={submissionContent}
-                isContentLoading={isContentLoading}
-                contentError={contentError}
-              />
+              <div className="grid gap-4 lg:grid-cols-5">
+                <div className="lg:col-span-3">
+                  <AnswerBox
+                    courseId={`${course_id}`}
+                    assignmentId={`${assignment_id}`}
+                    submissionId={selectedSubmission?.id || ""}
+                    attachmentId={selectedSubmission?.attachment_id}
+                    fileName={selectedSubmission?.file_name}
+                    isStudent={true}
+                    hasSubmission={!!studentHasSubmission}
+                    onSubmit={handleSubmit}
+                    answerContent={submissionContent}
+                    isContentLoading={isContentLoading}
+                    contentError={contentError}
+                  />
+                </div>
+                <div className="lg:col-span-2">
+                  <CommentSection
+                    comments={selectedSubmission?.comments || []}
+                  />    
+                </div>
+              </div>
             ) : selectedSubmission ? (
               <AnswerBox
                 courseId={`${course_id}`}
