@@ -510,7 +510,7 @@ export default function TemplatesPage() {
 
       {/* Use Template Dialog */}
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange} key={dialogOpen ? "open" : "closed"}>
-        <DialogContent className="max-w-2xl" >
+        <DialogContent className="max-h-[90vh] sm:max-w-2xl w-full" >
           <DialogHeader>
             <DialogTitle>Use Template</DialogTitle>
             <DialogDescription>
