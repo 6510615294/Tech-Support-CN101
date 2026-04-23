@@ -58,7 +58,6 @@ export function AppSidebar() {
           <span className="text-lg font-semibold">CN101</span>
         </Link>
       </SidebarHeader>
-      <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
@@ -82,7 +81,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <SidebarSeparator className="mb-4" />
         {user && (
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
