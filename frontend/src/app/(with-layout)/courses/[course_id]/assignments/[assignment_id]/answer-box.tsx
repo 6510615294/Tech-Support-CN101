@@ -255,7 +255,7 @@ export function AnswerBox({
           value={stdin}
           onChange={(e) => setStdin(e.target.value)}
           placeholder="Enter input for your Python code..."
-          className="w-full rounded-sm border p-2 text-sm min-h-16 bg-gray-900"
+          className="w-full rounded-sm border p-2 text-sm min-h-16"
         />
         <div className="flex gap-2">
           <Button onClick={handleRunCode} disabled={isRunning} variant="outline">

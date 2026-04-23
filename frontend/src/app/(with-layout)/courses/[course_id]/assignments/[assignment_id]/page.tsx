@@ -343,41 +343,6 @@ export default function AssignmentDetailPage() {
     )
   }
 
-  // if (isEvaluate) {
-  //   return (
-  //     <div className="h-screen flex flex-col">
-  //       <BreadcrumbNav />
-  //       <div className="grid grid-cols-4 flex-1">
-  //         <div className="col-span-3 flex flex-col">
-  //           <CodeSection
-  //             courseId={`${course_id}`}
-  //             assignmentId={`${assignment_id}`}
-  //             submissionId={selectedSubmission?.id || ""}
-  //             hasSubmission={true}
-  //             isAnonymous={isAnonymous}
-  //             toggleAnonymous={setIsAnonymous}
-  //             leaveEvaluate={() => setIsEvaluate(false)}
-  //           />
-  //         </div>
-  //         <div className="">
-  //           <GradingPanel
-  //             submissions={submissions}
-  //             selectedId={selectedSubmission?.id ?? ""}
-  //             onSelect={setSelectedSubmission}
-  //             isAnonymous={isAnonymous}
-  //             role={courseRole}
-  //             comments={selectedSubmission?.comments || []}
-  //             maxPoints={assignment.point}
-  //             currentGrade={selectedSubmission?.point || 0}
-  //             gradedBy={selectedSubmission?.graded_by || ""}
-  //             onSubmitGrade={handleSubmitGrade}
-  //           />
-  //         </div>
-  //       </div>
-  //     </div>
-  //   )
-  // }
-
   return (
     <div className={isEvaluate ? "flex h-screen flex-col overflow-hidden" : "space-y-6"}>
       {/* Breadcrumb */}
@@ -431,35 +396,14 @@ export default function AssignmentDetailPage() {
             </ScrollArea>
           </div>}
         </div>
-      ) : (<>
+      ) : (
         <div className="grid gap-6 lg:grid-cols-3 px-6">
-          <div className={isStudent ? "lg:col-span-3" : "lg:col-span-2"}>
+          {/* Left Section */}
+          <div className={`flex flex-col gap-4 ${isStudent ? "lg:col-span-3" : "lg:col-span-2"}`}>
             {/* 1. Assignment Info */}
             <AssignmentInfo assignment={assignment} />
-          </div>
-          {/* 2. Submission List - Only for non-students */}
-          {!isStudent && (
-            <div className="flex flex-col gap-4">
-              <AssignmentActions
-                courseId={`${course_id}`}
-                assignment={assignment}
-                evaluateMode={handleEnterEvaluateMode}
-                onAssignmentUpdated={setAssignment}
-              />
-              <SubmissionList
-                submissions={submissions}
-                selectedId={selectedSubmission?.id || null}
-                onSelect={handleSelectSubmission}
-                maxPoints={assignment.point}
-                isAnonymous={isAnonymous}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-3 px-6">
-          {/* 3. Answer Box */}
-          <div className="lg:col-span-2">
+            
+            {/* 2. Answer Box */}
             {isStudent ? (
               <AnswerBox
                 courseId={`${course_id}`}
@@ -495,22 +439,38 @@ export default function AssignmentDetailPage() {
               </Card>
             )}
           </div>
-          {(isStudent && studentHasSubmission) || (!isStudent && selectedSubmission) ? (
-            <CommentGrade
-              role={courseRole}
-              comments={selectedSubmission?.comments || []}
-              currentGrade={selectedSubmission?.point || 0}
-              maxPoints={assignment.point}
-              gradedBy={selectedSubmission?.graded_by || ""}
-              isStudent={isStudent}
-              onSubmitGrade={handleSubmitGrade}
-            />
-          ) : null}
+          {/* Right Section */}
+          {!isStudent && (
+            <div className="flex flex-col gap-4">
+              <AssignmentActions
+                courseId={`${course_id}`}
+                assignment={assignment}
+                evaluateMode={handleEnterEvaluateMode}
+                onAssignmentUpdated={setAssignment}
+              />
+              <SubmissionList
+                submissions={submissions}
+                selectedId={selectedSubmission?.id || null}
+                onSelect={handleSelectSubmission}
+                maxPoints={assignment.point}
+                isAnonymous={isAnonymous}
+              />
+            </div>
+          )}
         </div>
-      </>
-
       )}
-
     </div>
   )
 }
+
+{/*{(isStudent && studentHasSubmission) || (!isStudent && selectedSubmission) ? (
+  <CommentGrade
+    role={courseRole}
+    comments={selectedSubmission?.comments || []}
+    currentGrade={selectedSubmission?.point || 0}
+    maxPoints={assignment.point}
+    gradedBy={selectedSubmission?.graded_by || ""}
+    isStudent={isStudent}
+    onSubmitGrade={handleSubmitGrade}
+  />
+) : null}*/}
