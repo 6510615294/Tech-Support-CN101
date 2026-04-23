@@ -50,10 +50,15 @@ type AssignmentDetail = {
   title: string
 }
 
+type CourseDetail = {
+  name: string
+}
+
 export default function Page() {
   const [view, setView] = useState<"chart" | "table">("chart")
   const [statistic, setStatistic] = useState<SubmissionStatistic | null>(null);
   const [submissionList, setSubmissionList] = useState<SubmissionList[]>([]);
+  const [courseName, setCourseName] = useState("");
   const [assignmentName, setAssignmentName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +125,7 @@ export default function Page() {
       setLoading(true)
       setError(null)
 
-      const [summaryRes, assignmentRes] = await Promise.all([
+      const [summaryRes, assignmentRes, courseRes] = await Promise.all([
         fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/summary`,
           {
@@ -130,6 +135,13 @@ export default function Page() {
         ),
         fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`,
+          {
+            headers: { Authorization: `Bearer ${user.token}` },
+            cache: "no-store",
+          }
+        ),
+        fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`,
           {
             headers: { Authorization: `Bearer ${user.token}` },
             cache: "no-store",
@@ -146,11 +158,17 @@ export default function Page() {
       const summaryData = await summaryRes.json()
       setStatistic(summaryData.statistic)
       setSubmissionList(summaryData.submission_list)
-console.log(summaryData)
+
       if (assignmentRes.ok) {
         const assignmentData = await assignmentRes.json()
         const assignment = assignmentData.assignment as AssignmentDetail | undefined
         setAssignmentName(assignment?.title || "")
+      }
+
+      if (courseRes.ok) {
+        const courseData = await courseRes.json()
+        const course = courseData as CourseDetail | undefined
+        setCourseName(course?.name || "")
       }
 
       setLoading(false)
@@ -161,7 +179,7 @@ console.log(summaryData)
   if (loading)
     return (
       <>
-        <BreadcrumbNav assignmentName={assignmentName} />
+        <BreadcrumbNav courseName={courseName} assignmentName={assignmentName} />
         <div className="flex items-center justify-center min-h-[400px] p-6">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
@@ -174,7 +192,7 @@ console.log(summaryData)
   if (error)
     return (
       <>
-        <BreadcrumbNav assignmentName={assignmentName} />
+        <BreadcrumbNav courseName={courseName} assignmentName={assignmentName} />
         <div className="flex items-center justify-center min-h-[400px] p-6">
           <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900 px-6 py-5 text-red-600 dark:text-red-400 text-sm font-medium">
             {error}
@@ -187,7 +205,7 @@ console.log(summaryData)
 
   return (
     <>
-      <BreadcrumbNav assignmentName={assignmentName} />
+      <BreadcrumbNav courseName={courseName} assignmentName={assignmentName} />
       <div className="p-6 space-y-4">
         <ToggleGroup
           type="single"

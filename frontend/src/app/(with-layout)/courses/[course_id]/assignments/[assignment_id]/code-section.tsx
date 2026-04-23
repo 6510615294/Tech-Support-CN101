@@ -123,14 +123,14 @@ export function CodeSection({
     }
   }
 
-  // Student view - no submission yet
-  if (!hasSubmission) {
+  // In evaluate mode, always show the toolbar with back button even if no submission
+  if (!hasSubmission && !leaveEvaluate) {
     return (
       <p>No submission</p>
     )
   }
 
-  if (contentError) {
+  if (contentError && !leaveEvaluate) {
     return (
       <div className="p-6">
         <Empty className="py-16">
@@ -224,7 +224,11 @@ export function CodeSection({
         </div>
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
-        {isContentLoading ? (
+        {!hasSubmission ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            <span>No submission</span>
+          </div>
+        ) : isContentLoading ? (
           <Skeleton className="h-full" />
         ) : (
           <Editor
@@ -244,39 +248,41 @@ export function CodeSection({
           />
         )}
       </div>
-      <div className="shrink-0 border-t bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">Input (stdin)</label>
-        <Textarea
-          value={stdin}
-          onChange={(e) => setStdin(e.target.value)}
-          placeholder="Enter input for your Python code..."
-          className="w-full h-20 resize-none rounded-md text-sm"
-        />
-        {(output !== null || runError !== null) && (
-          <div className="mt-2 grid gap-2 md:grid-cols-2">
-            {output !== null && (
-              <div className="rounded-md border bg-muted/40 p-2">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Output</label>
-                <ScrollArea className="max-h-28">
-                  <div className="font-mono text-xs">
-                    <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
-            {runError !== null && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2">
-                <label className="mb-1 block text-xs font-medium text-destructive">Error</label>
-                <ScrollArea className="max-h-28">
-                  <div className="font-mono text-xs text-destructive">
-                    <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {hasSubmission && (
+        <div className="shrink-0 border-t bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Input (stdin)</label>
+          <Textarea
+            value={stdin}
+            onChange={(e) => setStdin(e.target.value)}
+            placeholder="Enter input for your Python code..."
+            className="w-full h-20 resize-none rounded-md text-sm"
+          />
+          {(output !== null || runError !== null) && (
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              {output !== null && (
+                <div className="rounded-md border bg-muted/40 p-2">
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Output</label>
+                  <ScrollArea className="max-h-28">
+                    <div className="font-mono text-xs">
+                      <pre className="whitespace-pre-wrap">{output || "(no output)"}</pre>
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+              {runError !== null && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2">
+                  <label className="mb-1 block text-xs font-medium text-destructive">Error</label>
+                  <ScrollArea className="max-h-28">
+                    <div className="font-mono text-xs text-destructive">
+                      <pre className="whitespace-pre-wrap">{runError || "(unknown error)"}</pre>
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
