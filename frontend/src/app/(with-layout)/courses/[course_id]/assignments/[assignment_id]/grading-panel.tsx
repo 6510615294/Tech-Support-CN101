@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { User, CheckCircle, Clock, MessageSquare, Eye, EyeOff, Send } from "lucide-react"
+import { User, CheckCircle, Clock, MessageSquare, Eye, EyeOff, Send, X } from "lucide-react"
 import { useMemo, useState, useEffect } from "react";
 import { SelectLabel } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -43,6 +43,8 @@ interface GradingPanelProps {
   currentGrade: number
   gradedBy: string
   onSubmitGrade: (grade: number, comment: string, visible: boolean) => void
+  isCollapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 type SortBy = "id" | "enName" | "thName" | "point"
@@ -58,6 +60,8 @@ export function GradingPanel({
   currentGrade,
   gradedBy,
   onSubmitGrade,
+  isCollapsed: isCollapsedProp,
+  onToggleCollapse,
 }: GradingPanelProps) {
   const existingComment = useMemo(() => {
     return role
@@ -72,6 +76,10 @@ export function GradingPanel({
   const [visibleToStudent, setVisibleToStudent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedCommentIds, setExpandedCommentIds] = useState<Record<string, boolean>>({})
+  const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
+
+  const isCollapsed = onToggleCollapse !== undefined ? isCollapsedProp : internalIsCollapsed
+  const handleToggleCollapse = onToggleCollapse || (() => setInternalIsCollapsed(!internalIsCollapsed))
 
   useEffect(() => {
     setGrade(currentGrade?.toString() ?? "");
@@ -97,17 +105,12 @@ export function GradingPanel({
     }))
   }
 
-  const isGraded = (submission: Submission) => {
-    return submission.graded_by && submission.graded_by.length > 0
-  }
-
   const parseSubmitter = (submitter: string) => {
     const [id = "", enName = "", thName = ""] = submitter.split("|")
     return { id, enName, thName }
   }
 
   const sortedSubmissions = useMemo(() => {
-    // When showName is false, force sort by point in ascending order
     const effectiveSortBy = isAnonymous ? "point" : sortBy
     const effectiveSortOrder = isAnonymous ? "asc" : sortOrder
 
@@ -119,7 +122,6 @@ export function GradingPanel({
       } else {
         const parsedA = parseSubmitter(a.submitter)
         const parsedB = parseSubmitter(b.submitter)
-
         result = parsedA[effectiveSortBy].localeCompare(parsedB[effectiveSortBy], "th")
       }
 
@@ -134,130 +136,155 @@ export function GradingPanel({
     }
   }
 
+  if (onToggleCollapse && isCollapsed) {
+    return null
+  }
+
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Comments & Grade
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Current Grade Display */}
-          {gradedBy && (
-            <div className="flex items-center justify-between rounded-md bg-muted p-3">
-              <span className="text-sm text-muted-foreground">Current Grade</span>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold">
-                  {currentGrade}/{maxPoints}
-                </span>
-                <span className="text-xs text-muted-foreground">by {gradedBy}</span>
-              </div>
+      {isCollapsed ? (
+        <Card
+          className="cursor-pointer hover:bg-muted/50 transition-colors w-8 items-center justify-center"
+          onClick={() => handleToggleCollapse()}
+        >
+          <CardContent className="flex items-center justify-center py-4 px-1">
+            <div className="flex flex-col items-center gap-1">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
             </div>
-          )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border border-border flex flex-col h-full overflow-hidden">
+          <CardHeader className="pb-3 flex-none">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Comments & Grade
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleToggleCollapse()}
+              >
+                <X />
+              </Button>
+            </div>
+          </CardHeader>
 
-          {/* Comments List */}
-          {comments.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium">Comments</h4>
-              <div className="space-y-2">
-                {comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className="rounded-md border p-3 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="font-medium">{c.commentator}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {c.visible ? (
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" /> Visible
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <EyeOff className="h-3 w-3" /> Hidden
-                          </span>
+          <CardContent className="flex flex-col flex-1 min-h-0 gap-4 pb-4">
+            {/* Current Grade Display */}
+            {gradedBy && (
+              <div className="flex-none flex items-center justify-between rounded-md bg-muted p-3">
+                <span className="text-sm text-muted-foreground">Current Grade</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold">
+                    {currentGrade}/{maxPoints}
+                  </span>
+                  <span className="text-xs text-muted-foreground">by {gradedBy}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Comments List — scrollable, fills available space */}
+            <div className="flex flex-col flex-1 min-h-0">
+              <h4 className="text-sm font-medium shrink-0 mb-2">Comments</h4>
+
+              {comments.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed py-8 text-center">
+                  <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                  <p className="text-sm text-muted-foreground">No comments yet</p>
+                </div>
+              ) : (
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="space-y-2 pr-4">
+                    {comments.map((c) => (
+                      <div
+                        key={c.id}
+                        className="rounded-md border p-3 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="font-medium">{c.commentator}</span>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {c.visible ? (
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" /> Visible
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1">
+                                <EyeOff className="h-3 w-3" /> Hidden
+                              </span>
+                            )}
+                          </Badge>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap wrap-break-word">
+                          {expandedCommentIds[c.id]
+                            ? c.comment
+                            : c.comment.slice(0, 120) + (c.comment.length > 120 ? "…" : "")}
+                        </p>
+                        {c.comment.length > 120 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleCommentExpanded(c.id)}
+                            className="text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            {expandedCommentIds[c.id] ? "Show less" : "Show more"}
+                          </button>
                         )}
-                      </Badge>
-                    </div>
-                    <p
-                      className="text-sm whitespace-pre-wrap overflow-hidden w-full"
-                      style={
-                        expandedCommentIds[c.id]
-                          ? {
-                            wordBreak: "break-word",
-                            overflowWrap: "break-word",
-                            maxHeight: "200px",
-                            overflowY: "auto",
-                          }
-                          : {
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            wordBreak: "break-word",
-                            overflowWrap: "break-word",
-                          }
-                      }
-                    >
-                      {c.comment}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => toggleCommentExpanded(c.id)}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      {expandedCommentIds[c.id] ? "Show less" : "Show more"}
-                    </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </ScrollArea>
+              )}
             </div>
-          )}
 
-          <Separator />
-          <FieldGroup>
-            <Field>
-              <FieldLabel>Grade (max {maxPoints})</FieldLabel>
-              <Input
-                type="number"
-                min={0}
-                max={maxPoints}
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                placeholder={`0 - ${maxPoints}`}
-              />
-            </Field>
-            <Field>
-              <FieldLabel>Comment</FieldLabel>
-              <Textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a comment..."
-                rows={3}
-                className="resize-none"
-              />
-            </Field>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="visible"
-                checked={visibleToStudent}
-                onCheckedChange={(checked) => setVisibleToStudent(checked as boolean)}
-              />
-              <label htmlFor="visible" className="text-sm cursor-pointer">
-                Visible to student
-              </label>
+            {/* Form — always sticks to bottom */}
+            <div className="flex-none">
+              <Separator className="mb-4" />
+              <FieldGroup>
+                <Field>
+                  <FieldLabel>Grade (max {maxPoints})</FieldLabel>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={maxPoints}
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    placeholder={`0 - ${maxPoints}`}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Comment</FieldLabel>
+                  <Textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Add a comment..."
+                    rows={3}
+                    className="resize-none"
+                  />
+                </Field>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="visible"
+                    checked={visibleToStudent}
+                    onCheckedChange={(checked) => setVisibleToStudent(checked as boolean)}
+                  />
+                  <label htmlFor="visible" className="text-sm cursor-pointer">
+                    Visible to student
+                  </label>
+                </div>
+                <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Grade & Comment
+                </Button>
+              </FieldGroup>
             </div>
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-              <Send className="mr-2 h-4 w-4" />
-              Submit Grade & Comment
-            </Button>
-          </FieldGroup>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </>
   )
 }

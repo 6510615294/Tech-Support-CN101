@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, X, MessageSquare } from "lucide-react"
 import { AssignmentActions } from "./assignment-actions"
 import { CodeSection } from "./code-section"
 import { GradingPanel } from "./grading-panel"
@@ -78,10 +78,10 @@ export default function AssignmentDetailPage() {
   const [gradingError, setGradingError] = useState<string | null>(null)
   const [isGrading, setIsGrading] = useState(false)
   const [isEvaluate, setIsEvaluate] = useState(false)
-  const [isGradingPanelVisible, setIsGradingPanelVisible] = useState(true)
   const [submissionContent, setSubmissionContent] = useState("")
   const [isContentLoading, setIsContentLoading] = useState(false)
   const [contentError, setContentError] = useState<string | null>(null)
+  const [isGradingPanelCollapsed, setIsGradingPanelCollapsed] = useState(false)
 
   useEffect(() => {
     if (!user?.token) {
@@ -148,13 +148,11 @@ export default function AssignmentDetailPage() {
   }
 
   const handleEnterEvaluateMode = () => {
-    setIsGradingPanelVisible(true)
     setIsEvaluate(true)
   }
 
   const handleLeaveEvaluateMode = () => {
     setIsEvaluate(false)
-    setIsGradingPanelVisible(true)
   }
 
   useEffect(() => {
@@ -348,8 +346,8 @@ export default function AssignmentDetailPage() {
       {/* Breadcrumb */}
       <BreadcrumbNav courseName={courseName} assignmentName={assignment.title} />
       {isEvaluate ? (
-        <div className="grid grid-cols-4 flex-1 min-h-0 overflow-hidden">
-          <div className={isGradingPanelVisible ? "col-span-3 min-h-0 flex flex-col" : "col-span-4 min-h-0 flex flex-col"}>
+        <div className="flex-1 flex min-h-0 overflow-hidden">
+          <div className={isGradingPanelCollapsed ? "flex-1" : "w-3/4 min-w-0"}>
             <CodeSection
               courseId={`${course_id}`}
               assignmentId={`${assignment_id}`}
@@ -372,29 +370,29 @@ export default function AssignmentDetailPage() {
               answerContent={submissionContent}
               isContentLoading={isContentLoading}
               contentError={contentError}
-              onToggleGradingPanel={() => setIsGradingPanelVisible(!isGradingPanelVisible)}
             />
           </div>
-          {isGradingPanelVisible && <div className="col-span-1 min-h-0 pr-2">
-            <ScrollArea className="h-full min-h-0">
-              <div className="flex justify-end">
-                <div className="w-full max-w-sm">
-                  <GradingPanel
-                    submissions={submissions}
-                    selectedId={selectedSubmission?.id ?? ""}
-                    onSelect={setSelectedSubmission}
-                    isAnonymous={isAnonymous}
-                    role={courseRole}
-                    comments={selectedSubmission?.comments || []}
-                    maxPoints={assignment.point}
-                    currentGrade={selectedSubmission?.point || 0}
-                    gradedBy={selectedSubmission?.graded_by || ""}
-                    onSubmitGrade={handleSubmitGrade}
-                  />
-                </div>
-              </div>
-            </ScrollArea>
-          </div>}
+          {isGradingPanelCollapsed ? (
+            <div className="w-8 flex-none cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-center border border-border" onClick={() => setIsGradingPanelCollapsed(false)}>
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="w-1/4 min-w-0">
+              <GradingPanel
+                submissions={submissions}
+                selectedId={selectedSubmission?.id ?? ""}
+                onSelect={setSelectedSubmission}
+                isAnonymous={isAnonymous}
+                role={courseRole}
+                comments={selectedSubmission?.comments || []}
+                maxPoints={assignment.point}
+                currentGrade={selectedSubmission?.point || 0}
+                gradedBy={selectedSubmission?.graded_by || ""}
+                onSubmitGrade={handleSubmitGrade}
+                onToggleCollapse={() => setIsGradingPanelCollapsed(!isGradingPanelCollapsed)}
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3 px-6">

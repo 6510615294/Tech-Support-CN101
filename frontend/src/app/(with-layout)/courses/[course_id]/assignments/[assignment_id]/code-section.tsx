@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Code, Play, Upload, FileText, X, Pencil, HatGlasses, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Code, Play, Upload, FileText, X, Pencil, HatGlasses, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, NotebookText } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
@@ -34,7 +34,6 @@ interface CodeSectionProps {
   onPreviousSubmission?: () => void
   onNextSubmission?: () => void
   onSelectSubmission?: (submissionId: string) => void
-  onToggleGradingPanel?: () => void
   canGoPrevious?: boolean
   canGoNext?: boolean
   currentSubmissionOrder?: number
@@ -56,7 +55,6 @@ export function CodeSection({
   onPreviousSubmission,
   onNextSubmission,
   onSelectSubmission,
-  onToggleGradingPanel,
   canGoPrevious = false,
   canGoNext = false,
   currentSubmissionOrder = 0,
@@ -130,22 +128,6 @@ export function CodeSection({
   if (!hasSubmission && !leaveEvaluate) {
     return (
       <p>No submission</p>
-    )
-  }
-
-  if (contentError && !leaveEvaluate) {
-    return (
-      <div className="p-6">
-        <Empty className="py-16">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-
-            </EmptyMedia>
-            <EmptyTitle>Failed to load assignment</EmptyTitle>
-            <EmptyDescription>{contentError || "Assignment not found"}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
     )
   }
 
@@ -227,16 +209,6 @@ export function CodeSection({
             </SelectContent>
           </Select>
           <Button
-            onClick={onToggleGradingPanel}
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            aria-label="Toggle grading panel"
-            title="Toggle Grading Panel"
-          >
-            <PanelLeftOpen className="h-4 w-4" />
-          </Button>
-          <Button
             onClick={leaveEvaluate}
             variant="ghost"
           >
@@ -251,6 +223,16 @@ export function CodeSection({
           </div>
         ) : isContentLoading ? (
           <Skeleton className="h-full" />
+        ) : contentError ? (
+          <Empty className="py-16">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <NotebookText />
+              </EmptyMedia>
+              <EmptyTitle>Failed to load submission</EmptyTitle>
+              <EmptyDescription>{contentError || "Submission not found"}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <Editor
             height="100%"
@@ -270,7 +252,7 @@ export function CodeSection({
         )}
       </div>
       {hasSubmission && (
-        <div className="shrink-0 border-t bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="shrink-0 rounded-md border bg-card text-card-foreground px-3 py-2 shadow-sm">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">Input (stdin)</label>
           <Textarea
             value={stdin}
