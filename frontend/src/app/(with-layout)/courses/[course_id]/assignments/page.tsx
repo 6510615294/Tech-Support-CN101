@@ -165,17 +165,6 @@ export default function CourseDetailPage() {
     })
   }
 
-  const toPlainTextDescription = (html: string) => {
-    return html
-      .replace(/<[^>]*>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/\s+/g, " ")
-      .trim()
-  }
-
   const filteredAssignments = useMemo(() => {
     const normalizedQuery = searchTerm.trim().toLowerCase()
 

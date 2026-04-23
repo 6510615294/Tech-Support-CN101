@@ -131,6 +131,32 @@ export function AssignmentActions({
       alert("Something went wrong.");
     }
   }
+  
+  async function handleAutoGrading() {
+    if (!user) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/assignments/${assignment.id}/auto-grading`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${user.token}`,
+        },
+      });
+
+      if (!res.ok) {
+        console.error("Failed to delete course");
+        alert("Failed to delete assignment");
+        return;
+      }
+
+      alert("Assignment auto grading in queue");
+    } catch (err) {
+      console.error("Error deleting course", err);
+      alert(err);
+    }
+  }
 
   return (
     <Card>
@@ -163,6 +189,7 @@ export function AssignmentActions({
           size="sm"
           variant="secondary"
           className="w-full justify-start gap-2"
+          onClick={handleAutoGrading}
         >
           <ClipboardCheck className="h-4 w-4" />
           AI Grading

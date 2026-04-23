@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, X, Paperclip, Upload, FolderOpen, FileText, File, Search, LayoutTemplate, ChevronDown, Check } from "lucide-react"
+import { Plus, X, Paperclip, Upload, FolderOpen, FileText, File as FileIcon, Search, LayoutTemplate, ChevronDown, Check } from "lucide-react"
 import { TipTapTextEditor } from "./ui/tiptap"
 import { toast } from "sonner"
 import SmartDatetimePickerByTui from "./smart-datetime-input2"
@@ -183,7 +183,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
 
   const getFileIcon = (mime: string) => {
     if (mime.includes("pdf") || mime.includes("word")) return FileText
-    return File
+    return FileIcon
   }
 
   const fetchExistingAttachments = async () => {
@@ -328,6 +328,10 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
       setAttachmentTabOpen(false)
     }
   }
+  
+  const handleTest = () => {
+    console.log("test")
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -343,7 +347,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
           <DialogDescription>Add a new assignment to this course.</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-12rem)] pr-4">
+        <ScrollArea className="max-h-[calc(90vh-12rem)] pr-4" onWheel={() => setTemplatePickerOpen(false)}>
           <div className="grid gap-5 py-2">
             {/* Template Picker */}
             <div className="grid gap-1.5">
@@ -363,7 +367,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
                       <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[480px] p-0" align="start">
+                  <PopoverContent className="w-[480px] p-0" align="start" onWheel={(e) => e.stopPropagation()}>
                     <div className="p-2 border-b">
                       <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -408,8 +412,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
                                     <Badge variant="secondary" className="h-4 px-1 text-[10px]">AI</Badge>
                                   )}
                                 </div>
-                                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{tpl.description}</p>
-                                {tpl.tags.length > 0 && (
+                                {tpl.tags.length > 0 ? (
                                   <div className="mt-1 flex flex-wrap gap-1">
                                     {tpl.tags.slice(0, 3).map((tag) => (
                                       <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{tag}</span>
@@ -417,6 +420,10 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
                                     {tpl.tags.length > 3 && (
                                       <span className="text-[10px] text-muted-foreground">+{tpl.tags.length - 3}</span>
                                     )}
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <span key={tpl.id+"no_tag"} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">no tags</span>
                                   </div>
                                 )}
                               </div>

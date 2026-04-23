@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { X, Paperclip, Upload, FolderOpen, FileText, File, Search, Pencil } from "lucide-react"
+import { X, Paperclip, Upload, FolderOpen, FileText, File as FileIcon, Search, Pencil } from "lucide-react"
 import { TipTapTextEditor } from "./ui/tiptap"
 import { toast } from "sonner"
 import SmartDatetimePickerByTui from "./smart-datetime-input2"
@@ -117,7 +117,7 @@ export function EditAssignmentDialog({
 
   const getFileIcon = (mime: string) => {
     if (mime.includes("pdf") || mime.includes("word")) return FileText
-    return File
+    return FileIcon
   }
 
   const fetchExistingAttachments = async () => {

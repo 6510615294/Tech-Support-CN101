@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, X, Paperclip, Upload, FolderOpen, FileText, File, Search, LayoutTemplate, ChevronDown, Check } from "lucide-react"
+import { Plus, X, Paperclip, Upload, FolderOpen, FileText, File as FileIcon, Search, LayoutTemplate, ChevronDown, Check } from "lucide-react"
 import { TipTapTextEditor } from "./ui/tiptap"
 import { toast } from "sonner"
 
@@ -98,7 +98,7 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
 
   const getFileIcon = (mime: string) => {
     if (mime.includes("pdf") || mime.includes("word")) return FileText
-    return File
+    return FileIcon
   }
 
   const fetchExistingAttachments = async () => {
@@ -239,13 +239,14 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
           New Template
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create Assignment Template</DialogTitle>
           <DialogDescription>Add a new reuseable template.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 py-2">          
+        <ScrollArea className="max-h-[calc(90vh-12rem)] pr-4">
+          <div className="grid gap-5 py-2">
           {/* Title */}
           <div className="grid gap-1.5">
             <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
@@ -515,7 +516,8 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
           {errors.submit && (
             <p className="text-sm text-destructive">{errors.submit}</p>
           )}
-        </div>
+          </div>
+        </ScrollArea>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>

@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Paperclip, Upload, FolderOpen, FileText, File, Search, X } from "lucide-react"
+import { Paperclip, Upload, FolderOpen, FileText, File as FileIcon, Search, X } from "lucide-react"
 import { TipTapTextEditor } from "./ui/tiptap"
 import { toast } from "sonner"
 
@@ -114,7 +114,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onUpdated }: 
 
   const getFileIcon = (mime: string) => {
     if (mime.includes("pdf") || mime.includes("word")) return FileText
-    return File
+    return FileIcon
   }
 
   const fetchExistingAttachments = async () => {
@@ -233,7 +233,7 @@ export function EditTemplateDialog({ template, open, onOpenChange, onUpdated }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[90vh] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Assignment Template</DialogTitle>
           <DialogDescription>
@@ -241,7 +241,8 @@ export function EditTemplateDialog({ template, open, onOpenChange, onUpdated }: 
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-2">
+        <ScrollArea className="max-h-[calc(90vh-12rem)] pr-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-2">
           {/* Title */}
           <Field>
             <FieldLabel htmlFor="title">
@@ -543,7 +544,8 @@ export function EditTemplateDialog({ template, open, onOpenChange, onUpdated }: 
               Save Changes
             </Button>
           </DialogFooter>
-        </form>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   )
