@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Code, Play, Upload, FileText, X } from "lucide-react"
+import { Code, Play, Upload, FileText, X, NotebookText } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
@@ -165,17 +165,32 @@ export function AnswerBox({
 
   if (contentError) {
     return (
-      <div className="p-6">
-        <Empty className="py-16">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-
-            </EmptyMedia>
-            <EmptyTitle>Failed to load assignment</EmptyTitle>
-            <EmptyDescription>{contentError || "Assignment not found"}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              Answer
+            </span>
+            <div
+              className="flex items-center gap-1 text-sm font-normal"
+            >
+              --
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Empty className="py-16">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <NotebookText/>
+              </EmptyMedia>
+              <EmptyTitle>Failed to load submission</EmptyTitle>
+              <EmptyDescription>{contentError || "Submission not found"}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -230,13 +245,12 @@ export function AnswerBox({
             Answer
           </span>
           {attachmentId && fileName && (
-            <a
-              href={`/api/attachments/${attachmentId}`}
-              className="flex items-center gap-1 text-sm font-normal hover:underline"
+            <div
+              className="flex items-center gap-1 text-sm font-normal"
             >
               <FileText className="h-4 w-4" />
               {fileName}
-            </a>
+            </div>
           )}
         </CardTitle>
       </CardHeader>
