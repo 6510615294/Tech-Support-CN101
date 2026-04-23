@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
 import { useAuth } from "@/lib/auth-context"
 import Editor from "@monaco-editor/react"
+import { useTheme } from "next-themes"
 import { Toggle } from "@/components/ui/toggle"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -70,7 +71,9 @@ export function CodeSection({
   const [isEditing, setIsEditing] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
+  const [fontSize, setFontSize] = useState(14)
   const { user } = useAuth()
+  const { theme } = useTheme()
 
   useEffect(() => {
     setCode(answerContent)
@@ -167,6 +170,24 @@ export function CodeSection({
           <HatGlasses />
           Anonymous Mode
         </Toggle>
+        <Select value={fontSize.toString()} onValueChange={(value) => setFontSize(Number(value))}>
+          <SelectTrigger className="w-24 h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="12">12px</SelectItem>
+              <SelectItem value="14">14px</SelectItem>
+              <SelectItem value="16">16px</SelectItem>
+              <SelectItem value="18">18px</SelectItem>
+              <SelectItem value="20">20px</SelectItem>
+              <SelectItem value="24">24px</SelectItem>
+              <SelectItem value="28">28px</SelectItem>
+              <SelectItem value="32">32px</SelectItem>
+              <SelectItem value="36">36px</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <div className="ml-auto flex items-center gap-1">
           <Button
             onClick={onPreviousSubmission}
@@ -235,12 +256,12 @@ export function CodeSection({
             height="100%"
             defaultLanguage={"python"}
             value={code}
-            theme={"vs-dark"}
+            theme={theme === "dark" ? "vs-dark" : "vs-light"}
             onChange={handleCodeChange}
             options={{
               readOnly: !isEditing,
               minimap: { enabled: false },
-              fontSize: 14,
+              fontSize: fontSize,
               automaticLayout: true,
               tabSize: 4,
               wordWrap: "on",
