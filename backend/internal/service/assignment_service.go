@@ -267,6 +267,29 @@ func CreateAssignmentOverride(
 		return nil, errors.ErrAssignmentNotFound
 	}
 
+	// Check if new due date is more than now - 1 minute (offset for delay)
+	if form.ExtendedDueDate.Before(time.Now().Add(-1 * time.Minute)) {
+		return nil, errors.ErrInvalidDueDate
+	}
+
+	// Check if new due date is more than assignment due date
+	if form.ExtendedDueDate.Before(assignment.DueDate) {
+		return nil, errors.ErrDueDateBeforeAssignment
+	}
+
+	// Check if there's an existing override for this student and assignment
+	existingOverride, err := repository.GetAssignmentOverride(assignmentID, form.StudentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// If an override exists, delete it first
+	if existingOverride != nil {
+		if err := repository.DeleteAssignmentOverride(existingOverride); err != nil {
+			return nil, err
+		}
+	}
+
 	override := models.AssignmentOverride{
 		AssignmentID:    assignmentID,
 		StudentID:       form.StudentID,

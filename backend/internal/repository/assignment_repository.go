@@ -148,3 +148,7 @@ func GetAssignmentOverride(assignmentID, userID string) (*models.AssignmentOverr
 
 	return &o, err
 }
+
+func DeleteAssignmentOverride(override *models.AssignmentOverride) error {
+	return database.DB.Delete(override).Error
+}
