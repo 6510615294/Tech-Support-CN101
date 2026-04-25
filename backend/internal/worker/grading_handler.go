@@ -3,14 +3,11 @@ package worker
 import (
 	"context"
 	"encoding/json"
-	"bytes"
 	"fmt"
-	"io"
-	"net/http"
-	"time"
 
 	"github.com/hibiken/asynq"
 
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/ai"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
@@ -163,64 +160,45 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 
 		// Prepare AI API request
 		prompt := buildGradingPrompt(assignmentPrompt, int(*maxPoint), string(submissionsJSON))
-		requestBody := map[string]any{
-			"model": aiConfig.Model,
-			"messages": []map[string]string{
-				{
-					"role":    "system",
-					"content": "You are a strict and fair programming teacher. Always return valid JSON and follow instructions exactly.",
-				},
-				{
-					"role":    "user",
-					"content": prompt,
-				},
-			},
-			"temperature": aiConfig.Temperature,
-			"stream":      false,
-			"thinking": map[string]string{
-				"type": "disabled",
-			},
-			"response_format": map[string]string{
-				"type": "json_object",
-			},
-		}
-
-		requestJSON, err := json.Marshal(requestBody)
+		
+		// Get AI provider
+		provider, err := ai.GetProvider(aiConfig.Provider)
 		if err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
-				"reason", "Failed to marshal request body",
+				"reason", "Failed to get AI provider",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to marshal request body: "+err.Error())
+			repository.FailGradingJob(assignmentID, teacherID, "Failed to get AI provider: "+err.Error())
 			return err
 		}
 
-		// Create HTTP request
-		// baseURL := strings.TrimSuffix(aiConfig.BaseURL, "/")
-		fullURL := aiConfig.BaseURL + "/chat/completions"
-		req, err := http.NewRequest("POST", fullURL, bytes.NewBuffer(requestJSON))
-		if err != nil {
-			log.Error("auto_grading_failed",
-				"error", err,
-				"teacher_id", teacherID,
-				"assignment_id", assignmentID,
-				"reason", "Failed to create HTTP request",
-			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to create HTTP request: "+err.Error())
-			return err
+		// Create credential
+		cred := ai.Credential{
+			Provider: aiConfig.Provider,
+			APIKey:   apiKey,
+			BaseURL:  aiConfig.BaseURL,
 		}
 
-		// Set headers
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
-
-		// Execute request
-		client := &http.Client{
-			Timeout: 60 * time.Second,
+		// Create chat request
+		chatReq := ai.ChatRequest{
+			Model:       aiConfig.Model,
+			Messages: []ai.Message{
+				{
+					Role:    "system",
+					Content: "You are a strict and fair programming teacher. Always return valid JSON and follow instructions exactly.",
+				},
+				{
+					Role:    "user",
+					Content: prompt,
+				},
+			},
+			Temperature: aiConfig.Temperature,
 		}
-		resp, err := client.Do(req)
+
+		// Call AI API
+		chatResp, err := provider.Chat(context.Background(), cred, chatReq)
 		if err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
@@ -231,61 +209,10 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			repository.FailGradingJob(assignmentID, teacherID, "Failed to call AI API: "+err.Error())
 			return err
 		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			errMsg := fmt.Sprintf("AI API returned status %d: %s", resp.StatusCode, string(body))
-			log.Error("auto_grading_failed",
-				"error", errMsg,
-				"teacher_id", teacherID,
-				"assignment_id", assignmentID,
-				"status_code", resp.StatusCode,
-			)
-			repository.FailGradingJob(assignmentID, teacherID, errMsg)
-			return fmt.Errorf("%s", errMsg)
-		}
-
-		// Parse response
-		responseBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Error("auto_grading_failed",
-				"error", err,
-				"teacher_id", teacherID,
-				"assignment_id", assignmentID,
-				"reason", "Failed to read response body",
-			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to read response body: "+err.Error())
-			return err
-		}
 
 		// Parse AI response as AIGradingForm array
-		var aiResp models.AIResponse
-		if err := json.Unmarshal(responseBody, &aiResp); err != nil {
-			log.Error("auto_grading_failed",
-				"error", err,
-				"teacher_id", teacherID,
-				"assignment_id", assignmentID,
-				"reason", "Failed to parse API response",
-			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to parse API response: "+err.Error())
-			return err
-		}
-
-		if len(aiResp.Choices) == 0 {
-			log.Error("auto_grading_failed",
-				"error", errors.ErrAIError,
-				"teacher_id", teacherID,
-				"assignment_id", assignmentID,
-				"reason", "AI response has no choices",
-			)
-			return errors.ErrAIError
-		}
-
 		var aiGradingForms []models.AIGradingForm
-		content := aiResp.Choices[0].Message.Content
-
-		if err := json.Unmarshal([]byte(content), &aiGradingForms); err != nil {
+		if err := json.Unmarshal([]byte(chatResp.Content), &aiGradingForms); err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
@@ -295,6 +222,8 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			repository.FailGradingJob(assignmentID, teacherID, "AI Content is not a valid Grading List: "+err.Error())
 			return err
 		}
+
+
 
 		for _, gradingForm := range aiGradingForms {
 			err = repository.UpdateSubmission(gradingForm.SubmissionID, map[string]any{
