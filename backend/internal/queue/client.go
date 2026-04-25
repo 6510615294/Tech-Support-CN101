@@ -1,7 +1,7 @@
 package queue
 
 import (
-	"crypto/tls"
+	// "crypto/tls"
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
@@ -13,9 +13,9 @@ func Init(redisAddr, redisPassword string) {
 	Client = asynq.NewClient(asynq.RedisClientOpt{
 		Addr:     redisAddr,
 		Password: redisPassword,
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		},
+		// TLSConfig: &tls.Config{
+		// 	MinVersion: tls.VersionTLS12,
+		// },
 	})
 }
 

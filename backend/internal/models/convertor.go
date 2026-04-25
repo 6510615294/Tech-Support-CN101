@@ -1,5 +1,9 @@
 package models
 
+import (
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/ai"
+)
+
 func ConvertCourseToResponse(course *Course) ResponseCourse {
 	return ResponseCourse{
 		ID:       course.ID,
@@ -239,6 +243,23 @@ func ConvertAssignmentTemplatesToResponse(
 		}
 
 		response = append(response, data)
+	}
+
+	return response
+}
+
+func ConvertAIModelToResponse(model ai.Model) ResponseModel {
+	return ResponseModel{
+		ID:   model.ID,
+		Name: model.Name,
+	}
+}
+
+func ConvertAIModelsToResponse(models []ai.Model) []ResponseModel {
+	response := make([]ResponseModel, 0, len(models))
+
+	for _, model := range models {
+		response = append(response, ConvertAIModelToResponse(model))
 	}
 
 	return response

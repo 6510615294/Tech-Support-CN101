@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	stderrors "errors"
 
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/ai"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
@@ -156,4 +158,43 @@ func DeleteAIConfig(userID string) error {
 	}
 
 	return repository.DeleteAIConfig(config.ID)
+}
+
+func GetModels(userID string) ([]models.ResponseModel, error) {
+	// Get user's AI config
+	config, err := repository.GetAIConfig(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decrypt API key
+	key, err := getEncryptionKey()
+	if err != nil {
+		return nil, err
+	}
+
+	apiKey, err := security.Decrypt(config.EncryptedAPIKey, key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create credential
+	credential := ai.Credential{
+		Provider: config.Provider,
+		APIKey:   apiKey,
+		BaseURL:  config.BaseURL,
+	}
+
+	
+	provider, err := ai.GetProvider(config.Provider)
+	if err != nil {
+		return nil, err
+	}
+	
+	modelList, err := provider.ListModels(context.Background(), credential)
+	if err != nil {
+		return nil, err
+	}
+	
+	return models.ConvertAIModelsToResponse(modelList), nil
 }

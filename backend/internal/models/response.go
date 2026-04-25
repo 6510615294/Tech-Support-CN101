@@ -183,6 +183,11 @@ type ResponseAIConfig struct {
 	PromptTemplate string  `json:"prompt_template"`
 }
 
+type ResponseModel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type ResponsePrompt struct {
 	Prompt string `json:"prompt"`
 }

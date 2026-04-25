@@ -11,10 +11,9 @@ import (
 func RegisterAIRoutes(app fiber.Router) {
 	app.Post("", createAIConfig)
 	app.Get("", getAIConfig)
-	// app.Get("/models", getAIModels)
-	app.Put("", updateAIConfig)
+	app.Get("/models", getAIModels)
+	app.Patch("", updateAIConfig)
 	app.Delete("", deleteAIConfig)
-	// app.Post("/grading", aiGrading)
 }
 
 func createAIConfig(c fiber.Ctx) error {
@@ -135,25 +134,30 @@ func deleteAIConfig(c fiber.Ctx) error {
 	})
 }
 
-// func aiGrading(c fiber.Ctx) error {
-// 	userID := c.Locals("user_id").(string)
-// 	role := c.Locals("user_role").(string)
+func getAIModels(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("ai_models_list_attempt")
+	
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
 
-// 	if !models.HasPermission(role, "assignment:grade") {
-// 		return SendError(c, errors.ErrForbidden)
-// 	}
+	if !models.HasPermission(role, "ai") {
+		log.Error("ai_models_list_failed",
+			"error", errors.ErrForbidden,
+		)
+		return SendError(c, errors.ErrForbidden)
+	}
 
-// 	var form []models.AIGradingForm
-// 	if err := c.Bind().Body(&form); err != nil {
-// 		return SendError(c, errors.ErrBadRequest)
-// 	}
+	modelList, err := service.GetModels(userID)
+	if err != nil {
+		log.Error("ai_models_list_failed",
+			"error", err,
+		)
+		return SendError(c, err)
+	}
 
-// 	err := service.AIGrading(userID, &form)
-// 	if err != nil {
-// 		return SendError(c, err)
-// 	}
-
-// 	return c.JSON(fiber.Map{
-// 		"message": "ai graded",
-// 	})
-// }
+	log.Info("ai_models_list_success")
+	
+	return c.JSON(modelList)
+}
