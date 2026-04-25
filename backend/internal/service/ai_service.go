@@ -198,3 +198,55 @@ func GetModels(userID string) ([]models.ResponseModel, error) {
 	
 	return models.ConvertAIModelsToResponse(modelList), nil
 }
+
+func GetGradingJobs(teacherID string) (*models.GradingJobsResponse, error) {
+	gradingJobs, err := repository.GetGradingJobsByTeacher(teacherID)
+	if err != nil {
+		return nil, err
+	}
+
+	jobs := make([]models.GradingJobResponse, len(gradingJobs))
+	for i, job := range gradingJobs {
+		jobs[i] = models.GradingJobResponse{
+			ID:                   job.ID,
+			AssignmentID:         job.AssignmentID,
+			AssignmentTitle:      job.Assignment.Title,
+			Status:               job.Status,
+			Progress:             job.Progress,
+			TotalSubmissions:     job.TotalSubmissions,
+			ProcessedSubmissions: job.ProcessedSubmissions,
+			Error:                job.Error,
+			StartedAt:            job.StartedAt,
+			CompletedAt:          job.CompletedAt,
+			CreatedAt:            job.CreatedAt,
+			UpdatedAt:            job.UpdatedAt,
+		}
+	}
+
+	return &models.GradingJobsResponse{Jobs: jobs}, nil
+}
+
+func DeleteGradingJob(gradingJobID, teacherID string) error {
+	// Get the grading job to check its status
+	job, err := repository.GetGradingJobByID(gradingJobID, teacherID)
+	if err != nil {
+		return err
+	}
+
+	if job == nil {
+		return errors.ErrGradingJobNotFound
+	}
+
+	// Only allow deletion of completed or failed jobs
+	if job.Status != models.JobCompleted && job.Status != models.JobFailed {
+		return errors.ErrCannotDeleteJob
+	}
+
+	// Delete the job
+	err = repository.DeleteGradingJob(gradingJobID, teacherID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

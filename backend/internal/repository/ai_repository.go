@@ -133,3 +133,40 @@ func FailGradingJob(assignmentID, teacherID string, errorMsg string) error {
 			"error":  errorMsg,
 		}).Error
 }
+
+func GetGradingJobsByTeacher(teacherID string) ([]models.GradingJob, error) {
+	var gradingJobs []models.GradingJob
+
+	err := database.DB.
+		Preload("Assignment").
+		Where("teacher_id = ?", teacherID).
+		Order("created_at DESC").
+		Find(&gradingJobs).Error
+
+	return gradingJobs, err
+}
+
+func GetGradingJobByID(gradingJobID, teacherID string) (*models.GradingJob, error) {
+	var gradingJob models.GradingJob
+
+	err := database.DB.
+		Preload("Assignment").
+		Preload("Teacher").
+		Where("id = ? AND teacher_id = ?", gradingJobID, teacherID).
+		First(&gradingJob).Error
+
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &gradingJob, nil
+}
+
+func DeleteGradingJob(gradingJobID, teacherID string) error {
+	return database.DB.
+		Where("id = ? AND teacher_id = ?", gradingJobID, teacherID).
+		Delete(&models.GradingJob{}).Error
+}

@@ -28,6 +28,8 @@ var (
 	ErrTooManyAttachments     = &AppError{400, "too many attachment"}
 	ErrTUAPI                  = &AppError{500, "internal server error (TU API)"}
 	ErrCodeExecutor           = &AppError{500, "internal server error (judge0)"}
-	ErrInvalidDueDate         = &AppError{400, "extended due date must be in the future"}
+	ErrInvalidDueDate          = &AppError{400, "extended due date must be in the future"}
 	ErrDueDateBeforeAssignment = &AppError{400, "extended due date must be after the assignment due date"}
+	ErrCannotDeleteJob         = &AppError{400, "can only delete completed or failed jobs"}
+	ErrGradingJobNotFound      = &AppError{404, "grading job not found"}
 )

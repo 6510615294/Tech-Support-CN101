@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type ResponseUserData struct {
 	Username string `json:"username"`
 	Name     string `json:"name"`
@@ -207,4 +209,23 @@ type ErrorResponse struct {
 type ResponseAttachmentDetail struct {
 	RelatedAssignments	[]string	`json:"related_assignments"`
 	RelatedTemplates	[]string	`json:"related_templates"`
+}
+
+type GradingJobResponse struct {
+	ID                   string     `json:"id"`
+	AssignmentID         string     `json:"assignment_id"`
+	AssignmentTitle      string     `json:"assignment_title"`
+	Status               string     `json:"status"`
+	Progress             int16      `json:"progress"`
+	TotalSubmissions     int16      `json:"total_submissions"`
+	ProcessedSubmissions int16      `json:"processed_submissions"`
+	Error                string     `json:"error,omitempty"`
+	StartedAt            *time.Time `json:"started_at,omitempty"`
+	CompletedAt          *time.Time `json:"completed_at,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+}
+
+type GradingJobsResponse struct {
+	Jobs []GradingJobResponse `json:"jobs"`
 }

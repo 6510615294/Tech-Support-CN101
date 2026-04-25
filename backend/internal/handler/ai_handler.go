@@ -14,6 +14,8 @@ func RegisterAIRoutes(app fiber.Router) {
 	app.Get("/models", getAIModels)
 	app.Patch("", updateAIConfig)
 	app.Delete("", deleteAIConfig)
+	app.Get("jobs", getGradingJobs)
+	app.Delete("jobs/:id", deleteGradingJob)
 }
 
 func createAIConfig(c fiber.Ctx) error {
@@ -160,4 +162,65 @@ func getAIModels(c fiber.Ctx) error {
 	log.Info("ai_models_list_success")
 	
 	return c.JSON(modelList)
+}
+
+func getGradingJobs(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("grading_jobs_list_attempt")
+	
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
+
+	if !models.HasPermission(role, "ai") {
+		log.Error("grading_jobs_list_failed",
+			"error", errors.ErrForbidden,
+		)
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	jobs, err := service.GetGradingJobs(userID)
+	if err != nil {
+		log.Error("grading_jobs_list_failed",
+			"error", err,
+		)
+		return SendError(c, err)
+	}
+
+	log.Info("grading_jobs_list_success")
+	
+	return c.JSON(jobs)
+}
+
+func deleteGradingJob(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+	
+	log.Info("grading_job_delete_attempt")
+	
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
+	gradingJobID := c.Params("id")
+
+	if !models.HasPermission(role, "ai") {
+		log.Error("grading_job_delete_failed",
+			"error", errors.ErrForbidden,
+		)
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	err := service.DeleteGradingJob(gradingJobID, userID)
+	if err != nil {
+		log.Error("grading_job_delete_failed",
+			"error", err,
+		)
+		return SendError(c, err)
+	}
+
+	log.Info("grading_job_delete_success",
+		"grading_job_id", gradingJobID,
+	)
+	
+	return c.JSON(fiber.Map{
+		"message": "grading job deleted",
+	})
 }
