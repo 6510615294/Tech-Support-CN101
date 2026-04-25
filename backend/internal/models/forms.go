@@ -90,7 +90,6 @@ type AIConfigForm struct {
 	APIKey         string  `json:"api_key" form:"api_key"`
 	BaseURL        string  `json:"base_url" form:"base_url"`
 	Temperature    float32 `json:"temperature" form:"temperature"`
-	PromptTemplate string  `json:"prompt_template" form:"prompt_template"`
 }
 
 type AssignmentPromptForm struct {

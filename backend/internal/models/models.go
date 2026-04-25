@@ -209,7 +209,6 @@ type AIConfig struct {
 	BaseURL         string    `json:"base_url"`
 	Model           string    `json:"model"`
 	Temperature     float32   `json:"temperature"`
-	PromptTemplate  string    `json:"prompt_template"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

@@ -405,7 +405,6 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 			Model:          aiConfig.Model,
 			BaseURL:        aiConfig.BaseURL,
 			Temperature:    aiConfig.Temperature,
-			PromptTemplate: aiConfig.PromptTemplate,
 		},
 		MaxPoint:         assignment.Point,
 		AssignmentPrompt: assignment.AssignmentPrompt,

@@ -50,7 +50,6 @@ func CreateAIConfig(userID string, form *models.AIConfigForm) (*models.ResponseA
 		BaseURL:         form.BaseURL,
 		Model:           form.Model,
 		Temperature:     form.Temperature,
-		PromptTemplate:  form.PromptTemplate,
 	}
 
 	err = repository.CreateAIConfig(config)
@@ -63,7 +62,6 @@ func CreateAIConfig(userID string, form *models.AIConfigForm) (*models.ResponseA
 		BaseURL:        form.BaseURL,
 		Model:          form.Model,
 		Temperature:    form.Temperature,
-		PromptTemplate: form.PromptTemplate,
 	}
 
 	return &response, nil
@@ -80,7 +78,6 @@ func GetAIConfig(userID string) (*models.ResponseAIConfig, error) {
 		BaseURL:        config.BaseURL,
 		Model:          config.Model,
 		Temperature:    config.Temperature,
-		PromptTemplate: config.PromptTemplate,
 	}
 
 	return &response, nil
@@ -123,10 +120,6 @@ func UpdateAIConfig(
 		updates["base_url"] = form.BaseURL
 	}
 
-	if form.PromptTemplate != "" {
-		updates["prompt_template"] = form.PromptTemplate
-	}
-
 	updates["temperature"] = form.Temperature
 
 	if len(updates) > 0 {
@@ -145,7 +138,6 @@ func UpdateAIConfig(
 		BaseURL:        config.BaseURL,
 		Model:          config.Model,
 		Temperature:    config.Temperature,
-		PromptTemplate: config.PromptTemplate,
 	}
 
 	return &response, nil
