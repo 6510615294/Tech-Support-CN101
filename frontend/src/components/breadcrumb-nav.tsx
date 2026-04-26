@@ -36,6 +36,8 @@ export function BreadcrumbNav({ courseName, assignmentName }: BreadcrumbNavProps
     // Handle special cases
     if (segment === "courses") {
       label = "Courses"
+    } else if (segment === "ai") {
+      label = "AI Agent"
     } else if (pathSegments[index - 1] === "courses" && courseName) {
       label = courseName
     } else if (segment === "assignments") {
