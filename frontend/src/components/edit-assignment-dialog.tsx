@@ -594,7 +594,12 @@ export function EditAssignmentDialog({
                 </Label>
                 <Textarea
                   id="assignment_prompt"
-                  placeholder="Describe what the AI should do with student submissions..."
+                  placeholder={`อธิบายงานที่ AI ต้องทำให้ชัดเจน เช่น
+- ให้ตรวจอะไรบ้าง และต้องอ้างอิงเกณฑ์ไหน
+- ต้องตอบเป็น paragraph, bullet points, หรือทั้งคู่
+- ต้องใช้ภาษาอะไร เช่น ไทย/อังกฤษ/ผสม
+- มีเกณฑ์ให้คะแนนไหม และคะแนนเต็มเท่าไร
+- ต้องเน้นความถูกต้อง, ความครบถ้วน, หรือความสั้นกระชับ`}
                   rows={4}
                   value={form.assignment_prompt}
                   onChange={(e) => set("assignment_prompt", e.target.value)}
