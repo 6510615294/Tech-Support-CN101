@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Settings } from "lucide-react"
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,6 +15,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Fragment } from "react"
+import { ModeToggle } from "@/components/mode-toggle"
 
 interface BreadcrumbNavProps {
   courseName?: string
@@ -68,11 +69,7 @@ export function BreadcrumbNav({ courseName, assignmentName }: BreadcrumbNavProps
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <Button asChild variant="ghost" size="icon" className="ml-auto" aria-label="Open settings">
-        <Link href="/settings">
-          <Settings className="h-4 w-4" />
-        </Link>
-      </Button>
+      <ModeToggle className="ml-auto" />
     </header>
   )
 }

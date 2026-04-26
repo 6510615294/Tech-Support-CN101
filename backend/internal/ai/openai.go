@@ -15,7 +15,7 @@ func NewOpenAIProvider() *OpenAIProvider {
 }
 
 func (p *OpenAIProvider) createClient(cred Credential) openai.Client {
-	if cred.BaseURL != "" {
+	if cred.BaseURL != "" && cred.Provider != "openai"{
 		return openai.NewClient(
 			option.WithAPIKey(cred.APIKey),
 			option.WithBaseURL(cred.BaseURL),

@@ -18,7 +18,15 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { BookOpen, LogOut, Settings, File, BookDashed, LayoutTemplate } from "lucide-react"
+import {
+  BookOpen,
+  LogOut,
+  Settings,
+  File,
+  BookDashed,
+  LayoutTemplate,
+  Sparkle,
+} from "lucide-react"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -39,6 +47,11 @@ export function AppSidebar() {
       title: "Attachment",
       href: "/attachments",
       icon: File,
+    },
+    {
+      title: "AI Agent",
+      href: "/ai",
+      icon: Sparkle,
     },
   ]
 

@@ -47,9 +47,9 @@ func UpdateAIConfig(userID string, updates map[string]any) error {
 		Error
 }
 
-func DeleteAIConfig(userID string) error {
+func DeleteAIConfig(id string) error {
 	return database.DB.
-		Delete(&models.Course{}, "user_id = ?", userID).
+		Delete(&models.AIConfig{}, "id = ?", id).
 		Error
 }
 

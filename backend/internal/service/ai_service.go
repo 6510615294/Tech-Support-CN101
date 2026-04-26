@@ -43,25 +43,37 @@ func CreateAIConfig(userID string, form *models.AIConfigForm) (*models.ResponseA
 		return nil, err
 	}
 
+	// Set default values
+	temperature := form.Temperature
+	if temperature == 0 {
+		temperature = 1.0
+	}
+
 	config := &models.AIConfig{
 		UserID:          userID,
 		Provider:        form.Provider,
 		EncryptedAPIKey: encryptedKey,
 		BaseURL:         form.BaseURL,
 		Model:           form.Model,
-		Temperature:     form.Temperature,
+		Temperature:     temperature,
 	}
 
 	err = repository.CreateAIConfig(config)
 	if err != nil {
 		return nil, err
 	}
+	
+	hasApiKey := false
+	if form.APIKey != "" {
+		hasApiKey = true
+	}
 
 	response := models.ResponseAIConfig{
 		Provider:       form.Provider,
 		BaseURL:        form.BaseURL,
 		Model:          form.Model,
-		Temperature:    form.Temperature,
+		Temperature:    temperature,
+		HasApiKey:      hasApiKey,
 	}
 
 	return &response, nil
@@ -72,12 +84,18 @@ func GetAIConfig(userID string) (*models.ResponseAIConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	hasApiKey := false
+	if config.EncryptedAPIKey != "" {
+		hasApiKey = true
+	}
 
 	response := models.ResponseAIConfig{
 		Provider:       config.Provider,
 		BaseURL:        config.BaseURL,
 		Model:          config.Model,
 		Temperature:    config.Temperature,
+		HasApiKey:      hasApiKey,
 	}
 
 	return &response, nil
@@ -132,12 +150,18 @@ func UpdateAIConfig(
 			return nil, err
 		}
 	}
+	
+	hasApiKey := false
+	if config.EncryptedAPIKey != "" {
+		hasApiKey = true
+	}
 
 	response := models.ResponseAIConfig{
 		Provider:       config.Provider,
 		BaseURL:        config.BaseURL,
 		Model:          config.Model,
 		Temperature:    config.Temperature,
+		HasApiKey:      hasApiKey,
 	}
 
 	return &response, nil

@@ -182,7 +182,7 @@ type ResponseAIConfig struct {
 	Model          string  `json:"model"`
 	BaseURL        string  `json:"base_url"`
 	Temperature    float32 `json:"temperature"`
-	PromptTemplate string  `json:"prompt_template"`
+	HasApiKey	   bool    `json:"has_api_key"`
 }
 
 type ResponseModel struct {
