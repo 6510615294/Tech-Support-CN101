@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Trash2Icon } from "lucide-react"
 import { EditAssignmentDialog } from "@/components/edit-assignment-dialog";
+import { toast } from "sonner";
 
 type Attachment = {
   id: string
@@ -131,7 +132,7 @@ export function AssignmentActions({
       alert("Something went wrong.");
     }
   }
-  
+
   async function handleAutoGrading() {
     if (!user) {
       return;
@@ -147,14 +148,20 @@ export function AssignmentActions({
 
       if (!res.ok) {
         console.error("Failed to delete course");
-        alert("Failed to delete assignment");
+        toast.error("Failed to start AI grading", {
+          description: "Please try again.",
+        });
         return;
       }
 
-      alert("Assignment auto grading in queue");
+      toast.success("AI grading queued", {
+        description: "The grading job has been added to the queue.",
+      });
     } catch (err) {
       console.error("Error deleting course", err);
-      alert(err);
+      toast.error("Something went wrong", {
+        description: "Unable to start AI grading.",
+      });
     }
   }
 
