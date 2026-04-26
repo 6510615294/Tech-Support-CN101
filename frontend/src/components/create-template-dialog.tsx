@@ -150,7 +150,7 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
     if (!form.title.trim()) e.title = "Title is required"
     if (!form.description.trim()) e.description = "Description is required"
     if (form.point <= 0) e.point = "Points must be greater than 0"
-    if (form.ai_agent && !form.assignment_prompt.trim())
+    if (form.ai_agent && !(form.assignment_prompt ?? "").trim())
       e.assignment_prompt = "Prompt is required when AI Agent is enabled"
     setErrors(e)
     return Object.keys(e).length === 0
@@ -161,7 +161,7 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
     setIsSubmitting(true)
     try {
       const formData = new FormData();
-         
+
       formData.append("title", form.title)
       formData.append("description", form.description)
       formData.append("point", String(form.point))
@@ -171,7 +171,7 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
       if (tags) {
         tags.forEach(tag => formData.append("tags", tag));
       }
-      
+
       if (uploadedFiles && Array.isArray(uploadedFiles) && uploadedFiles.length > 0) {
         uploadedFiles.forEach((file) => {
           if (file instanceof File) {
@@ -183,7 +183,7 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
           formData.append("attachments", attachment.id);
         });
       }
-      
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/templates`, {
         method: "POST",
         headers: {
@@ -191,14 +191,14 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
         },
         body: formData,
       })
-      
+
       if (!res.ok) {
         toast.error("Failed to create Template", {
           description: "Something went wrong. Please try again.",
         })
         return;
       }
-      
+
       const data = await res.json()
       onCreated(data)
       setOpen(false)
@@ -247,280 +247,279 @@ export function CreateAssignmentTemplateDialog({ onCreated }: CreateAssignmentTe
 
         <ScrollArea className="max-h-[calc(90vh-12rem)] pr-4">
           <div className="grid gap-5 py-2">
-          {/* Title */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
-            <Input
-              id="title"
-              placeholder="e.g. HTML Basics Quiz"
-              value={form.title}
-              onChange={(e) => set("title", e.target.value)}
-            />
-            {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
-          </div>
-
-          {/* Description */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="description">Description <span className="text-destructive">*</span></Label>
-            <TipTapTextEditor
-              value={form.description}
-              onChange={(e) => set("description", e)}
-              editable={true}
-            />
-            {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
-          </div>
-
-          {/* Points */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="point">Points <span className="text-destructive">*</span></Label>
-            <Input
-              id="point"
-              type="number"
-              min={1}
-              placeholder="100"
-              value={form.point}
-              onChange={(e) => set("point", Number(e.target.value))}
-            />
-            {errors.point && <p className="text-xs text-destructive">{errors.point}</p>}
-          </div>
-
-          {/* Tags */}
-          <div className="grid gap-1.5">
-            <Label>Tags</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add a tag and press Enter"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    addTag()
-                  }
-                }}
-              />
-              <Button type="button" variant="outline" onClick={addTag}>
-                Add
-              </Button>
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                    {tag}
-                    <button
-                      onClick={() => removeTag(tag)}
-                      className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Attachments */}
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label>
-                Attachments
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  (optional, up to {MAX_FILES})
-                </span>
-              </Label>
-              <span className="text-xs text-muted-foreground">
-                {totalAttachments}/{MAX_FILES}
-              </span>
-            </div>
-
-            {/* Selected summary chips */}
-            {totalAttachments > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {uploadedFiles.map((f, i) => (
-                  <Badge key={`upload-${i}`} variant="secondary" className="gap-1 pr-1 text-xs">
-                    <Upload className="h-3 w-3 shrink-0" />
-                    {f.name}
-                    <button onClick={() => removeUploadedFile(i)} className="ml-0.5 rounded-sm opacity-60 hover:opacity-100">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-                {selectedAttachments.map((a) => (
-                  <Badge key={a.id} variant="secondary" className="gap-1 pr-1 text-xs">
-                    <Paperclip className="h-3 w-3 shrink-0" />
-                    {a.file_name}
-                    <button onClick={() => toggleExistingAttachment(a)} className="ml-0.5 rounded-sm opacity-60 hover:opacity-100">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            {/* Add attachment panel */}
-            {totalAttachments < MAX_FILES && (
-              <div className="rounded-lg border">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAttachmentTabOpen((v) => !v)
-                    fetchExistingAttachments()
-                  }}
-                  className="flex w-full items-center justify-between px-4 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="flex items-center gap-2">
-                    <Paperclip className="h-4 w-4" />
-                    Add attachment
-                  </span>
-                  <span className="text-xs">{attachmentTabOpen ? "Close" : "Open"}</span>
-                </button>
-
-                {attachmentTabOpen && (
-                  <div className="border-t">
-                    <Tabs defaultValue="upload" className="p-3">
-                      <TabsList className="mb-3 w-full">
-                        <TabsTrigger value="upload" className="flex-1 gap-1.5">
-                          <Upload className="h-3.5 w-3.5" />
-                          Upload New
-                        </TabsTrigger>
-                        <TabsTrigger value="existing" className="flex-1 gap-1.5">
-                          <FolderOpen className="h-3.5 w-3.5" />
-                          Select Existing
-                        </TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="upload" className="mt-0">
-                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 text-center transition-colors hover:border-muted-foreground/50 hover:bg-muted/30">
-                          <Upload className="h-8 w-8 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">Click to upload files</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Up to {MAX_FILES - totalAttachments} more file{MAX_FILES - totalAttachments !== 1 ? "s" : ""}
-                            </p>
-                          </div>
-                          <input
-                            type="file"
-                            multiple
-                            className="sr-only"
-                            onChange={handleUploadFiles}
-                          />
-                        </label>
-                      </TabsContent>
-
-                      <TabsContent value="existing" className="mt-0">
-                        {isLoadingAttachments ? (
-                          <div className="flex items-center justify-center py-8">
-                            <Spinner className="h-5 w-5" />
-                          </div>
-                        ) : existingAttachments.length === 0 ? (
-                          <p className="py-6 text-center text-sm text-muted-foreground">No uploaded files found</p>
-                        ) : (
-                          <>
-                            <div className="relative mb-2">
-                              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                              <Input
-                                placeholder="Search files..."
-                                value={attachmentSearch}
-                                onChange={(e) => setAttachmentSearch(e.target.value)}
-                                className="h-8 pl-8 text-sm"
-                              />
-                            </div>
-                          <ScrollArea className="h-44">
-                            <div className="space-y-1 pr-2">
-                              {existingAttachments
-                                .filter((a) =>
-                                  a.file_name.toLowerCase().includes(attachmentSearch.toLowerCase())
-                                )
-                                .map((att) => {
-                                const Icon = getFileIcon(att.file_type)
-                                const isSelected = selectedAttachments.some((a) => a.id === att.id)
-                                const isDisabled = !isSelected && totalAttachments >= MAX_FILES
-                                return (
-                                  <button
-                                    key={att.id}
-                                    type="button"
-                                    disabled={isDisabled}
-                                    onClick={() => toggleExistingAttachment(att)}
-                                    className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                                      isSelected
-                                        ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                        : isDisabled
-                                        ? "cursor-not-allowed opacity-40"
-                                        : "hover:bg-muted"
-                                    }`}
-                                  >
-                                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate font-medium">{att.file_name}</p>
-                                      <p className="text-xs text-muted-foreground">{formatSize(att.size)}</p>
-                                    </div>
-                                    {isSelected && (
-                                      <span className="shrink-0 text-xs font-medium text-primary">Selected</span>
-                                    )}
-                                  </button>
-                                )
-                              })}
-                              {existingAttachments.filter((a) =>
-                                a.file_name.toLowerCase().includes(attachmentSearch.toLowerCase())
-                              ).length === 0 && (
-                                <p className="py-4 text-center text-xs text-muted-foreground">
-                                  No files match &ldquo;{attachmentSearch}&rdquo;
-                                </p>
-                              )}
-                            </div>
-                          </ScrollArea>
-                          </>
-                        )}
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* AI Agent toggle */}
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label className="text-base">AI Agent</Label>
-              <p className="text-sm text-muted-foreground">
-                Enable an AI agent to assist or evaluate submissions
-              </p>
-            </div>
-            <Switch
-              checked={form.ai_agent}
-              onCheckedChange={(val) => set("ai_agent", val)}
-            />
-          </div>
-
-          {/* AI Prompt — only shown when AI Agent is on */}
-          {form.ai_agent && (
+            {/* Title */}
             <div className="grid gap-1.5">
-              <Label htmlFor="assignment_prompt">
-                AI Prompt <span className="text-destructive">*</span>
-              </Label>
-              <Textarea
-                id="assignment_prompt"
-                placeholder={`อธิบายงานที่ AI ต้องทำให้ชัดเจน เช่น
+              <Label htmlFor="title">Title <span className="text-destructive">*</span></Label>
+              <Input
+                id="title"
+                placeholder="e.g. HTML Basics Quiz"
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+              />
+              {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
+            </div>
+
+            {/* Description */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="description">Description <span className="text-destructive">*</span></Label>
+              <TipTapTextEditor
+                value={form.description}
+                onChange={(e) => set("description", e)}
+                editable={true}
+              />
+              {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
+            </div>
+
+            {/* Points */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="point">Points <span className="text-destructive">*</span></Label>
+              <Input
+                id="point"
+                type="number"
+                min={1}
+                placeholder="100"
+                value={form.point}
+                onChange={(e) => set("point", Number(e.target.value))}
+              />
+              {errors.point && <p className="text-xs text-destructive">{errors.point}</p>}
+            </div>
+
+            {/* Tags */}
+            <div className="grid gap-1.5">
+              <Label>Tags</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Add a tag and press Enter"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      addTag()
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={addTag}>
+                  Add
+                </Button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+                      {tag}
+                      <button
+                        onClick={() => removeTag(tag)}
+                        className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Attachments */}
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label>
+                  Attachments
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    (optional, up to {MAX_FILES})
+                  </span>
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {totalAttachments}/{MAX_FILES}
+                </span>
+              </div>
+
+              {/* Selected summary chips */}
+              {totalAttachments > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {uploadedFiles.map((f, i) => (
+                    <Badge key={`upload-${i}`} variant="secondary" className="gap-1 pr-1 text-xs">
+                      <Upload className="h-3 w-3 shrink-0" />
+                      {f.name}
+                      <button onClick={() => removeUploadedFile(i)} className="ml-0.5 rounded-sm opacity-60 hover:opacity-100">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  {selectedAttachments.map((a) => (
+                    <Badge key={a.id} variant="secondary" className="gap-1 pr-1 text-xs">
+                      <Paperclip className="h-3 w-3 shrink-0" />
+                      {a.file_name}
+                      <button onClick={() => toggleExistingAttachment(a)} className="ml-0.5 rounded-sm opacity-60 hover:opacity-100">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Add attachment panel */}
+              {totalAttachments < MAX_FILES && (
+                <div className="rounded-lg border">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttachmentTabOpen((v) => !v)
+                      fetchExistingAttachments()
+                    }}
+                    className="flex w-full items-center justify-between px-4 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Add attachment
+                    </span>
+                    <span className="text-xs">{attachmentTabOpen ? "Close" : "Open"}</span>
+                  </button>
+
+                  {attachmentTabOpen && (
+                    <div className="border-t">
+                      <Tabs defaultValue="upload" className="p-3">
+                        <TabsList className="mb-3 w-full">
+                          <TabsTrigger value="upload" className="flex-1 gap-1.5">
+                            <Upload className="h-3.5 w-3.5" />
+                            Upload New
+                          </TabsTrigger>
+                          <TabsTrigger value="existing" className="flex-1 gap-1.5">
+                            <FolderOpen className="h-3.5 w-3.5" />
+                            Select Existing
+                          </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="upload" className="mt-0">
+                          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 text-center transition-colors hover:border-muted-foreground/50 hover:bg-muted/30">
+                            <Upload className="h-8 w-8 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">Click to upload files</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Up to {MAX_FILES - totalAttachments} more file{MAX_FILES - totalAttachments !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                            <input
+                              type="file"
+                              multiple
+                              className="sr-only"
+                              onChange={handleUploadFiles}
+                            />
+                          </label>
+                        </TabsContent>
+
+                        <TabsContent value="existing" className="mt-0">
+                          {isLoadingAttachments ? (
+                            <div className="flex items-center justify-center py-8">
+                              <Spinner className="h-5 w-5" />
+                            </div>
+                          ) : existingAttachments.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-muted-foreground">No uploaded files found</p>
+                          ) : (
+                            <>
+                              <div className="relative mb-2">
+                                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search files..."
+                                  value={attachmentSearch}
+                                  onChange={(e) => setAttachmentSearch(e.target.value)}
+                                  className="h-8 pl-8 text-sm"
+                                />
+                              </div>
+                              <ScrollArea className="h-44">
+                                <div className="space-y-1 pr-2">
+                                  {existingAttachments
+                                    .filter((a) =>
+                                      a.file_name.toLowerCase().includes(attachmentSearch.toLowerCase())
+                                    )
+                                    .map((att) => {
+                                      const Icon = getFileIcon(att.file_type)
+                                      const isSelected = selectedAttachments.some((a) => a.id === att.id)
+                                      const isDisabled = !isSelected && totalAttachments >= MAX_FILES
+                                      return (
+                                        <button
+                                          key={att.id}
+                                          type="button"
+                                          disabled={isDisabled}
+                                          onClick={() => toggleExistingAttachment(att)}
+                                          className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${isSelected
+                                              ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                              : isDisabled
+                                                ? "cursor-not-allowed opacity-40"
+                                                : "hover:bg-muted"
+                                            }`}
+                                        >
+                                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                          <div className="min-w-0 flex-1">
+                                            <p className="truncate font-medium">{att.file_name}</p>
+                                            <p className="text-xs text-muted-foreground">{formatSize(att.size)}</p>
+                                          </div>
+                                          {isSelected && (
+                                            <span className="shrink-0 text-xs font-medium text-primary">Selected</span>
+                                          )}
+                                        </button>
+                                      )
+                                    })}
+                                  {existingAttachments.filter((a) =>
+                                    a.file_name.toLowerCase().includes(attachmentSearch.toLowerCase())
+                                  ).length === 0 && (
+                                      <p className="py-4 text-center text-xs text-muted-foreground">
+                                        No files match &ldquo;{attachmentSearch}&rdquo;
+                                      </p>
+                                    )}
+                                </div>
+                              </ScrollArea>
+                            </>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* AI Agent toggle */}
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-base">AI Agent</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable an AI agent to assist or evaluate submissions
+                </p>
+              </div>
+              <Switch
+                checked={form.ai_agent}
+                onCheckedChange={(val) => set("ai_agent", val)}
+              />
+            </div>
+
+            {/* AI Prompt — only shown when AI Agent is on */}
+            {form.ai_agent && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="assignment_prompt">
+                  AI Prompt <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="assignment_prompt"
+                  placeholder={`อธิบายงานที่ AI ต้องทำให้ชัดเจน เช่น
 - ให้ตรวจอะไรบ้าง และต้องอ้างอิงเกณฑ์ไหน
 - ต้องตอบเป็น paragraph, bullet points, หรือทั้งคู่
 - ต้องใช้ภาษาอะไร เช่น ไทย/อังกฤษ/ผสม
 - มีเกณฑ์ให้คะแนนไหม และคะแนนเต็มเท่าไร
 - ต้องเน้นความถูกต้อง, ความครบถ้วน, หรือความสั้นกระชับ`}
-                rows={4}
-                value={form.assignment_prompt}
-                onChange={(e) => set("assignment_prompt", e.target.value)}
-              />
-              {errors.assignment_prompt && (
-                <p className="text-xs text-destructive">{errors.assignment_prompt}</p>
-              )}
-            </div>
-          )}
+                  rows={4}
+                  value={form.assignment_prompt}
+                  onChange={(e) => set("assignment_prompt", e.target.value)}
+                />
+                {errors.assignment_prompt && (
+                  <p className="text-xs text-destructive">{errors.assignment_prompt}</p>
+                )}
+              </div>
+            )}
 
-          {errors.submit && (
-            <p className="text-sm text-destructive">{errors.submit}</p>
-          )}
+            {errors.submit && (
+              <p className="text-sm text-destructive">{errors.submit}</p>
+            )}
           </div>
         </ScrollArea>
 

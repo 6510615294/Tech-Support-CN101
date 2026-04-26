@@ -73,6 +73,15 @@ export function CodeSection({
   const { user } = useAuth()
   const { theme } = useTheme()
 
+  const stripCommentLines = (source: string) => {
+    return source
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("#"))
+      .join("\n")
+  }
+
+  const displayCode = isAnonymous ? stripCommentLines(code) : code
+
   useEffect(() => {
     setCode(answerContent)
   }, [answerContent])
@@ -83,6 +92,13 @@ export function CodeSection({
   }, [submissionId])
 
   const handleCodeChange = (newCode: string | undefined) => {
+    // Monaco may emit onChange on controlled value updates.
+    // Accept updates only when user is actively editing in non-anonymous mode,
+    // so anonymous toggles never overwrite the original source.
+    if (!isEditing || isAnonymous) {
+      return
+    }
+
     setCode(newCode ?? "")
   }
 
@@ -237,11 +253,11 @@ export function CodeSection({
           <Editor
             height="100%"
             defaultLanguage={"python"}
-            value={code}
+            value={displayCode}
             theme={theme === "dark" ? "vs-dark" : "vs-light"}
             onChange={handleCodeChange}
             options={{
-              readOnly: !isEditing,
+              readOnly: !isEditing || isAnonymous,
               minimap: { enabled: false },
               fontSize: fontSize,
               automaticLayout: true,

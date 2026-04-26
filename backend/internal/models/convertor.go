@@ -79,6 +79,7 @@ func ConvertAssignmentToResponse(
 		Attachments: attachments,
 		Tags:        tagNames,
 		AIAgent:     a.AIAgent,
+		AssignmentPrompt: a.AssignmentPrompt,
 		Visible:     a.Visible,
 	}
 }

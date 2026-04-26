@@ -176,7 +176,7 @@ export function EditAssignmentDialog({
       e.due_date = "Due date must be after start date"
     if (form.due_date && form.close_date && form.close_date < form.due_date)
       e.close_date = "Close date must be on or after due date"
-    if (form.ai_agent && !form.assignment_prompt.trim())
+    if (form.ai_agent && !(form.assignment_prompt ?? "").trim())
       e.assignment_prompt = "Prompt is required when AI Agent is enabled"
     setErrors(e)
     return Object.keys(e).length === 0
@@ -493,10 +493,10 @@ export function EditAssignmentDialog({
                                           disabled={isDisabled}
                                           onClick={() => toggleExistingAttachment(att)}
                                           className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${isSelected
-                                              ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                              : isDisabled
-                                                ? "cursor-not-allowed opacity-40"
-                                                : "hover:bg-muted"
+                                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                                            : isDisabled
+                                              ? "cursor-not-allowed opacity-40"
+                                              : "hover:bg-muted"
                                             }`}
                                         >
                                           <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />

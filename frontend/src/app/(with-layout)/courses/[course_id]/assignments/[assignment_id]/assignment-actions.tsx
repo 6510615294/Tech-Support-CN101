@@ -62,6 +62,7 @@ export function AssignmentActions({
   const { user } = useAuth()
   const router = useRouter();
   const [isDownloadingAll, setIsDownloadingAll] = useState(false)
+  const isAIGradingDisabled = !assignment.ai_agent || !(assignment.assignment_prompt ?? "").trim()
 
   async function handleDownloadAllSubmissions() {
     if (!user?.token) {
@@ -197,10 +198,16 @@ export function AssignmentActions({
           variant="secondary"
           className="w-full justify-start gap-2"
           onClick={handleAutoGrading}
+          disabled={isAIGradingDisabled}
         >
           <ClipboardCheck className="h-4 w-4" />
           AI Grading
         </Button>
+        {isAIGradingDisabled && (
+          <p className="text-xs text-muted-foreground">
+            Enable AI Agent and set an AI Prompt to use AI Grading.
+          </p>
+        )}
 
         <Button
           size="sm"

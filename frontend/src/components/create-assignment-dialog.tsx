@@ -242,7 +242,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
       e.due_date = "Due date must be after start date"
     if (form.due_date && form.close_date && form.close_date < form.due_date)
       e.close_date = "Close date must be on or after due date"
-    if (form.ai_agent && !form.assignment_prompt.trim())
+    if (form.ai_agent && !(form.assignment_prompt ?? "").trim())
       e.assignment_prompt = "Prompt is required when AI Agent is enabled"
     setErrors(e)
     return Object.keys(e).length === 0
@@ -328,7 +328,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
       setAttachmentTabOpen(false)
     }
   }
-  
+
   const handleTest = () => {
     console.log("test")
   }
@@ -423,7 +423,7 @@ export function CreateAssignmentDialog({ courseId, onCreated }: CreateAssignment
                                   </div>
                                 ) : (
                                   <div>
-                                    <span key={tpl.id+"no_tag"} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">no tags</span>
+                                    <span key={tpl.id + "no_tag"} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">no tags</span>
                                   </div>
                                 )}
                               </div>
