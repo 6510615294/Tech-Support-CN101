@@ -74,10 +74,118 @@ export function CodeSection({
   const { theme } = useTheme()
 
   const stripCommentLines = (source: string) => {
-    return source
-      .split("\n")
-      .filter((line) => !line.trimStart().startsWith("#"))
-      .join("\n")
+    const lines = source.split("\n")
+    const output: string[] = []
+    let inTripleSingleQuote = false
+    let inTripleDoubleQuote = false
+
+    for (const line of lines) {
+      const trimmedLine = line.trimStart()
+      if (!inTripleSingleQuote && !inTripleDoubleQuote && trimmedLine.startsWith("#")) {
+        continue
+      }
+
+      let result = ""
+      let index = 0
+      let inSingleQuote = false
+      let inDoubleQuote = false
+
+      while (index < line.length) {
+        const current = line[index]
+        const nextTwo = line.slice(index, index + 3)
+
+        if (inTripleSingleQuote) {
+          if (line.slice(index, index + 3) === "'''") {
+            result += "'''"
+            index += 3
+            inTripleSingleQuote = false
+            continue
+          }
+          result += current
+          index += 1
+          continue
+        }
+
+        if (inTripleDoubleQuote) {
+          if (line.slice(index, index + 3) === '"""') {
+            result += '"""'
+            index += 3
+            inTripleDoubleQuote = false
+            continue
+          }
+          result += current
+          index += 1
+          continue
+        }
+
+        if (inSingleQuote) {
+          result += current
+          if (current === "\\" && index + 1 < line.length) {
+            result += line[index + 1]
+            index += 2
+            continue
+          }
+          if (current === "'") {
+            inSingleQuote = false
+          }
+          index += 1
+          continue
+        }
+
+        if (inDoubleQuote) {
+          result += current
+          if (current === "\\" && index + 1 < line.length) {
+            result += line[index + 1]
+            index += 2
+            continue
+          }
+          if (current === '"') {
+            inDoubleQuote = false
+          }
+          index += 1
+          continue
+        }
+
+        if (nextTwo === "'''") {
+          inTripleSingleQuote = true
+          result += "'''"
+          index += 3
+          continue
+        }
+
+        if (nextTwo === '"""') {
+          inTripleDoubleQuote = true
+          result += '"""'
+          index += 3
+          continue
+        }
+
+        if (current === "#") {
+          break
+        }
+
+        if (current === "'") {
+          inSingleQuote = true
+          result += current
+          index += 1
+          continue
+        }
+
+        if (current === '"') {
+          inDoubleQuote = true
+          result += current
+          index += 1
+          continue
+        }
+
+        result += current
+        index += 1
+      }
+
+      output.push(result.replace(/[ \t]+$/g, ""))
+    }
+
+    return output.join("\n")
   }
 
   const displayCode = isAnonymous ? stripCommentLines(code) : code
