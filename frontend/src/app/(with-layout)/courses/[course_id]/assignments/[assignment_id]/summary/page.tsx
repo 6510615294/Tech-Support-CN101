@@ -271,12 +271,12 @@ export default function Page() {
                 {
                   column_name: "en_name",
                   column_display: "English Name",
-                  placeholder: "Filter by name..."
+                  placeholder: "Filter by english name..."
                 },
                 {
                   column_name: "th_name",
                   column_display: "Thai Name",
-                  placeholder: "Filter by name..."
+                  placeholder: "Filter by thai name..."
                 },
                 {
                   column_name: "status",

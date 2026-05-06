@@ -618,7 +618,7 @@ export default function TemplatesPage() {
                 <label className="text-sm font-medium">Add to course</label>
                 <Select value={targetCourse} onValueChange={setTargetCourse}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a course..." />
+                    <SelectValue placeholder="Select a course" />
                   </SelectTrigger>
                   <SelectContent>
                     {courses.map((course) =>

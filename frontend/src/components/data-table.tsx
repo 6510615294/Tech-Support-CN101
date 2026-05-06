@@ -38,7 +38,7 @@ import { Input } from "./ui/input"
 
 interface DataTableFilterProps {
   column_name: string
-  column_display: string 
+  column_display: string
   placeholder: string
 }
 
@@ -60,8 +60,8 @@ export function DataTable<TData, TValue>({
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [filterColumn, setFilterColumn] = useState(filterProps?.[0] || null)
-  
-  
+
+
   const table = useReactTable({
     data,
     columns,
@@ -93,7 +93,7 @@ export function DataTable<TData, TValue>({
                   onChange={(event) =>
                     table.getColumn(filterColumn.column_name)?.setFilterValue(event.target.value)
                   }
-                  className="max-w-sm"
+                  className="w-[320px] max-w-full"
                 />
               </div>
               <Select
@@ -108,7 +108,7 @@ export function DataTable<TData, TValue>({
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select filter" />
                 </SelectTrigger>
-              
+
                 <SelectContent>
                   {filterProps.map((filterOption) => (
                     <SelectItem
@@ -165,9 +165,9 @@ export function DataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
