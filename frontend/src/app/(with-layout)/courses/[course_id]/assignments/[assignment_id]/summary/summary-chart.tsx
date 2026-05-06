@@ -35,6 +35,7 @@ interface SubmissionStatistic {
 
 interface SummaryChartProps {
   statistic: SubmissionStatistic;
+  maxPoint?: number | null;
 }
 
 function StatCard({
@@ -118,7 +119,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
   return null;
 };
 
-export default function SummaryChartSummaryChart({ statistic }: SummaryChartProps) {
+export default function SummaryChartSummaryChart({ statistic, maxPoint }: SummaryChartProps) {
   const toOptionalNumber = (value: unknown) => {
     if (value === null || value === undefined || value === "") {
       return null
@@ -128,10 +129,14 @@ export default function SummaryChartSummaryChart({ statistic }: SummaryChartProp
     return Number.isFinite(parsed) ? parsed : null
   }
 
-  const avgScore = toOptionalNumber(statistic.avg_score)
-  const medianScore = toOptionalNumber(statistic.median_score)
-  const highestScore = toOptionalNumber(statistic.highest_score)
-  const lowestScore = toOptionalNumber(statistic.lowest_score)
+  const avgScore = toOptionalNumber(statistic.avg_score) ?? 0
+  const medianScore = toOptionalNumber(statistic.median_score) ?? 0
+  const highestScore = toOptionalNumber(statistic.highest_score) ?? 0
+  const lowestScore = toOptionalNumber(statistic.lowest_score) ?? 0
+  const graded = statistic.graded ?? 0
+  const ungraded = statistic.ungrade ?? 0
+  const submitted = statistic.submitted ?? 0
+  const submissionRate = statistic.submission_rate ?? 0
 
   const chartData = statistic.distribution.map((d) => ({
     name: `${d.range_start}–${d.range_end}`,
@@ -151,9 +156,9 @@ export default function SummaryChartSummaryChart({ statistic }: SummaryChartProp
       {/* Submission Rate Hero Card */}
       <div className="rounded-2xl border bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20 dark:border-green-900/40 p-6 flex items-center gap-6">
         <div className="relative flex items-center justify-center">
-          <ProgressRing value={statistic.submission_rate} size={90} />
+          <ProgressRing value={submissionRate} size={90} />
           <span className="absolute text-lg font-bold text-green-600 dark:text-green-400">
-            {statistic.submission_rate}%
+            {submissionRate}%
           </span>
         </div>
         <div className="flex-1 space-y-3">
@@ -176,10 +181,10 @@ export default function SummaryChartSummaryChart({ statistic }: SummaryChartProp
 
       {/* Score Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Average Score" value={avgScore !== null ? avgScore.toFixed(2) : "-"} accent="#f97316" />
-        <StatCard label="Median Score" value={medianScore ?? "-"} accent="#8b5cf6" />
-        <StatCard label="Highest Score" value={highestScore ?? "-"} accent="#22c55e" sub="Top performer" />
-        <StatCard label="Lowest Score" value={lowestScore ?? "-"} accent="#ef4444" sub="Needs attention" />
+        <StatCard label={maxPoint != null ? `Average Score (/${maxPoint})` : "Average Score"} value={avgScore !== undefined ? (typeof avgScore === 'number' ? avgScore.toFixed(2) : avgScore) : '0.00'} accent="#f97316" />
+        <StatCard label={maxPoint != null ? `Median Score (/${maxPoint})` : "Median Score"} value={medianScore !== undefined ? medianScore : 0} accent="#8b5cf6" />
+        <StatCard label={maxPoint != null ? `Highest Score (/${maxPoint})` : "Highest Score"} value={highestScore !== undefined ? highestScore : 0} accent="#22c55e" sub="Top performer" />
+        <StatCard label={maxPoint != null ? `Lowest Score (/${maxPoint})` : "Lowest Score"} value={lowestScore !== undefined ? lowestScore : 0} accent="#ef4444" sub="Needs attention" />
       </div>
 
       {/* Grading Status */}
@@ -187,28 +192,28 @@ export default function SummaryChartSummaryChart({ statistic }: SummaryChartProp
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Grading Progress</p>
           <p className="text-2xl font-bold tabular-nums">
-            {statistic.graded}{" "}
-            <span className="text-base font-normal text-muted-foreground">/ {statistic.submitted} graded</span>
+            {graded}{" "}
+            <span className="text-base font-normal text-muted-foreground">/ {submitted} graded</span>
           </p>
         </div>
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
             <span className="text-muted-foreground">
-              Graded: <span className="font-semibold text-foreground">{statistic.graded}</span>
+              Graded: <span className="font-semibold text-foreground">{graded}</span>
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
             <span className="text-muted-foreground">
-              Pending: <span className="font-semibold text-foreground">{statistic.ungrade}</span>
+              Pending: <span className="font-semibold text-foreground">{ungraded}</span>
             </span>
           </div>
         </div>
         <div className="w-full sm:w-48 bg-muted rounded-full h-2.5 overflow-hidden">
           <div
             className="h-2.5 rounded-full bg-green-500 transition-all duration-700"
-            style={{ width: `${(statistic.graded / statistic.submitted) * 100}%` }}
+            style={{ width: `${submitted > 0 ? (graded / submitted) * 100 : 0}%` }}
           />
         </div>
       </div>

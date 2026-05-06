@@ -48,6 +48,7 @@ type SubmissionList = {
 
 type AssignmentDetail = {
   title: string
+  point?: number
 }
 
 type CourseDetail = {
@@ -60,15 +61,17 @@ export default function Page() {
   const [submissionList, setSubmissionList] = useState<SubmissionList[]>([]);
   const [courseName, setCourseName] = useState("");
   const [assignmentName, setAssignmentName] = useState("");
+  const [assignmentPoint, setAssignmentPoint] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { course_id, assignment_id } = useParams();
   const { user } = useAuth();
-  
+
   // Create columns and dialog with proper props
   const { columns, dialog } = createColumns({
     courseId: course_id as string,
     assignmentId: assignment_id as string,
+    fullPoint: assignmentPoint,
   });
 
   const handleExportCsv = () => {
@@ -82,7 +85,7 @@ export default function Page() {
       "th_name",
       "email",
       "submission_status",
-      "point",
+      assignmentPoint != null ? `point (${assignmentPoint})` : "point",
       "percentage",
     ]
 
@@ -100,7 +103,7 @@ export default function Page() {
       escapeCsv(item.th_name),
       escapeCsv(item.email),
       escapeCsv(item.submission_status),
-      escapeCsv(item.point),
+      escapeCsv(String(item.point ?? "")),
       escapeCsv(item.percentage),
     ])
 
@@ -168,6 +171,7 @@ export default function Page() {
       const assignmentData = await assignmentRes.json()
       const assignment = assignmentData.assignment as AssignmentDetail | undefined
       setAssignmentName(assignment?.title || "")
+      setAssignmentPoint(assignment?.point ?? null)
     }
 
     if (courseRes.ok) {
@@ -243,7 +247,7 @@ export default function Page() {
                 Export CSV
               </Button>
             </div>
-            <SummaryChart statistic={statistic} />
+            <SummaryChart statistic={statistic} maxPoint={assignmentPoint} />
           </div>
         )}
         {view === "table" && (

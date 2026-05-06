@@ -74,17 +74,52 @@ func buildAssignmentSummary(
 		})
 	}
 
-	// statistics calculations remain same
-	// average, median, distribution etc.
-
+	// Calculate statistics
 	distribution := createScoreDistribution(scores, float32(assignment.Point))
+
+	var avgScore float32
+	var highestScore float32
+	var lowestScore float32
+	var medianScore float32
+	var submissionRate float32
+
+	if graded > 0 {
+		sum := float32(0)
+		highestScore = scores[0]
+		lowestScore = scores[0]
+
+		for _, score := range scores {
+			sum += score
+			if score > highestScore {
+				highestScore = score
+			}
+			if score < lowestScore {
+				lowestScore = score
+			}
+		}
+
+		avgScore = sum / float32(graded)
+		medianScore = calculateMedian(scores)
+	}
+
+	if totalStudents > 0 {
+		submissionRate = float32(submitted) / float32(totalStudents) * 100
+	}
 
 	response := models.ResponseAssignmentSummary{
 		Statistic: models.ResponseAssignmentStatistic{
-			Student:      totalStudents,
-			Submitted:    submitted,
-			Incomplete:   incomplete,
-			Distribution: distribution,
+			Student:        totalStudents,
+			Submitted:      submitted,
+			Incomplete:     incomplete,
+			NotStarted:     totalStudents - submitted - incomplete,
+			SubmissionRate: submissionRate,
+			Graded:         graded,
+			Ungraded:       ungraded,
+			AverageScore:   avgScore,
+			HighestScore:   highestScore,
+			LowestScore:    lowestScore,
+			MedianScore:    medianScore,
+			Distribution:   distribution,
 		},
 		SubmissionList: submissionList,
 	}
@@ -135,6 +170,30 @@ func createScoreDistribution(scores []float32, maxPoints float32) []models.Score
 	}
 
 	return distribution
+}
+
+func calculateMedian(scores []float32) float32 {
+	if len(scores) == 0 {
+		return 0
+	}
+
+	// Simple sorting using bubble sort for small slices
+	sorted := make([]float32, len(scores))
+	copy(sorted, scores)
+
+	for i := 0; i < len(sorted); i++ {
+		for j := i + 1; j < len(sorted); j++ {
+			if sorted[j] < sorted[i] {
+				sorted[i], sorted[j] = sorted[j], sorted[i]
+			}
+		}
+	}
+
+	n := len(sorted)
+	if n%2 == 1 {
+		return sorted[n/2]
+	}
+	return (sorted[n/2-1] + sorted[n/2]) / 2
 }
 
 func sanitizeFileName(fileName string) string {
@@ -230,7 +289,7 @@ func handleAttachments(
 			FileName: file.Filename,
 			FileType: file.Header.Get("Content-Type"),
 			FileKey:  fileKey,
-			Size: 	  file.Size,
+			Size:     file.Size,
 			UserID:   userID,
 		}
 
