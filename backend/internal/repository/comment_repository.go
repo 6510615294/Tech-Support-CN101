@@ -65,11 +65,11 @@ func GetCommentByIDAndCourse(
 	return &comment, err
 }
 
-func GetCommentBySubmissionAndUser(submissionID, userID string) (*models.Comment, error) {
+func GetCommentBySubmissionAndUserAndRole(submissionID, userID, role string) (*models.Comment, error) {
 	var comment models.Comment
 
 	err := database.DB.
-		Where("submission_id = ? AND created_by = ?", submissionID, userID).
+		Where("submission_id = ? AND created_by = ? AND created_by_role = ?", submissionID, userID, role).
 		First(&comment).Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {

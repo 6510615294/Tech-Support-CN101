@@ -21,7 +21,7 @@ func CreateOrUpdateComment(
 		return nil, err
 	}
 
-	comment, err := repository.GetCommentBySubmissionAndUser(submissionID, userID)
+	comment, err := repository.GetCommentBySubmissionAndUserAndRole(submissionID, userID, role)
 
 	if stderrors.Is(err, errors.ErrCommentNotFound) {
 
