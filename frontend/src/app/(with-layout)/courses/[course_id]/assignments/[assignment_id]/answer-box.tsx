@@ -362,13 +362,13 @@ export function AnswerBox({
             value={code}
             onChange={(e) => handleCodeChange(e.target.value)}
             className="font-mono text-sm min-h-[200px]"
-            placeholder="Code answer..."
+            placeholder="Code answer"
           />
         )}
         <Textarea
           value={stdin}
           onChange={(e) => setStdin(e.target.value)}
-          placeholder="Enter input for your Python code..."
+          placeholder="Enter input for your Python code"
           className="w-full rounded-sm border p-2 text-sm min-h-16"
         />
         <div className="flex gap-2">

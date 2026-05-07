@@ -182,7 +182,7 @@ function ModelCombobox({
           disabled={disabled}
         >
           <span className="truncate text-left">
-            {inputValue || "Type or select a model…"}
+            {inputValue || "Type or select a model"}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -190,7 +190,7 @@ function ModelCombobox({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput
-            placeholder="Search or type model name…"
+            placeholder="Search or type model name"
             value={inputValue}
             onValueChange={handleInputChange}
           />

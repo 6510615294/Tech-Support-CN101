@@ -255,7 +255,7 @@ export function GradingPanel({
                     <Textarea
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      placeholder="Add a comment..."
+                      placeholder="Add a comment"
                       rows={3}
                       className="resize-none"
                     />

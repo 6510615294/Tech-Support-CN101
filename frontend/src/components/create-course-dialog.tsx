@@ -57,7 +57,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
       setError("All fields are required.")
       return
     }
-    
+
     const payload = {
       name: form.name,
       schedule: form.schedule,
@@ -113,8 +113,18 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
             <Input
               id="name"
               name="name"
-              placeholder="e.g. Introduction to Web Development"
+              placeholder="e.g. Introduction to Computer Programming"
               value={form.name}
+              onChange={handleChange}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="schedule">Schedule</FieldLabel>
+            <Input
+              id="schedule"
+              name="schedule"
+              placeholder="e.g. Monday 09:30 - 12:30 EGR103"
+              value={form.schedule}
               onChange={handleChange}
             />
           </Field>
@@ -124,7 +134,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
               <Input
                 id="section"
                 name="section"
-                placeholder="e.g. A"
+                placeholder="e.g. 810001"
                 value={form.section}
                 onChange={handleChange}
               />
@@ -134,25 +144,13 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
               <Input
                 id="semester"
                 name="semester"
-                placeholder="e.g. Spring 2026"
+                placeholder="e.g. 1/2565"
                 value={form.semester}
                 onChange={handleChange}
               />
             </Field>
           </div>
-          <Field>
-            <FieldLabel htmlFor="schedule">Schedule</FieldLabel>
-            <Input
-              id="schedule"
-              name="schedule"
-              placeholder="e.g. Mon/Wed 9:00 AM - 10:30 AM"
-              value={form.schedule}
-              onChange={handleChange}
-            />
-          </Field>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="mt-2">
             <Button
               type="button"

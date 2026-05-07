@@ -381,7 +381,7 @@ export function CodeSection({
           <Textarea
             value={stdin}
             onChange={(e) => setStdin(e.target.value)}
-            placeholder="Enter input for your Python code..."
+            placeholder="Enter input for your Python code"
             className="w-full h-20 resize-none rounded-md text-sm"
           />
           {(output !== null || runError !== null) && (

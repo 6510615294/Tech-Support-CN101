@@ -296,7 +296,7 @@ export function EnrollDialog({ courseId, onEnrolled }: EnrollDialogProps) {
               </p>
               <Textarea
                 ref={bulkRef}
-                placeholder={"alice teacher\nbob ta\ncharlie,student\ndave"}
+                placeholder={"8810615201 teacher\n8810615202 ta\n8810615203, student\n8810615204"}
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
                 className="min-h-[100px] font-mono text-sm"

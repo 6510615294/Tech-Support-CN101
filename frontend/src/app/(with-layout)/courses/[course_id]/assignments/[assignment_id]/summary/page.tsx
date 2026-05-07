@@ -266,22 +266,22 @@ export default function Page() {
                 {
                   column_name: "student_id",
                   column_display: "Student ID",
-                  placeholder: "Filter by student id..."
+                  placeholder: "Filter by student id"
                 },
                 {
                   column_name: "en_name",
                   column_display: "English Name",
-                  placeholder: "Filter by english name..."
+                  placeholder: "Filter by english name"
                 },
                 {
                   column_name: "th_name",
                   column_display: "Thai Name",
-                  placeholder: "Filter by thai name..."
+                  placeholder: "Filter by thai name"
                 },
                 {
                   column_name: "status",
                   column_display: "Status",
-                  placeholder: "Filter by status..."
+                  placeholder: "Filter by status"
                 }
               ]}
             />
