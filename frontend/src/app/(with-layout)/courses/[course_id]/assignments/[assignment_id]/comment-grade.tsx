@@ -37,11 +37,16 @@ export function CommentGrade({
   isStudent,
   onSubmitGrade,
 }: CommentGradeProps) {
+  const normalizedComments = useMemo(
+    () => comments.filter((comment) => comment.comment.trim().length > 0),
+    [comments]
+  )
+
   const existingComment = useMemo(() => {
     return role
-      ? comments.find(c => c.commentator === role)
+      ? normalizedComments.find(c => c.commentator === role)
       : undefined;
-  }, [comments, role]);
+  }, [normalizedComments, role]);
 
   const [grade, setGrade] = useState("");
   const [comment, setComment] = useState("");
@@ -75,8 +80,8 @@ export function CommentGrade({
 
   // Filter comments for student - only show visible ones
   const visibleComments = isStudent
-    ? comments.filter((c) => c.visible)
-    : comments
+    ? normalizedComments.filter((c) => c.visible)
+    : normalizedComments
 
   return (
     <Card>

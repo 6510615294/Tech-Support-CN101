@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { User, CheckCircle, Clock } from "lucide-react"
+import { User, CheckCircle, Clock, Zap } from "lucide-react"
 import { useMemo, useState } from "react";
 
 type Comment = {
@@ -39,16 +39,26 @@ type SortBy = "id" | "enName" | "thName" | "point"
 export function SubmissionList({ submissions, selectedId, onSelect, maxPoints, isAnonymous = false }: SubmissionListProps) {
   const [sortBy, setSortBy] = useState<SortBy>("id")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
-  
-  const isGraded = (submission: Submission) => {
-    return submission.graded_by && submission.graded_by.length > 0
+
+  const getSubmissionStatus = (submission: Submission) => {
+    const gradedBy = (submission.graded_by || "").toLowerCase().trim()
+    const hasTeacherGrade = gradedBy.length > 0 && gradedBy !== "ai"
+    const hasAIReview = gradedBy === "ai" || submission.comments.some(c => c.commentator.toLowerCase().trim() === "ai")
+
+    if (hasTeacherGrade) {
+      return { icon: "check", color: "text-green-600", label: "Graded by teacher" }
+    } else if (hasAIReview) {
+      return { icon: "ai", color: "text-blue-600", label: "Reviewed by AI" }
+    } else {
+      return { icon: "clock", color: "text-yellow-600", label: "Not reviewed by AI" }
+    }
   }
 
   const parseSubmitter = (submitter: string) => {
     const [id = "", enName = "", thName = ""] = submitter.split("|")
     return { id, enName, thName }
   }
-  
+
   const sortedSubmissions = useMemo(() => {
     // When showName is false, force sort by point in ascending order
     const effectiveSortBy = isAnonymous ? "point" : sortBy
@@ -56,20 +66,20 @@ export function SubmissionList({ submissions, selectedId, onSelect, maxPoints, i
 
     return [...submissions].sort((a, b) => {
       let result = 0
-  
+
       if (effectiveSortBy === "point") {
         result = a.point - b.point
       } else {
         const parsedA = parseSubmitter(a.submitter)
         const parsedB = parseSubmitter(b.submitter)
-  
+
         result = parsedA[effectiveSortBy].localeCompare(parsedB[effectiveSortBy], "th")
       }
-  
+
       return effectiveSortOrder === "asc" ? result : -result
     })
   }, [submissions, sortBy, sortOrder, isAnonymous])
-  
+
   return (
     <Card className="w-full">
       <CardHeader className="pb-3">
@@ -132,16 +142,22 @@ export function SubmissionList({ submissions, selectedId, onSelect, maxPoints, i
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isGraded(submission) ? (
-                      <>
-                        <span className="text-xs font-medium">
-                          {submission.point}/{maxPoints}
-                        </span>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </>
-                    ) : (
-                      <Clock className="h-4 w-4 text-yellow-600" />
-                    )}
+                    {(() => {
+                      const status = getSubmissionStatus(submission)
+                      const IconComponent = status.icon === "check" ? CheckCircle : status.icon === "ai" ? Zap : Clock
+                      return (
+                        <>
+                          <span className="text-xs text-muted-foreground">
+                            {submission.point}/{maxPoints}
+                          </span>
+                          <IconComponent
+                            className={`h-4 w-4 shrink-0 ${status.color}`}
+                            aria-label={status.label}
+                            title={status.label}
+                          />
+                        </>
+                      )
+                    })()}
                   </div>
                 </button>
               ))

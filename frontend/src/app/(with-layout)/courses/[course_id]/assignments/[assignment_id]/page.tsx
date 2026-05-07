@@ -239,12 +239,13 @@ export default function AssignmentDetailPage() {
       }
 
       const result = await response.json()
+      const normalizedComment = (result.comment ?? "").trim()
       setSelectedSubmission((prev) => {
         if (!prev) return prev
 
         const newComment = {
           id: result.comment_id,
-          comment: result.comment,
+          comment: normalizedComment,
           commentator: result.graded_by,
           visible: result.visible,
         }
@@ -253,24 +254,29 @@ export default function AssignmentDetailPage() {
           (c) => c.commentator === newComment.commentator
         )
 
+        const nextComments = normalizedComment
+          ? exists
+            ? prev.comments.map((c) =>
+              c.commentator === newComment.commentator ? newComment : c
+            )
+            : [newComment, ...prev.comments]
+          : prev.comments.filter((c) => c.commentator !== newComment.commentator)
+
         return {
           ...prev,
           point: result.point,
           graded_by: result.graded_by,
-          comments: exists
-            ? prev.comments.map((c) =>
-              c.commentator === newComment.commentator ? newComment : c
-            )
-            : [newComment, ...prev.comments],
+          comments: nextComments,
         }
       })
       setSubmissions((prevList) =>
         prevList.map((s) => {
           if (s.id !== result.submission_id) return s;
 
+          const normalizedComment = (result.comment ?? "").trim()
           const newComment = {
             id: result.comment_id,
-            comment: result.comment,
+            comment: normalizedComment,
             commentator: result.graded_by,
             visible: result.visible,
           };
@@ -279,15 +285,19 @@ export default function AssignmentDetailPage() {
             (c) => c.commentator === newComment.commentator
           );
 
+          const nextComments = normalizedComment
+            ? exists
+              ? s.comments.map((c) =>
+                c.commentator === newComment.commentator ? newComment : c
+              )
+              : [newComment, ...s.comments]
+            : s.comments.filter((c) => c.commentator !== newComment.commentator)
+
           return {
             ...s,
             point: result.point,
             graded_by: result.graded_by,
-            comments: exists
-              ? s.comments.map((c) =>
-                c.commentator === newComment.commentator ? newComment : c
-              )
-              : [newComment, ...s.comments],
+            comments: nextComments,
           };
         })
       );
@@ -422,6 +432,7 @@ export default function AssignmentDetailPage() {
           ) : (
             <div className="w-1/4 min-w-0">
               <GradingPanel
+                key={selectedSubmission?.id ?? "no-submission"}
                 submissions={submissions}
                 selectedId={selectedSubmission?.id ?? ""}
                 onSelect={setSelectedSubmission}
@@ -443,7 +454,7 @@ export default function AssignmentDetailPage() {
           <div className={`flex flex-col gap-4 ${isStudent ? "lg:col-span-3" : "lg:col-span-2"}`}>
             {/* 1. Assignment Info */}
             <AssignmentInfo assignment={assignment} />
-            
+
             {/* 2. Answer Box */}
             {isStudent ? (
               <div className="grid gap-4 lg:grid-cols-5">
@@ -465,7 +476,7 @@ export default function AssignmentDetailPage() {
                 <div className="lg:col-span-2">
                   <CommentSection
                     comments={selectedSubmission?.comments || []}
-                  />    
+                  />
                 </div>
               </div>
             ) : selectedSubmission ? (

@@ -63,11 +63,16 @@ export function GradingPanel({
   isCollapsed: isCollapsedProp,
   onToggleCollapse,
 }: GradingPanelProps) {
+  const normalizedComments = useMemo(
+    () => comments.filter((comment) => comment.comment.trim().length > 0),
+    [comments]
+  )
+
   const existingComment = useMemo(() => {
     return role
-      ? comments.find(c => c.commentator === role)
+      ? normalizedComments.find(c => c.commentator === role)
       : undefined;
-  }, [comments, role]);
+  }, [normalizedComments, role]);
 
   const [sortBy, setSortBy] = useState<SortBy>("id")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
@@ -85,7 +90,7 @@ export function GradingPanel({
     setGrade(currentGrade?.toString() ?? "");
     setComment(existingComment?.comment ?? "");
     setVisibleToStudent(existingComment?.visible ?? true);
-  }, [currentGrade, existingComment]);
+  }, [currentGrade, existingComment, selectedId]);
 
   const handleSubmit = async () => {
     if (!comment.trim() && !grade) return
@@ -191,14 +196,14 @@ export function GradingPanel({
               <h4 className="text-sm font-medium shrink-0 mb-2">Comments</h4>
 
               <ScrollArea className="flex-1 min-h-0">
-                {comments.length === 0 && (
+                {normalizedComments.length === 0 && (
                   <div className="flex flex-col items-center justify-center rounded-md border border-dashed py-8 text-center mb-4">
                     <MessageSquare className="h-8 w-8 text-muted-foreground/40 mb-2" />
                     <p className="text-sm text-muted-foreground">No comments yet</p>
                   </div>
                 )}
                 <div className="space-y-2 pr-4">
-                  {comments.map((c) => (
+                  {normalizedComments.map((c) => (
                     <div
                       key={c.id}
                       className="rounded-md border p-3 space-y-2"
