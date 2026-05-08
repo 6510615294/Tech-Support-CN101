@@ -28,6 +28,7 @@ var (
 	ErrTooManyAttachments     = &AppError{400, "too many attachment"}
 	ErrAttachmentTooLarge     = &AppError{400, "attachment file size must be <= 10MB"}
 	ErrSubmissionFileTooLarge = &AppError{400, "submission file size must be <= 5MB"}
+	ErrInvalidCredentials     = &AppError{400, "invalid username or password"}
 	ErrTUAPI                  = &AppError{500, "internal server error (TU API)"}
 	ErrCodeExecutor           = &AppError{500, "internal server error (judge0)"}
 	ErrInvalidDueDate          = &AppError{400, "extended due date must be in the future"}

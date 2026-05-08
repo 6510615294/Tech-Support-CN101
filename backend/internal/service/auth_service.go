@@ -13,6 +13,7 @@ import (
 
 type TUAPIResponse struct {
 	Status   bool   `json:"status"`
+	Message  string `json:"message"`
 	Username string `json:"username"`
 	ThName   string `json:"displayname_th"`
 	EnName   string `json:"displayname_en"`
@@ -38,10 +39,22 @@ func AuthenticateUser(form *models.LoginForm) (*models.User, error) {
 		Post("https://restapi.tu.ac.th/api/v1/auth/Ad/verify")
 
 	if err != nil {
-		return nil, err
+		return nil, errors.ErrTUAPI
 	}
 
 	if resp.StatusCode() != 200 {
+		tuMsg := res.Message
+		if tuMsg == "" {
+			tuMsg = string(resp.Body())
+		}
+
+		isInvalidCred := resp.StatusCode() == 400 &&
+			(!res.Status || tuMsg == "User or Password Invalid!" || tuMsg == "The request body has error! (UserName or PassWord Invalid!)")
+
+		if isInvalidCred {
+			return nil, errors.ErrInvalidCredentials
+		}
+
 		return nil, errors.ErrTUAPI
 	}
 
