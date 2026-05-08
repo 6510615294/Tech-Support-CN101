@@ -2,6 +2,7 @@ package repository
 
 import (
 	stderrors "errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -67,7 +68,11 @@ func GetVisibleAssignment(courseID, assignmentID string) (*models.Assignment, er
 	err := database.DB.
 		Preload("Tags").
 		Preload("Attachments").
-		Where("course_id = ? AND visible = ?", courseID, true).
+		Where(`
+			course_id = ?
+			AND visible = ?
+			AND start_date <= ?
+		`, courseID, true, time.Now()).
 		First(&assignment, "id = ?", assignmentID).
 		Error
 
@@ -92,7 +97,11 @@ func GetVisibleAssignments(courseID string) ([]models.Assignment, error) {
 
 	err := database.DB.
 		Preload("Tags").
-		Where("course_id = ? AND visible = ?", courseID, true).
+		Where(`
+			course_id = ?
+			AND visible = ?
+			AND start_date <= ?
+		`, courseID, true, time.Now()).
 		Find(&assignments).
 		Error
 

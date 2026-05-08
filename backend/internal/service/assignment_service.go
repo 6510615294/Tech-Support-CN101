@@ -81,6 +81,18 @@ func GetAssignments(userID, courseID, role string) (*[]models.ResponseAssignment
 		return nil, err
 	}
 
+	if models.HasPermission(role, "assignment:view_visible") &&
+		!models.HasPermission(role, "assignment:view_all") {
+		now := time.Now()
+		filteredAssignments := make([]models.Assignment, 0, len(assignments))
+		for _, assignment := range assignments {
+			if assignment.StartDate.IsZero() || !assignment.StartDate.After(now) {
+				filteredAssignments = append(filteredAssignments, assignment)
+			}
+		}
+		assignments = filteredAssignments
+	}
+
 	overrideMap := map[string]models.AssignmentOverride{}
 
 	if models.HasPermission(role, "submission:view_own") {
