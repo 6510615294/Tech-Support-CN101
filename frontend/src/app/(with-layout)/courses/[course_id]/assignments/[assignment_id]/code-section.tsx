@@ -4,8 +4,16 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Code, Play, Upload, FileText, X, Pencil, HatGlasses, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, NotebookText } from "lucide-react"
-import { Spinner } from "@/components/ui/spinner"
+import { 
+  Play, 
+  X, 
+  Pencil, 
+  HatGlasses, 
+  ChevronLeft, 
+  ChevronRight, 
+  NotebookText, 
+  Loader2 
+} from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
 import { useAuth } from "@/lib/auth-context"
@@ -23,8 +31,6 @@ import {
 } from "@/components/ui/select"
 
 interface CodeSectionProps {
-  courseId: string
-  assignmentId: string
   submissionId: string
   submissions?: { id: string; submitter: string }[]
   hasSubmission: boolean
@@ -44,8 +50,6 @@ interface CodeSectionProps {
 }
 
 export function CodeSection({
-  courseId,
-  assignmentId,
   submissionId,
   submissions = [],
   hasSubmission,
@@ -212,7 +216,6 @@ export function CodeSection({
 
   const handleRunCode = async () => {
     if (!user) return
-    console.log("tets")
     setIsRunning(true)
     setOutput(null)
     setRunError(null)
@@ -232,8 +235,6 @@ export function CodeSection({
 
       if (!response.ok) {
         throw new Error("Failed to run code")
-      } else {
-        console.log("222")
       }
 
       const result = await response.json()
@@ -258,16 +259,28 @@ export function CodeSection({
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
       <div className="flex flex-wrap gap-1 border-b p-2 bg-muted/40">
-        <Button onClick={handleRunCode}>
-          <Play />
-          Run code
-        </Button>
+      <Button
+        onClick={handleRunCode}
+        disabled={isRunning}
+      >
+        {isRunning ? (
+          <>
+            <Loader2 className="animate-spin" />
+            Running...
+          </>
+        ) : (
+          <>
+            <Play />
+            Run code
+          </>
+        )}
+      </Button>
         <Toggle
           pressed={isEditing}
           onPressedChange={setIsEditing}
         >
           <Pencil />
-          Edit
+          Edit{`${isEditing ? "ing" : ""}`}
         </Toggle>
         <Toggle
           pressed={isAnonymous}
@@ -370,7 +383,6 @@ export function CodeSection({
               fontSize: fontSize,
               automaticLayout: true,
               tabSize: 4,
-              wordWrap: "on",
             }}
           />
         )}

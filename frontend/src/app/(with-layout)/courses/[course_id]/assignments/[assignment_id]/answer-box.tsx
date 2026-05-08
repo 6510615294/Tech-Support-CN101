@@ -13,14 +13,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useAuth } from "@/lib/auth-context"
 
 interface AnswerBoxProps {
-  courseId: string
-  assignmentId: string
-  submissionId: string
   attachmentId?: string
   fileName?: string
   isStudent: boolean
   hasSubmission: boolean
-  onRunCode?: (code: string) => Promise<string>
   onSubmit?: (file?: File | null) => void
   answerContent: string
   isContentLoading: boolean
@@ -28,24 +24,16 @@ interface AnswerBoxProps {
 }
 
 export function AnswerBox({
-  courseId,
-  assignmentId,
-  submissionId,
   attachmentId,
   fileName,
   isStudent,
   hasSubmission,
-  onRunCode,
   onSubmit,
   answerContent,
   isContentLoading,
   contentError,
 }: AnswerBoxProps) {
   const [code, setCode] = useState("")
-  const [stdin, setStdin] = useState<string>("")
-  const [output, setOutput] = useState<string | null>(null)
-  const [isRunning, setIsRunning] = useState(false)
-  const [runError, setRunError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -56,48 +44,8 @@ export function AnswerBox({
     setCode(answerContent)
   }, [answerContent])
 
-  useEffect(() => {
-    setOutput(null)
-    setRunError(null)
-  }, [submissionId])
-
   const handleCodeChange = (newCode: string) => {
     setCode(newCode)
-  }
-
-  const handleRunCode = async () => {
-    if (!onRunCode || !user) return
-    setIsRunning(true)
-    setOutput(null)
-    setRunError(null)
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/run/python3`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          source_code: code,
-          stdin: stdin,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to run code")
-      }
-
-      const result = await response.json()
-      setOutput(result.stdout || result.output || "")
-      if (result.stderr) {
-        setRunError(result.stderr)
-      }
-    } catch (error) {
-      setRunError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`)
-    } finally {
-      setIsRunning(false)
-    }
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,44 +306,9 @@ export function AnswerBox({
         {isContentLoading ? (
           <Skeleton className="h-48" />
         ) : (
-          <Textarea
-            value={code}
-            onChange={(e) => handleCodeChange(e.target.value)}
-            className="font-mono text-sm min-h-[200px]"
-            placeholder="Code answer"
-          />
-        )}
-        <Textarea
-          value={stdin}
-          onChange={(e) => setStdin(e.target.value)}
-          placeholder="Enter input for your Python code"
-          className="w-full rounded-sm border p-2 text-sm min-h-16"
-        />
-        <div className="flex gap-2">
-          <Button onClick={handleRunCode} disabled={isRunning} variant="outline">
-            {isRunning ? <Spinner className="mr-2" /> : <Play className="mr-2 h-4 w-4" />}
-            Run Code
-          </Button>
-        </div>
-        {output !== null && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Output</label>
-            <ScrollArea className="h-64 rounded-md bg-muted">
-              <div className="p-4 font-mono text-sm">
-                <pre className="whitespace-pre-wrap wrap-break-word overflow-hidden">{output || "(no output)"}</pre>
-              </div>
-            </ScrollArea>
-          </div>
-        )}
-        {runError !== null && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Error</label>
-            <ScrollArea className="h-64 rounded-md bg-muted">
-              <div className="p-4 font-mono text-sm">
-                <pre className="whitespace-pre-wrap wrap-break-word overflow-hidden">{runError || "(unknown error)"}</pre>
-              </div>
-            </ScrollArea>
-          </div>
+          <pre className="font-mono text-sm min-h-[200px] overflow-auto rounded-md border p-3">
+            <code>{code}</code>
+          </pre>
         )}
       </CardContent>
     </Card>

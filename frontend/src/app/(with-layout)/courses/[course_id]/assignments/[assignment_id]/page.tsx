@@ -402,8 +402,6 @@ export default function AssignmentDetailPage() {
         <div className="flex-1 flex min-h-0 overflow-hidden">
           <div className={isGradingPanelCollapsed ? "flex-1" : "w-3/4 min-w-0"}>
             <CodeSection
-              courseId={`${course_id}`}
-              assignmentId={`${assignment_id}`}
               submissionId={selectedSubmission?.id || ""}
               submissions={submissions}
               hasSubmission={!!selectedSubmission}
@@ -460,9 +458,6 @@ export default function AssignmentDetailPage() {
               <div className="grid gap-4 lg:grid-cols-5">
                 <div className="lg:col-span-3">
                   <AnswerBox
-                    courseId={`${course_id}`}
-                    assignmentId={`${assignment_id}`}
-                    submissionId={selectedSubmission?.id || ""}
                     attachmentId={selectedSubmission?.attachment_id}
                     fileName={selectedSubmission?.file_name}
                     isStudent={true}
@@ -481,9 +476,6 @@ export default function AssignmentDetailPage() {
               </div>
             ) : selectedSubmission ? (
               <AnswerBox
-                courseId={`${course_id}`}
-                assignmentId={`${assignment_id}`}
-                submissionId={selectedSubmission.id || ""}
                 attachmentId={selectedSubmission.attachment_id}
                 fileName={selectedSubmission.file_name}
                 isStudent={false}
