@@ -11,6 +11,8 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
+const maxSubmissionFileSizeBytes int64 = 5 * 1024 * 1024
+
 func CreateSubmission(
 	courseID,
 	assignmentID,
@@ -42,6 +44,9 @@ func CreateSubmission(
 	var attachmentID *string
 
 	if file != nil {
+		if file.Size > maxSubmissionFileSizeBytes {
+			return nil, errors.ErrSubmissionFileTooLarge
+		}
 		attachment, err := uploadSubmissionFile(userID, file)
 		if err != nil {
 			return nil, err
@@ -88,6 +93,10 @@ func UpdateSubmission(
 
 	if effectiveClose.Before(time.Now()) {
 		return nil, errors.ErrAssignmentNotAvailable
+	}
+
+	if file != nil && file.Size > maxSubmissionFileSizeBytes {
+		return nil, errors.ErrSubmissionFileTooLarge
 	}
 
 	attachmentID, err := handleAttachmentUpdate(submission, file, userID)

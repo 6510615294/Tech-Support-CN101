@@ -271,6 +271,9 @@ func handleAttachments(
 	attachments = append(attachments, existing...)
 
 	for _, file := range files {
+		if file.Size > maxAttachmentSizeBytes {
+			return nil, errors.ErrAttachmentTooLarge
+		}
 
 		src, err := file.Open()
 		if err != nil {

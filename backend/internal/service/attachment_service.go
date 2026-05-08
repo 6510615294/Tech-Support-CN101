@@ -12,6 +12,8 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
+const maxAttachmentSizeBytes int64 = 10 * 1024 * 1024
+
 func stringifyValue(v any) string {
 	switch val := v.(type) {
 	case string:
@@ -32,6 +34,9 @@ func CreateAttachments(
 	}
 
 	for _, file := range files {
+		if file.Size > maxAttachmentSizeBytes {
+			return errors.ErrAttachmentTooLarge
+		}
 
 		src, err := file.Open()
 		if err != nil {
