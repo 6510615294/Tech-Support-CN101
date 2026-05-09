@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -46,10 +47,13 @@ func RunPython(form models.PythonCodeForm) (*models.ResponsePythonCode, error) {
 		return nil, fmt.Errorf("judge0 config missing")
 	}
 
+	encodedSource := base64.StdEncoding.EncodeToString([]byte(form.SourceCode))
+	encodedInput := base64.StdEncoding.EncodeToString([]byte(form.Input))
+
 	payload := judgeRequest{
-		SourceCode:    form.SourceCode,
+		SourceCode:    encodedSource,
 		LanguageID:    71,
-		Stdin:         form.Input,
+		Stdin:         encodedInput,
 		CpuTimeLimit:  2.0,
 		WallTimeLimit: 5.0,
 		MemoryLimit:   128000,
@@ -63,7 +67,7 @@ func RunPython(form models.PythonCodeForm) (*models.ResponsePythonCode, error) {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%s/submissions?base64_encoded=false&wait=true", judgeURL)
+	url := fmt.Sprintf("%s/submissions?base64_encoded=true&wait=true", judgeURL)
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
@@ -92,13 +96,43 @@ func RunPython(form models.PythonCodeForm) (*models.ResponsePythonCode, error) {
 		return nil, err
 	}
 
+	fmt.Printf("%+v\n", judgeResp)
+
+	// Decode base64 response fields from Judge0
+	stdout, err := base64.StdEncoding.DecodeString(judgeResp.Stdout)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode stdout: %w", err)
+	}
+
+	var stderrStr *string
+	if judgeResp.Stderr != nil && *judgeResp.Stderr != "" {
+		decoded, err := base64.StdEncoding.DecodeString(*judgeResp.Stderr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode stderr: %w", err)
+		}
+		s := string(decoded)
+		stderrStr = &s
+	}
+
+	var compileOutput *string
+	if judgeResp.CompileOutput != nil && *judgeResp.CompileOutput != "" {
+		decoded, err := base64.StdEncoding.DecodeString(*judgeResp.CompileOutput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode compile_output: %w", err)
+		}
+		s := string(decoded)
+		compileOutput = &s
+	}
+
 	response := models.ResponsePythonCode{
-		Stdout: judgeResp.Stdout,
-		Stderr: judgeResp.Stderr,
+		Stdout: string(stdout),
+		Stderr: stderrStr,
 		Status: judgeResp.Status.Description,
 		Time:   judgeResp.Time,
 		Memory: int(judgeResp.Memory),
 	}
+
+	_ = compileOutput // available if needed
 
 	return &response, nil
 }
