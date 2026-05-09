@@ -11,12 +11,17 @@ type ResponseUserData struct {
 }
 
 type ResponseCourse struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Schedule string `json:"schedule"`
-	Section  string `json:"section"`
-	Semester string `json:"semester"`
-	Teacher  string `json:"teacher"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	CourseCode string `json:"course_code"`
+	DayOfWeek  string `json:"day_of_week"`
+	StartTime  string `json:"start_time"`
+	EndTime    string `json:"end_time"`
+	Room       string `json:"room"`
+	Credits    int16  `json:"credits"`
+	Section    string `json:"section"`
+	Semester   string `json:"semester"`
+	Teacher    string `json:"teacher"`
 }
 
 type ResponseAttachment struct {
@@ -28,18 +33,18 @@ type ResponseAttachment struct {
 }
 
 type ResponseAssignment struct {
-	ID          		string               `json:"id"`
-	Title       		string               `json:"title"`
-	Description 		string               `json:"description"`
-	Point       		int16                `json:"point"`
-	StartDate   		string               `json:"start_date"`
-	DueDate     		string               `json:"due_date"`
-	CloseDate   		string               `json:"close_date"`
-	Attachments 		[]ResponseAttachment `json:"attachments"`
-	Tags        		[]string             `json:"tags"`
-	AIAgent     		bool                 `json:"ai_agent"`
-	AssignmentPrompt	string				 `json:"assignment_prompt,omitempty"`			
-	Visible     		bool                 `json:"visible"`
+	ID               string               `json:"id"`
+	Title            string               `json:"title"`
+	Description      string               `json:"description"`
+	Point            int16                `json:"point"`
+	StartDate        string               `json:"start_date"`
+	DueDate          string               `json:"due_date"`
+	CloseDate        string               `json:"close_date"`
+	Attachments      []ResponseAttachment `json:"attachments"`
+	Tags             []string             `json:"tags"`
+	AIAgent          bool                 `json:"ai_agent"`
+	AssignmentPrompt string               `json:"assignment_prompt,omitempty"`
+	Visible          bool                 `json:"visible"`
 }
 
 type ResponseComment struct {
@@ -111,9 +116,9 @@ type ResponseAssignmentSummary struct {
 }
 
 type ResponseEnrollmentResult struct {
-	Username 		string `json:"username"`
-	Role     		string `json:"role"`
-	Status   		string `json:"status"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	Status   string `json:"status"`
 }
 
 type ResponseEnrollmentResults struct {
@@ -149,14 +154,14 @@ type ResponseAssignmentOverride struct {
 }
 
 type ResponseAssignmentTemplates struct {
-	ID          		string               `json:"id"`
-	Title       		string               `json:"title"`
-	Description 		string               `json:"description"`
-	Point       		int16                `json:"point"`
-	Attachments 		[]ResponseAttachment `json:"attachments"`
-	Tags        		[]string             `json:"tags"`
-	AIAgent     		bool                 `json:"ai_agent"`
-	AssignmentPrompt	string				 `json:"assignment_prompt,omitempty"`			
+	ID               string               `json:"id"`
+	Title            string               `json:"title"`
+	Description      string               `json:"description"`
+	Point            int16                `json:"point"`
+	Attachments      []ResponseAttachment `json:"attachments"`
+	Tags             []string             `json:"tags"`
+	AIAgent          bool                 `json:"ai_agent"`
+	AssignmentPrompt string               `json:"assignment_prompt,omitempty"`
 }
 
 type ResponseShortAssignmentTemplates struct {
@@ -166,23 +171,23 @@ type ResponseShortAssignmentTemplates struct {
 }
 
 type ResponseAssignmentTemplate struct {
-	ID          		string               	`json:"id"`
-	Title       		string               	`json:"title"`
-	Description 		string               	`json:"description"`
-	Point       		int16                	`json:"point"`
-	Attachments 		[]ResponseAttachment 	`json:"attachments"`
-	Tags        		[]string             	`json:"tags"`
-	AIAgent     		bool                 	`json:"ai_agent"`
-	AssignmentPrompt	string					`json:"assignment_prompt"`
-	Visible     		bool                 	`json:"visible"`
+	ID               string               `json:"id"`
+	Title            string               `json:"title"`
+	Description      string               `json:"description"`
+	Point            int16                `json:"point"`
+	Attachments      []ResponseAttachment `json:"attachments"`
+	Tags             []string             `json:"tags"`
+	AIAgent          bool                 `json:"ai_agent"`
+	AssignmentPrompt string               `json:"assignment_prompt"`
+	Visible          bool                 `json:"visible"`
 }
 
 type ResponseAIConfig struct {
-	Provider       string  `json:"provider"`
-	Model          string  `json:"model"`
-	BaseURL        string  `json:"base_url"`
-	Temperature    float32 `json:"temperature"`
-	HasApiKey	   bool    `json:"has_api_key"`
+	Provider    string  `json:"provider"`
+	Model       string  `json:"model"`
+	BaseURL     string  `json:"base_url"`
+	Temperature float32 `json:"temperature"`
+	HasApiKey   bool    `json:"has_api_key"`
 }
 
 type ResponseModel struct {
@@ -195,11 +200,11 @@ type ResponsePrompt struct {
 }
 
 type LoginResponse struct {
-	Token 		string 	`json:"token"`
-	Username 	string 	`json:"username"`
-	EnName 		string 	`json:"en_name"`
-	ThName 		string 	`json:"th_name"`
-	Role		string	`json:"role"`
+	Token    string `json:"token"`
+	Username string `json:"username"`
+	EnName   string `json:"en_name"`
+	ThName   string `json:"th_name"`
+	Role     string `json:"role"`
 }
 
 type ErrorResponse struct {
@@ -207,8 +212,8 @@ type ErrorResponse struct {
 }
 
 type ResponseAttachmentDetail struct {
-	RelatedAssignments	[]string	`json:"related_assignments"`
-	RelatedTemplates	[]string	`json:"related_templates"`
+	RelatedAssignments []string `json:"related_assignments"`
+	RelatedTemplates   []string `json:"related_templates"`
 }
 
 type GradingJobResponse struct {

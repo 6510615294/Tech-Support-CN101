@@ -4,7 +4,6 @@ import (
 	stderrors "errors"
 	"math/rand"
 
-
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
@@ -27,7 +26,12 @@ func CreateCourse(userID, role string, form *models.CourseForm) (*models.Respons
 	course := &models.Course{
 		ID:         courseID,
 		Name:       form.Name,
-		CourseDate: form.Schedule,
+		CourseCode: form.CourseCode,
+		DayOfWeek:  form.DayOfWeek,
+		StartTime:  form.StartTime,
+		EndTime:    form.EndTime,
+		Room:       form.Room,
+		Credits:    form.Credits,
 		Section:    form.Section,
 		Semester:   form.Semester,
 		TeacherID:  userID,
@@ -100,8 +104,28 @@ func UpdateCourse(
 		updates["name"] = form.Name
 	}
 
-	if form.Schedule != "" {
-		updates["course_date"] = form.Schedule
+	if form.CourseCode != "" {
+		updates["course_code"] = form.CourseCode
+	}
+
+	if form.DayOfWeek != "" {
+		updates["day_of_week"] = form.DayOfWeek
+	}
+
+	if form.StartTime != "" {
+		updates["start_time"] = form.StartTime
+	}
+
+	if form.EndTime != "" {
+		updates["end_time"] = form.EndTime
+	}
+
+	if form.Room != "" {
+		updates["room"] = form.Room
+	}
+
+	if form.Credits != 0 {
+		updates["credits"] = form.Credits
 	}
 
 	if form.Section != "" {

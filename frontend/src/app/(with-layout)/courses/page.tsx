@@ -27,7 +27,12 @@ import { toast } from "sonner"
 type Course = {
   id: string;
   name: string;
-  schedule: string;
+  course_code?: string;
+  day_of_week?: string;
+  start_time?: string;
+  end_time?: string;
+  room?: string;
+  credits?: number;
   section: string;
   semester: string;
   teacher: string;
@@ -182,7 +187,12 @@ export default function Page() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 shrink-0" />
-                          <span>{course.schedule}</span>
+                          <span>
+                            {course.day_of_week ? `${course.day_of_week} ` : ""}
+                            {course.start_time ? `${course.start_time}` : ""}
+                            {course.end_time ? ` - ${course.end_time}` : ""}
+                            {course.room ? ` ${course.room}` : ""}
+                          </span>
                         </div>
                       </div>
                     </CardContent>

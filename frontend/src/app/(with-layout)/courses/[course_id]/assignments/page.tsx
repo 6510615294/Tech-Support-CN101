@@ -28,7 +28,12 @@ import { CreateAssignmentDialog } from "@/components/create-assignment-dialog"
 interface Course {
   id: string
   name: string
-  schedule: string
+  course_code?: string
+  day_of_week?: string
+  start_time?: string
+  end_time?: string
+  room?: string
+  credits?: number
   section: string
   semester: string
   teacher: string
@@ -236,7 +241,12 @@ export default function CourseDetailPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  <span>{course.schedule}</span>
+                  <span>
+                    {course.day_of_week ? `${course.day_of_week} ` : ""}
+                    {course.start_time ? `${course.start_time}` : ""}
+                    {course.end_time ? ` - ${course.end_time}` : ""}
+                    {course.room ? ` ${course.room}` : ""}
+                  </span>
                 </div>
                 <Badge variant="outline">Section {course.section}</Badge>
                 <Badge variant="secondary">{course.semester}</Badge>

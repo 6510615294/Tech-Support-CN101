@@ -22,7 +22,12 @@ export function CourseCards({
   course: {
     id: string
     name: string
-    schedule: string
+    course_code?: string
+    day_of_week?: string
+    start_time?: string
+    end_time?: string
+    room?: string
+    credits?: number
     section: string
     semester: string
     teacher: string
@@ -77,7 +82,12 @@ export function CourseCards({
             <div className="calendar-icon">
               <Calendar size={16} />
             </div>
-            <span className="text-lg font-normal">Due: {course.schedule}</span>
+            <span className="text-lg font-normal">
+              {course.day_of_week ? `${course.day_of_week} ` : ""}
+              {course.start_time ? `${course.start_time}` : ""}
+              {course.end_time ? ` - ${course.end_time}` : ""}
+              {course.room ? ` ${course.room}` : ""}
+            </span>
           </Badge>
         </CardFooter>
       </Card>
