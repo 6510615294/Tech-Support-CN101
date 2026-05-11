@@ -19,6 +19,8 @@ import { toast } from "sonner"
 interface Course {
   id: string
   name: string
+  schedule?: string
+  course_date?: string
   course_code: string
   day_of_week: string
   start_time: string
@@ -30,6 +32,48 @@ interface Course {
   teacher: string
 }
 
+type CourseFormState = {
+  name: string
+  course_code: string
+  day_of_week: string
+  start_time: string
+  end_time: string
+  room: string
+  credits: string
+  section: string
+  semester: string
+}
+
+function parseCourseSchedule(schedule?: string) {
+  if (!schedule) return {}
+
+  const normalized = schedule.trim()
+  const dayMatch = normalized.match(/\b(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/i)
+  const timeMatch = normalized.match(/(\d{1,2}:\d{2})(?:\s*[AP]M)?\s*[-–]\s*(\d{1,2}:\d{2})(?:\s*[AP]M)?/i)
+
+  return {
+    day_of_week: dayMatch ? dayMatch[1][0].toUpperCase() + dayMatch[1].slice(1).toLowerCase() : "",
+    start_time: timeMatch ? timeMatch[1] : "",
+    end_time: timeMatch ? timeMatch[2] : "",
+  }
+}
+
+function buildInitialForm(course: Course): CourseFormState {
+  const legacy = course.day_of_week ? {} : parseCourseSchedule(course.schedule || course.course_date)
+
+  return {
+    name: course.name || "",
+    course_code: course.course_code || "",
+    day_of_week: course.day_of_week || legacy.day_of_week || "",
+    start_time: course.start_time || legacy.start_time || "",
+    end_time: course.end_time || legacy.end_time || "",
+    room: course.room || "",
+    credits: course.credits ? String(course.credits) : "",
+    section: course.section || "",
+    semester: course.semester || "",
+  }
+}
+
 interface EditCourseDialogProps {
   course: Course
   open: boolean
@@ -39,15 +83,47 @@ interface EditCourseDialogProps {
 
 export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: EditCourseDialogProps) {
   const { user } = useAuth()
-  const [form, setForm] = useState({ ...course })
+  const [form, setForm] = useState<CourseFormState>(buildInitialForm(course))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
 
   // Sync form when course prop changes (e.g. opening a different card)
   useEffect(() => {
-    setForm({ ...course })
+    setForm(buildInitialForm(course))
     setError("")
   }, [course])
+
+  // Fetch the latest course data when the dialog opens so the form is not
+  // dependent on whatever the list page happened to keep in memory.
+  useEffect(() => {
+    if (!open || !user?.token) return
+
+    const controller = new AbortController()
+
+    const loadCourse = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${course.id}`, {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+          signal: controller.signal,
+        })
+
+        if (!res.ok) {
+          return
+        }
+
+        const latestCourse: Course = await res.json()
+        setForm(buildInitialForm(latestCourse))
+      } catch {
+        // Keep the current form values if the refresh fails.
+      }
+    }
+
+    loadCourse()
+
+    return () => controller.abort()
+  }, [open, course.id, user?.token])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))

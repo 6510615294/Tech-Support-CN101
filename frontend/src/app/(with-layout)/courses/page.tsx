@@ -27,6 +27,8 @@ import { toast } from "sonner"
 type Course = {
   id: string;
   name: string;
+  schedule?: string;
+  course_date?: string;
   course_code?: string;
   day_of_week?: string;
   start_time?: string;
@@ -37,6 +39,25 @@ type Course = {
   semester: string;
   teacher: string;
 };
+
+function formatCourseSchedule(course: Course) {
+  const legacySchedule = course.schedule || course.course_date || ""
+
+  const pieces = [
+    course.course_code,
+    course.day_of_week,
+    course.start_time && course.end_time
+      ? `${course.start_time} - ${course.end_time}`
+      : course.start_time || course.end_time,
+    course.room,
+  ].filter(Boolean) as string[]
+
+  if (pieces.length > 0) {
+    return pieces.join(" • ")
+  }
+
+  return legacySchedule || "Schedule not set"
+}
 
 export default function Page() {
   const { user } = useAuth()
@@ -187,12 +208,7 @@ export default function Page() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 shrink-0" />
-                          <span>
-                            {course.day_of_week ? `${course.day_of_week} ` : ""}
-                            {course.start_time ? `${course.start_time}` : ""}
-                            {course.end_time ? ` - ${course.end_time}` : ""}
-                            {course.room ? ` ${course.room}` : ""}
-                          </span>
+                          <span>{formatCourseSchedule(course)}</span>
                         </div>
                       </div>
                     </CardContent>

@@ -11,9 +11,9 @@ import (
 
 	"time"
 
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
+	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
@@ -257,6 +257,10 @@ func DeleteAssignment(courseID, assignmentID string) error {
 		}
 	}
 
+	if err := repository.DeleteAssignmentDependencies(assignment.ID); err != nil {
+		return err
+	}
+
 	if err := repository.DeleteAssignment(assignment); err != nil {
 		return err
 	}
@@ -413,10 +417,10 @@ func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
 	// Build N8NForm
 	n8nForm := models.AIForm{
 		AIConfig: models.ResponseAIConfig{
-			Provider:       aiConfig.Provider,
-			Model:          aiConfig.Model,
-			BaseURL:        aiConfig.BaseURL,
-			Temperature:    aiConfig.Temperature,
+			Provider:    aiConfig.Provider,
+			Model:       aiConfig.Model,
+			BaseURL:     aiConfig.BaseURL,
+			Temperature: aiConfig.Temperature,
 		},
 		MaxPoint:         assignment.Point,
 		AssignmentPrompt: assignment.AssignmentPrompt,

@@ -120,6 +120,36 @@ func DeleteAssignment(assignment *models.Assignment) error {
 	return database.DB.Delete(assignment).Error
 }
 
+func DeleteAssignmentDependencies(assignmentID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`DELETE FROM comments WHERE submission_id IN (SELECT id FROM submissions WHERE assignment_id = ?)`, assignmentID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("assignment_id = ?", assignmentID).Delete(&models.Submission{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Exec(`DELETE FROM assignment_attachments WHERE assignment_id = ?`, assignmentID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Exec(`DELETE FROM assignment_tags WHERE assignment_id = ?`, assignmentID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("assignment_id = ?", assignmentID).Delete(&models.AssignmentOverride{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("assignment_id = ?", assignmentID).Delete(&models.GradingJob{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 func CreateAssignmentOverride(
 	override *models.AssignmentOverride,
 ) (*models.AssignmentOverride, error) {
