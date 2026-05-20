@@ -92,3 +92,21 @@ func DeleteCourse(courseID string) error {
 		Delete(&models.Course{}, "id = ?", courseID).
 		Error
 }
+
+func DeleteCourseWithDependencies(courseID string) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("course_id = ?", courseID).Delete(&models.CourseMember{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("course_id = ?", courseID).Delete(&models.Assignment{}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Delete(&models.Course{}, "id = ?", courseID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}

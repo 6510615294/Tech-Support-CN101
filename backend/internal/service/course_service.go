@@ -2,13 +2,12 @@ package service
 
 import (
 	stderrors "errors"
+	"fmt"
 	"math/rand"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
 func generateCourseID() string {
@@ -37,6 +36,8 @@ func CreateCourse(userID, role string, form *models.CourseForm) (*models.Respons
 		TeacherID:  userID,
 	}
 
+	fmt.Println(form)
+	
 	member := &models.CourseMember{
 		UserID:   userID,
 		CourseID: courseID,
@@ -163,33 +164,13 @@ func DeleteCourse(courseID string) error {
 		return err
 	}
 
-	// Delete all submission attachment files from S3
 	for _, assignment := range assignments {
-		// Get all submissions for this assignment with their attachments
-		submissions, err := repository.GetSubmissionsWithAttachments(assignment.ID)
-		if err != nil {
-			// Log error but continue with deletion
-			logger.Log.Error("error_get_submissions_with_attachment",
-				"assignment_id", assignment.ID,
-			)
-			continue
-		}
-
-		// Delete submission attachment files from S3
-		for _, submission := range submissions {
-			if submission.Attachment != nil {
-				if err := storage.DeleteFile(submission.Attachment.FileKey); err != nil {
-					// Log error but continue with deletion
-					logger.Log.Error("error_delete_file_from_s3",
-						"submission_id", submission.ID,
-					)
-					continue
-				}
-			}
+		if err := DeleteAssignment(courseID, assignment.ID); err != nil {
+			return err
 		}
 	}
 
-	return repository.DeleteCourse(course.ID)
+	return repository.DeleteCourseWithDependencies(course.ID)
 }
 
 // o(n) querry (Absolutely 3N)

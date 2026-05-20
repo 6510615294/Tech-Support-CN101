@@ -264,6 +264,10 @@ func DeleteAssignment(courseID, assignmentID string) error {
 		}
 	}
 
+	if err := repository.DeleteAssignmentDependencies(assignment.ID); err != nil {
+		return err
+	}
+
 	if err := repository.DeleteAssignment(assignment); err != nil {
 		return err
 	}
