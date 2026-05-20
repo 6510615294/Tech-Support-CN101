@@ -2,6 +2,7 @@ package service
 
 import (
 	stderrors "errors"
+	"fmt"
 	"math/rand"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
@@ -35,6 +36,8 @@ func CreateCourse(userID, role string, form *models.CourseForm) (*models.Respons
 		TeacherID:  userID,
 	}
 
+	fmt.Println(form)
+	
 	member := &models.CourseMember{
 		UserID:   userID,
 		CourseID: courseID,

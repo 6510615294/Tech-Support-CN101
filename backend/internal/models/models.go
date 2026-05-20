@@ -93,7 +93,7 @@ type User struct {
 
 type Course struct {
 	ID         string    `gorm:"primaryKey;size:6" json:"id"`
-	Name       string    `gorm:"unique;not null" json:"name"`
+	Name       string    `gorm:"not null" json:"name"`
 	CourseCode string    `gorm:"type:varchar(20);not null" json:"course_code"`
 	DayOfWeek  string    `gorm:"type:varchar(20);not null" json:"day_of_week"`
 	StartTime  string    `gorm:"type:varchar(10);not null" json:"start_time"`
