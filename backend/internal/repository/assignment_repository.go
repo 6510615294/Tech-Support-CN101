@@ -47,20 +47,36 @@ func GetAssignmentWithRelations(courseID, assignmentID string) (*models.Assignme
 	return &assignment, err
 }
 
-func GetAssignmentMaxPointPromptAndDescription(assignmentID string) (*int16, string, string, error) {
+func GetAssignmentWithAIConfig(assignmentID string) (*models.Assignment, error) {
 	var assignment models.Assignment
 
 	err := database.DB.
-		Where("id = ?", assignmentID).
-		First(&assignment).
+		Preload("AIConfig").
+		Preload("AIConfig.AICredential").
+		First(&assignment, "id = ?", assignmentID).
 		Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, "", "", errors.ErrAssignmentNotFound
+		return nil, errors.ErrAssignmentNotFound
 	}
 
-	return &assignment.Point, assignment.AssignmentPrompt, assignment.Description, err
+	return &assignment, err
 }
+
+// func GetAssignmentMaxPointPromptAndDescription(assignmentID string) (*int16, *string, string, error) {
+// 	var assignment models.Assignment
+
+// 	err := database.DB.
+// 		Where("id = ?", assignmentID).
+// 		First(&assignment).
+// 		Error
+
+// 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+// 		return nil, nil, "", errors.ErrAssignmentNotFound
+// 	}
+
+// 	return &assignment.Point, assignment.Prompt, assignment.Description, err
+// }
 
 func GetVisibleAssignment(courseID, assignmentID string) (*models.Assignment, error) {
 	var assignment models.Assignment

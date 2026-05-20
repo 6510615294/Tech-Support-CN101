@@ -15,6 +15,7 @@ var (
 	ErrUserNotFound           = &AppError{404, "user not found"}
 	ErrAIConfigNotFound       = &AppError{404, "ai config not found"}
 	ErrAIConfigAlreadyExists  = &AppError{409, "ai config already exists"}
+	ErrAICredentialNotFound   = &AppError{409, "ai credential not exists"}
 	ErrAttachmentNotFound     = &AppError{404, "attachment not found"}
 	ErrCommentNotFound        = &AppError{404, "comment not found"}
 	ErrSubmissionNotFound     = &AppError{404, "submission not found"}
@@ -35,4 +36,5 @@ var (
 	ErrDueDateBeforeAssignment = &AppError{400, "extended due date must be after the assignment due date"}
 	ErrCannotDeleteJob         = &AppError{400, "can only delete completed or failed jobs"}
 	ErrGradingJobNotFound      = &AppError{404, "grading job not found"}
+	ErrPromptNotFound         = &AppError{404, "prompt not found"}
 )

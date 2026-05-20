@@ -33,8 +33,8 @@ func CreateAssignmentTemplate(
 		Point:       		form.Point,
 		Attachments: 		attachments,
 		Tags:        		tags,
-		AIAgent: 			form.AIAgent,
-		AssignmentPrompt: 	form.AssignmentPrompt,
+		AIConfigID: 		form.AIConfigID,
+		Prompt:     		form.Prompt,
 		CreatedBy:   		userID,
 	}
 	
@@ -108,10 +108,15 @@ func UpdateAssignmentTemplate(
 	}
 	
 	updates["description"] = form.Description
-	updates["assignment_prompt"] = form.AssignmentPrompt
-	updates["ai_agent"] = form.AIAgent
 
-
+	if form.AIConfigID != nil {
+		updates["ai_config_id"] = form.AIConfigID
+	}
+	
+	if form.Prompt != nil {
+		updates["prompt"] = form.Prompt
+	}
+	
 	if len(updates) > 0 {
 		if err := repository.UpdateAssignmentTemplate(templateID, updates); err != nil {
 			return nil, err

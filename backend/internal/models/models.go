@@ -149,8 +149,9 @@ type Assignment struct {
 	CloseDate        time.Time    `json:"close_date"`
 	Attachments      []Attachment `gorm:"many2many:assignment_attachments;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments"`
 	Tags             []Tag        `gorm:"many2many:assignment_tags;constraint:OnDelete:CASCADE;" json:"tags"`
-	AIAgent          bool         `gorm:"default:false" json:"ai_agent"`
-	AssignmentPrompt string       `json:"assignment_prompt"`
+	AIConfigID 		 *string 	  `gorm:"index" json:"ai_config_id,omitempty"`
+	AIConfig   		 *AIConfig    `gorm:"foreignKey:AIConfigID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Prompt 			 *string 	  `json:"prompt,omitempty"`
 	CreatedAt        time.Time    `json:"created_at"`
 	UpdatedAt        time.Time    `json:"updated_at"`
 	Visible          bool         `gorm:"default:true" json:"visible"`
@@ -198,24 +199,46 @@ type AssignmentTemplate struct {
 	Point            int16        `json:"point"`
 	Attachments      []Attachment `gorm:"many2many:assignment_template_attachments;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments"`
 	Tags             []Tag        `gorm:"many2many:assignment_template_tags;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"tags"`
-	AIAgent          bool         `gorm:"default:false" json:"ai_agent"`
-	AssignmentPrompt string       `json:"assignment_prompt"`
+	AIConfigID 		 *string 	  `gorm:"index" json:"ai_config_id,omitempty"`
+	AIConfig   		 *AIConfig    `gorm:"foreignKey:AIConfigID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
+	Prompt 			 *string 	  `json:"prompt,omitempty"`
 	CreatedBy        string       `gorm:"type:uuid" json:"created_by"`
 	CreatedAt        time.Time    `json:"created_at"`
 	UpdatedAt        time.Time    `json:"updated_at"`
 }
 
 type AIConfig struct {
-	ID              string    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
-	UserID          string    `gorm:"not null;uniqueIndex" json:"user_id"`
-	User            User      `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
-	Provider        string    `json:"provider"`
-	EncryptedAPIKey string    `json:"encrypted_api_key"`
-	BaseURL         string    `json:"base_url"`
-	Model           string    `json:"model"`
-	Temperature     float32   `json:"temperature"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID 				string 			`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	UserID 			string 			`gorm:"not null;index" json:"user_id"`
+	User   			User   			`gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Name 			string 			`gorm:"not null" json:"name"`
+	AICredentialID 	string 			`gorm:"not null;index" json:"ai_credential_id"`
+	AICredential   	AICredential 	`gorm:"foreignKey:AICredentialID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Model       	string  		`gorm:"not null" json:"model"`
+	Temperature 	float32 		`gorm:"default:0.2" json:"temperature"`
+	CreatedAt 		time.Time 		`json:"created_at"`
+	UpdatedAt 		time.Time 		`json:"updated_at"`
+}
+
+type AICredential struct {
+	ID 				string 		`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	UserID 			string 		`gorm:"not null;index" json:"user_id"`
+	User   			User   		`gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Name 			string 		`gorm:"not null" json:"name"`
+	Provider 		string 		`gorm:"not null" json:"provider"`
+	BaseURL 		string 		`gorm:"not null" json:"base_url"`
+	EncryptedAPIKey string 		`gorm:"not null" json:"-"`
+	CreatedAt 		time.Time 	`json:"created_at"`
+	UpdatedAt 		time.Time 	`json:"updated_at"`
+}
+
+type PromptTemplate struct {
+	ID 				string 		`gorm:"primaryKey;type:uuid;default:gen_random_uuid()" json:"id"`
+	UserID 			string 		`gorm:"not null;index" json:"user_id"`
+	User   			User   		`gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Name 			string 		`gorm:"not null" json:"name"`
+	Prompt 			string 		`gorm:"not null" json:"prompt"`
+	CreatedAt 		time.Time 	`json:"created_at"`
 }
 
 type GradingJob struct {

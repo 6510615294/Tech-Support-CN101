@@ -31,8 +31,8 @@ type AssignmentForm struct {
 	CloseDate        time.Time `form:"close"`
 	Tags             []string  `form:"tags"`
 	Attachments      []string  `form:"attachments"`
-	AIAgent          bool      `form:"ai_agent"`
-	AssignmentPrompt string    `form:"assignment_prompt"`
+	AIConfigID    	 *string   `form:"ai_config_id"`
+	Prompt 	 		 *string   `form:"prompt"`
 	Visible          bool      `form:"visible"`
 }
 
@@ -85,20 +85,27 @@ type AssignmentTemplateForm struct {
 	Point            int16    `json:"point" form:"point"`
 	Tags             []string `json:"tags" form:"tags"`
 	Attachments      []string `json:"attachments" form:"attachments"`
-	AIAgent          bool     `form:"ai_agent"`
-	AssignmentPrompt string   `form:"assignment_prompt"`
+	AIConfigID    	 *string   `form:"ai_config_id"`
+	Prompt 	 		 *string   `form:"prompt"`
+}
+
+type AICredentialForm struct {
+	Name        string  `json:"name" form:"name"`
+	Provider    string  `json:"provider" form:"provider"`
+	APIKey      string  `json:"api_key" form:"api_key"`
+	BaseURL     string  `json:"base_url" form:"base_url"`
 }
 
 type AIConfigForm struct {
-	Provider    string  `json:"provider" form:"provider"`
-	Model       string  `json:"model" form:"model"`
-	APIKey      string  `json:"api_key" form:"api_key"`
-	BaseURL     string  `json:"base_url" form:"base_url"`
-	Temperature float32 `json:"temperature" form:"temperature"`
+	Name		    string 	`json:"name" form:"name"`
+	AICredentialID	string  `json:"credential_id" form:"credential_id"`
+	Model       	string  `json:"model" form:"model"`
+	Temperature 	float32 `json:"temperature" form:"temperature"`
 }
 
-type AssignmentPromptForm struct {
-	Prompt string `json:"prompt" form:"prompt"`
+type PromptTemplateForm struct {
+	Name		    string 	`json:"name" form:"name"`
+	Prompt 			string 	`json:"prompt" form:"prompt"`
 }
 
 type AISubmissionForm struct {

@@ -4,15 +4,12 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"mime/multipart"
-	"net/http"
 
 	"time"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/logger"
-	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/errors"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/queue"
@@ -50,8 +47,8 @@ func CreateAssignment(
 		CloseDate:        form.CloseDate,
 		Attachments:      attachments,
 		Tags:             tags,
-		AIAgent:          form.AIAgent,
-		AssignmentPrompt: form.AssignmentPrompt,
+		AIConfigID:       form.AIConfigID,
+		Prompt: 		  form.Prompt,
 		Visible:          form.Visible,
 	}
 
@@ -172,26 +169,36 @@ func UpdateAssignment(
 	if form.Title != "" {
 		updates["title"] = form.Title
 	}
+	
 	if form.Description != "" {
 		updates["description"] = form.Description
 	}
+	
 	if form.Point > 0 {
 		updates["point"] = form.Point
 	}
+	
 	if !form.StartDate.IsZero() {
 		updates["start_date"] = form.StartDate
 	}
+	
 	if !form.DueDate.IsZero() {
 		updates["due_date"] = form.DueDate
 	}
+	
 	if !form.CloseDate.IsZero() {
 		updates["close_date"] = form.CloseDate
 	}
-	if form.AssignmentPrompt != "" {
-		updates["assignment_prompt"] = form.AssignmentPrompt
+	
+	if form.AIConfigID != nil {
+		updates["ai_config_id"] = form.AIConfigID
 	}
+	
+	if form.Prompt != nil {
+		updates["prompt"] = form.Prompt
+	}
+	
 	updates["visible"] = form.Visible
-	updates["ai_agent"] = form.AIAgent
 
 	if len(updates) > 0 {
 		if err := repository.UpdateAssignment(assignmentID, updates); err != nil {
@@ -332,9 +339,13 @@ func GetAssignmentSummary(courseID, assignmentID string) (*models.ResponseAssign
 }
 
 func AutoGradingAssignment(userID, courseID, assignmentID string) error {
-	_, err := repository.GetAssignment(courseID, assignmentID)
+	assignment, err := repository.GetAssignment(courseID, assignmentID)
 	if err != nil {
 		return err
+	}
+
+	if assignment.AIConfig == nil {
+		return errors.ErrAIConfigNotFound
 	}
 
 	job, _ := repository.GetGradingJob(assignmentID, userID)
@@ -357,98 +368,12 @@ func AutoGradingAssignment(userID, courseID, assignmentID string) error {
 	payload := queue.AutoGradingPayload{
 		AssignmentID: assignmentID,
 		TeacherID:    userID,
+		ForceRegade:  job != nil && job.Status == models.JobCompleted,
 	}
 
 	err = queue.EnqueueAutoGrading(payload)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func AutoGradingAssignmentN8N(userID, courseID, assignmentID string) error {
-	n8nURL := config.GetEnv("N8N_URL")
-
-	// Get assignment
-	assignment, err := repository.GetAssignment(courseID, assignmentID)
-	if err != nil {
-		return err
-	}
-
-	// Get AI config for user
-	aiConfig, err := repository.GetAIConfig(userID)
-	if err != nil {
-		return err
-	}
-
-	// Get submissions with attachments
-	submissions, err := repository.GetSubmissionsWithAttachments(assignmentID)
-	if err != nil {
-		return err
-	}
-
-	// Build N8NSubmissions array
-	n8nSubmissions := []models.AISubmissionForm{}
-	for i, submission := range submissions {
-		print(i)
-		answer := ""
-
-		// If submission has an attachment, download and read the text from S3
-		if submission.Attachment != nil {
-			fileBytes, err := storage.DownloadFile(submission.Attachment.FileKey)
-			if err != nil {
-				return err
-			}
-			answer = string(fileBytes)
-		}
-
-		n8nSubmission := models.AISubmissionForm{
-			SubmissionID: submission.ID,
-			Answer:       answer,
-		}
-		n8nSubmissions = append(n8nSubmissions, n8nSubmission)
-	}
-
-	// Build N8NForm
-	n8nForm := models.AIForm{
-		AIConfig: models.ResponseAIConfig{
-			Provider:       aiConfig.Provider,
-			Model:          aiConfig.Model,
-			BaseURL:        aiConfig.BaseURL,
-			Temperature:    aiConfig.Temperature,
-		},
-		MaxPoint:         assignment.Point,
-		AssignmentPrompt: assignment.AssignmentPrompt,
-		Submissions:      n8nSubmissions,
-	}
-
-	// Serialize to JSON
-	formBytes, err := json.Marshal(n8nForm)
-	if err != nil {
-		return err
-	}
-
-	// Send POST request to n8n URL
-	req, err := http.NewRequest("POST", n8nURL, bytes.NewBuffer(formBytes))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("n8n returned status %d", resp.StatusCode)
 	}
 
 	return nil

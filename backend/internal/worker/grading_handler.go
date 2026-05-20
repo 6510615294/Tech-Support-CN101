@@ -21,7 +21,10 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/storage"
 )
 
-var htmlTagRegex = regexp.MustCompile(`<[^>]*>`)
+var (
+	htmlTagRegex      = regexp.MustCompile(`<[^>]*>`)
+	jsonFenceRegex    = regexp.MustCompile("(?s)```(?:json)?\\s*\\n?(.*?)\\n?\\s*```")
+)
 
 func HandleAutoGrading(ctx context.Context, t *asynq.Task) error {
 	var payload queue.AutoGradingPayload
@@ -30,7 +33,7 @@ func HandleAutoGrading(ctx context.Context, t *asynq.Task) error {
 		return err
 	}
 
-	return runAutoGrading(payload.AssignmentID, payload.TeacherID)
+	return runAutoGrading(ctx, payload.AssignmentID, payload.TeacherID, payload.ForceRegade)
 }
 
 type aiPromptSubmission struct {
@@ -46,7 +49,10 @@ type aiGradingResult struct {
 	Comment string `json:"comment"`
 }
 
-func runAutoGrading(assignmentID string, teacherID string) error {
+func runAutoGrading(ctx context.Context, assignmentID string, teacherID string, forceRegade bool) error {
+	const gradedByAI = "ai"
+	const batchSize = 10
+
 	log := logger.Log
 
 	log.Info("auto_grading_attempt",
@@ -60,6 +66,7 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			"error", err,
 			"teacher_id", teacherID,
 			"assignment_id", assignmentID,
+			"reason", "Failed to fetch submissions from database",
 		)
 		return err
 	}
@@ -70,6 +77,7 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			"error", errors.ErrSubmissionNotFound,
 			"teacher_id", teacherID,
 			"assignment_id", assignmentID,
+			"reason", "No submissions found for assignment",
 		)
 		return errors.ErrSubmissionNotFound
 	}
@@ -80,33 +88,44 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			"error", err,
 			"teacher_id", teacherID,
 			"assignment_id", assignmentID,
+			"total", total,
+			"reason", "Failed to mark grading job as processing",
 		)
 		return err
 	}
 
-	maxPoint, assignmentPrompt, assignmentDescription, err := repository.GetAssignmentMaxPointPromptAndDescription(assignmentID)
+	assignment, err := repository.GetAssignmentWithAIConfig(assignmentID)
 	if err != nil {
 		log.Error("auto_grading_failed",
 			"error", err,
 			"teacher_id", teacherID,
 			"assignment_id", assignmentID,
+			"reason", "Failed to load assignment with AI config",
 		)
+		failErr := repository.FailGradingJob(assignmentID, teacherID, fmt.Sprintf("Failed to load assignment: %v", err))
+		if failErr != nil {
+			log.Error("auto_grading_fail_job_error", "error", failErr)
+		}
 		return err
 	}
-	assignmentDescription = sanitizeAssignmentDescription(assignmentDescription)
 
-	// Get teacher's AI config
-	aiConfig, err := repository.GetAIConfig(teacherID)
-	if err != nil {
-		log.Error("auto_grading_failed",
-			"error", err,
-			"teacher_id", teacherID,
-			"assignment_id", assignmentID,
-			"reason", "Failed to get AI config",
-		)
-		repository.FailGradingJob(assignmentID, teacherID, "Failed to get AI config: "+err.Error())
-		return err
+	assignmentDescription := sanitizeAssignmentDescription(assignment.Description)
+	assignmentPrompt := ""
+	if assignment.Prompt != nil {
+		assignmentPrompt = *assignment.Prompt
 	}
+	maxPoint := assignment.Point
+	aiConfig := assignment.AIConfig
+
+	log.Info("auto_grading_config_loaded",
+		"teacher_id", teacherID,
+		"assignment_id", assignmentID,
+		"model", aiConfig.Model,
+		"provider", aiConfig.AICredential.Provider,
+		"max_point", maxPoint,
+		"total_submissions", total,
+		"has_prompt", assignmentPrompt != "",
+	)
 
 	// Decrypt API key
 	key, err := getEncryptionKey()
@@ -115,28 +134,111 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			"error", err,
 			"teacher_id", teacherID,
 			"assignment_id", assignmentID,
-			"reason", "Failed to get encryption key",
+			"reason", "AI_SECRET_KEY not configured",
 		)
-		repository.FailGradingJob(assignmentID, teacherID, "Failed to get encryption key: "+err.Error())
+		failErr := repository.FailGradingJob(assignmentID, teacherID, fmt.Sprintf("Encryption key error: %v", err))
+		if failErr != nil {
+			log.Error("auto_grading_fail_job_error", "error", failErr)
+		}
 		return err
 	}
-	apiKey, err := security.Decrypt(aiConfig.EncryptedAPIKey, key)
+	apiKey, err := security.Decrypt(aiConfig.AICredential.EncryptedAPIKey, key)
 	if err != nil {
 		log.Error("auto_grading_failed",
 			"error", err,
 			"teacher_id", teacherID,
 			"assignment_id", assignmentID,
-			"reason", "Failed to decrypt API key",
+			"credential_id", aiConfig.AICredential.ID,
+			"reason", "Failed to decrypt AI API key – key may have changed since credential was saved",
 		)
-		repository.FailGradingJob(assignmentID, teacherID, "Failed to decrypt API key: "+err.Error())
+		failErr := repository.FailGradingJob(assignmentID, teacherID, fmt.Sprintf("API key decryption failed: %v", err))
+		if failErr != nil {
+			log.Error("auto_grading_fail_job_error", "error", failErr)
+		}
 		return err
 	}
 
-	// Process in batches of 10
-	batchSize := 10
-	for i := 0; i < len(submissions); i += batchSize {
-		end := min(i+batchSize, len(submissions))
-		batch := submissions[i:end]
+	// --- Idempotent / Re-grade handling ---
+	var pending []models.Submission
+	skippedCount := 0
+
+	if forceRegade {
+		log.Info("auto_grading_regrade_reset",
+			"teacher_id", teacherID,
+			"assignment_id", assignmentID,
+			"total", total,
+			"reason", "Force re-grade requested, clearing previous AI grades",
+		)
+		if err := repository.ResetAIGrades(assignmentID); err != nil {
+			log.Error("auto_grading_failed",
+				"error", err,
+				"teacher_id", teacherID,
+				"assignment_id", assignmentID,
+				"reason", "Failed to reset previous AI grades for re-grading",
+			)
+			failErr := repository.FailGradingJob(assignmentID, teacherID, fmt.Sprintf("Re-grade reset failed: %v", err))
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
+			return err
+		}
+		// After reset, all submissions need grading
+		pending = submissions
+	} else {
+		// Filter out submissions already graded by AI (idempotent skip)
+		for _, s := range submissions {
+			if s.GradedBy != nil && *s.GradedBy == gradedByAI {
+				skippedCount++
+				continue
+			}
+			pending = append(pending, s)
+		}
+		if skippedCount > 0 {
+			log.Info("auto_grading_skipped_already_graded",
+				"teacher_id", teacherID,
+				"assignment_id", assignmentID,
+				"skipped", skippedCount,
+				"pending", len(pending),
+			)
+		}
+
+		// If all submissions are already graded, complete immediately.
+		if len(pending) == 0 {
+			log.Info("auto_grading_nothing_to_do",
+				"teacher_id", teacherID,
+				"assignment_id", assignmentID,
+				"total", total,
+			)
+			if err := repository.CompleteGradingJob(assignmentID, teacherID); err != nil {
+				log.Error("auto_grading_failed",
+					"error", err,
+					"teacher_id", teacherID,
+					"assignment_id", assignmentID,
+					"reason", "Failed to complete grading job (no pending submissions)",
+				)
+				return err
+			}
+			return nil
+		}
+	}
+
+	// Track how many submissions have been processed overall (including pre-graded).
+	processedOverall := skippedCount
+	totalBatches := (len(pending) + batchSize - 1) / batchSize
+
+	for i := 0; i < len(pending); i += batchSize {
+		batchNum := i/batchSize + 1
+		end := min(i+batchSize, len(pending))
+		batch := pending[i:end]
+
+		log.Info("auto_grading_batch_start",
+			"teacher_id", teacherID,
+			"assignment_id", assignmentID,
+			"batch", batchNum,
+			"total_batches", totalBatches,
+			"batch_size", len(batch),
+			"pending_remaining", len(pending)-i,
+		)
 
 		// Prepare aiSubmissionForm list
 		aiSubmissionForm := make([]aiPromptSubmission, 0, len(batch))
@@ -144,16 +246,25 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 			answer := ""
 
 			if submission.Attachment != nil {
-				fileBytes, err := storage.DownloadFile(submission.Attachment.FileKey)
-				if err != nil {
+				fileBytes, dlErr := storage.DownloadFile(submission.Attachment.FileKey)
+				if dlErr != nil {
 					log.Error("auto_grading_failed",
-						"error", err,
+						"error", dlErr,
 						"teacher_id", teacherID,
 						"assignment_id", assignmentID,
 						"submission_id", submission.ID,
-						"reason", "Failed to download attachment",
+						"student_id", submission.StudentID,
+						"file_key", submission.Attachment.FileKey,
+						"batch", batchNum,
+						"reason", "Failed to download submission attachment from storage",
 					)
-					return err
+					failMsg := fmt.Sprintf("Batch %d: download failed for submission %s (file_key=%s): %v",
+						batchNum, submission.ID, submission.Attachment.FileKey, dlErr)
+					failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+					if failErr != nil {
+						log.Error("auto_grading_fail_job_error", "error", failErr)
+					}
+					return dlErr
 				}
 				answer = removePythonComments(string(fileBytes))
 			}
@@ -172,33 +283,44 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
-				"reason", "Failed to marshal submissions",
+				"batch", batchNum,
+				"reason", "Failed to marshal AI submission form to JSON",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to marshal submissions: "+err.Error())
+			failMsg := fmt.Sprintf("Batch %d: failed to marshal submissions: %v", batchNum, err)
+			failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
 			return err
 		}
 
 		// Prepare AI API request
-		prompt := buildGradingPrompt(assignmentPrompt, assignmentDescription, int(*maxPoint), string(submissionsJSON))
+		prompt := buildGradingPrompt(assignmentPrompt, assignmentDescription, int(maxPoint), string(submissionsJSON))
 
 		// Get AI provider
-		provider, err := ai.GetProvider(aiConfig.Provider)
+		provider, err := ai.GetProvider(aiConfig.AICredential.Provider)
 		if err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
-				"reason", "Failed to get AI provider",
+				"provider", aiConfig.AICredential.Provider,
+				"batch", batchNum,
+				"reason", "Unknown or unsupported AI provider",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to get AI provider: "+err.Error())
+			failMsg := fmt.Sprintf("Batch %d: unsupported provider %q: %v", batchNum, aiConfig.AICredential.Provider, err)
+			failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
 			return err
 		}
 
 		// Create credential
 		cred := ai.Credential{
-			Provider: aiConfig.Provider,
+			Provider: aiConfig.AICredential.Provider,
 			APIKey:   apiKey,
-			BaseURL:  aiConfig.BaseURL,
+			BaseURL:  aiConfig.AICredential.BaseURL,
 		}
 
 		// Create chat request
@@ -218,47 +340,87 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 		}
 
 		// Call AI API
-		chatResp, err := provider.Chat(context.Background(), cred, chatReq)
+		log.Info("auto_grading_ai_call",
+			"teacher_id", teacherID,
+			"assignment_id", assignmentID,
+			"batch", batchNum,
+			"model", aiConfig.Model,
+			"submission_count", len(batch),
+		)
+
+		chatResp, err := provider.Chat(ctx, cred, chatReq)
 		if err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
-				"reason", "Failed to call AI API",
+				"batch", batchNum,
+				"model", aiConfig.Model,
+				"provider", aiConfig.AICredential.Provider,
+				"submission_count", len(batch),
+				"reason", "AI API call failed",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to call AI API: "+err.Error())
+			failMsg := fmt.Sprintf("Batch %d: AI API call failed (model=%s, provider=%s): %v",
+				batchNum, aiConfig.Model, aiConfig.AICredential.Provider, err)
+			failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
 			return err
 		}
 
-		// Parse AI response and map it to trusted submission IDs from this batch.
+		// Strip markdown code fences if present, then parse JSON.
+		aiContent := extractJSON(chatResp.Content)
+
 		var aiGradingForms []aiGradingResult
-		if err := json.Unmarshal([]byte(chatResp.Content), &aiGradingForms); err != nil {
+		if err := json.Unmarshal([]byte(aiContent), &aiGradingForms); err != nil {
+			const snippetLen = 500
+			snippet := aiContent
+			if len(snippet) > snippetLen {
+				snippet = snippet[:snippetLen] + "... (truncated)"
+			}
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
-				"reason", "AI content is not a valid grading list",
+				"batch", batchNum,
+				"ai_response_snippet", snippet,
+				"ai_response_length", len(aiContent),
+				"reason", "AI response is not valid JSON",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "AI Content is not a valid Grading List: "+err.Error())
+			failMsg := fmt.Sprintf("Batch %d: AI returned invalid JSON (length=%d): %v. Response snippet: %s",
+				batchNum, len(aiContent), err, truncateString(aiContent, 300))
+			failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
 			return err
 		}
 
-		normalizedGradingForms, err := normalizeAIGradingResults(aiGradingForms, batch, int(*maxPoint))
+		normalizedGradingForms, err := normalizeAIGradingResults(aiGradingForms, batch, int(maxPoint))
 		if err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
-				"reason", "AI grading result cannot be mapped safely to submissions",
+				"batch", batchNum,
+				"ai_results_count", len(aiGradingForms),
+				"expected_count", len(batch),
+				"reason", "Cannot map AI grading results to submissions – index mismatch or missing items",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "AI grading result cannot be mapped safely to submissions: "+err.Error())
+			failMsg := fmt.Sprintf("Batch %d: result normalization failed (expected=%d, got=%d): %v",
+				batchNum, len(batch), len(aiGradingForms), err)
+			failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
 			return err
 		}
 
 		for _, gradingForm := range normalizedGradingForms {
 			err = repository.UpdateSubmission(gradingForm.SubmissionID, map[string]any{
 				"point":     gradingForm.Point,
-				"graded_by": "ai",
+				"graded_by": gradedByAI,
 			})
 			if err != nil {
 				log.Error("auto_grading_failed",
@@ -266,9 +428,14 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 					"teacher_id", teacherID,
 					"assignment_id", assignmentID,
 					"submission_id", gradingForm.SubmissionID,
-					"reason", "Failed to update submission",
+					"batch", batchNum,
+					"reason", "Failed to write grade to database",
 				)
-				repository.FailGradingJob(assignmentID, teacherID, "Failed to update submission: "+err.Error())
+				failMsg := fmt.Sprintf("Batch %d: failed to update submission %s: %v", batchNum, gradingForm.SubmissionID, err)
+				failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+				if failErr != nil {
+					log.Error("auto_grading_fail_job_error", "error", failErr)
+				}
 				return err
 			}
 
@@ -287,34 +454,70 @@ func runAutoGrading(assignmentID string, teacherID string) error {
 					"teacher_id", teacherID,
 					"assignment_id", assignmentID,
 					"submission_id", gradingForm.SubmissionID,
-					"reason", "Failed to create comment",
+					"batch", batchNum,
+					"reason", "Failed to write AI comment to database",
 				)
-				repository.FailGradingJob(assignmentID, teacherID, "Failed to create comment: "+err.Error())
+				failMsg := fmt.Sprintf("Batch %d: failed to create comment for submission %s: %v", batchNum, gradingForm.SubmissionID, err)
+				failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+				if failErr != nil {
+					log.Error("auto_grading_fail_job_error", "error", failErr)
+				}
 				return err
 			}
 		}
 
-		progress := int(float64(end) / float64(total) * 100)
-		err = repository.UpdateGradingJob(assignmentID, teacherID, progress, end)
+		processedOverall += len(batch)
+		progress := int(float64(processedOverall) / float64(total) * 100)
+		if progress > 100 {
+			progress = 100
+		}
+		err = repository.UpdateGradingJob(assignmentID, teacherID, progress, processedOverall)
 		if err != nil {
 			log.Error("auto_grading_failed",
 				"error", err,
 				"teacher_id", teacherID,
 				"assignment_id", assignmentID,
+				"batch", batchNum,
 				"progress", progress,
+				"processed", processedOverall,
 				"reason", "Failed to update grading job progress",
 			)
-			repository.FailGradingJob(assignmentID, teacherID, "Failed to update grading job progress: "+err.Error())
+			failMsg := fmt.Sprintf("Batch %d: failed to update job progress to %d%%: %v", batchNum, progress, err)
+			failErr := repository.FailGradingJob(assignmentID, teacherID, failMsg)
+			if failErr != nil {
+				log.Error("auto_grading_fail_job_error", "error", failErr)
+			}
 			return err
 		}
+
+		log.Info("auto_grading_batch_done",
+			"teacher_id", teacherID,
+			"assignment_id", assignmentID,
+			"batch", batchNum,
+			"total_batches", totalBatches,
+			"graded_in_batch", len(batch),
+			"processed_overall", processedOverall,
+			"progress", progress,
+		)
 	}
 
-	repository.CompleteGradingJob(assignmentID, teacherID)
+	if err := repository.CompleteGradingJob(assignmentID, teacherID); err != nil {
+		log.Error("auto_grading_failed",
+			"error", err,
+			"teacher_id", teacherID,
+			"assignment_id", assignmentID,
+			"reason", "Failed to mark grading job as completed",
+		)
+		return err
+	}
 
 	log.Info("auto_grading_success",
 		"teacher_id", teacherID,
 		"assignment_id", assignmentID,
 		"total_submissions", total,
+		"skipped_already_graded", skippedCount,
+		"newly_graded", len(pending),
+		"force_regrade", forceRegade,
 	)
 
 	return nil
@@ -501,6 +704,13 @@ func removePythonComments(code string) string {
 	inTripleDouble := false
 
 	for i < n {
+		// Handle escape sequences inside strings: always emit both chars and skip quote toggling.
+		if runes[i] == '\\' && i+1 < n && (inSingleQuote || inDoubleQuote || inTripleSingle || inTripleDouble) {
+			result = append(result, runes[i], runes[i+1])
+			i += 2
+			continue
+		}
+
 		// Check for triple single quotes
 		if i+2 < n && runes[i] == '\'' && runes[i+1] == '\'' && runes[i+2] == '\'' {
 			if inTripleSingle {
@@ -508,6 +718,7 @@ func removePythonComments(code string) string {
 			} else if !inDoubleQuote && !inTripleDouble {
 				inTripleSingle = true
 			}
+			result = append(result, runes[i:i+3]...)
 			i += 3
 			continue
 		}
@@ -519,18 +730,13 @@ func removePythonComments(code string) string {
 			} else if !inSingleQuote && !inTripleSingle {
 				inTripleDouble = true
 			}
+			result = append(result, runes[i:i+3]...)
 			i += 3
 			continue
 		}
 
-		// If we're inside triple quotes, skip content (don't add to result)
-		if inTripleSingle || inTripleDouble {
-			i++
-			continue
-		}
-
-		// Check for # comments (but not inside strings)
-		if runes[i] == '#' && !inSingleQuote && !inDoubleQuote {
+		// Check for # comments (but not inside any kind of string)
+		if runes[i] == '#' && !inSingleQuote && !inDoubleQuote && !inTripleSingle && !inTripleDouble {
 			// Skip to end of line
 			for i < n && runes[i] != '\n' {
 				i++
@@ -538,20 +744,36 @@ func removePythonComments(code string) string {
 			continue
 		}
 
-		// Track regular quotes
-		if runes[i] == '\'' && !inDoubleQuote {
+		// Track regular single quotes (mutually exclusive with double)
+		if runes[i] == '\'' && !inDoubleQuote && !inTripleSingle && !inTripleDouble {
 			inSingleQuote = !inSingleQuote
 		}
-		if runes[i] == '"' && !inSingleQuote {
+		if runes[i] == '"' && !inSingleQuote && !inTripleSingle && !inTripleDouble {
 			inDoubleQuote = !inDoubleQuote
 		}
 
-		// Add character to result
 		result = append(result, runes[i])
 		i++
 	}
 
 	return string(result)
+}
+
+// extractJSON strips markdown code fences (```json ... ```) from AI responses
+// and returns the raw JSON content.
+func extractJSON(raw string) string {
+	if m := jsonFenceRegex.FindStringSubmatch(raw); len(m) >= 2 {
+		return strings.TrimSpace(m[1])
+	}
+	return strings.TrimSpace(raw)
+}
+
+// truncateString returns s truncated to maxLen characters with "..." suffix if needed.
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 func getEncryptionKey() ([]byte, error) {

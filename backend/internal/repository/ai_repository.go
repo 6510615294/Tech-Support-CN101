@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	stderrors "errors"
 	"time"
 
@@ -11,15 +12,58 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/models"
 )
 
+func CreateAICredential(credential *models.AICredential) error {
+	return database.DB.Create(credential).Error
+}
+
+func GetAICredential(userID, id string) (*models.AICredential, error) {
+	var credential *models.AICredential
+
+	err := database.DB.
+		Where("user_id = ? AND id = ?", userID, id).
+		First(&credential).Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrAIConfigNotFound
+	}
+
+	return credential, err
+}
+
+func GetAICredentials(userID string) ([]models.AICredential, error) {
+	var credentials []models.AICredential
+
+	err := database.DB.
+		Where("user_id = ?", userID).
+		Find(&credentials).Error
+
+	return credentials, err
+}
+
+func UpdateAICredential(id string, updates map[string]any) error {
+	return database.DB.
+		Model(&models.AICredential{}).
+		Where("id = ?", id).
+		Updates(updates).
+		Error
+}
+
+func DeleteAICredential(id string) error {
+	return database.DB.
+		Delete(&models.AICredential{}, "id = ?", id).
+		Error
+}
+
 func CreateAIConfig(config *models.AIConfig) error {
 	return database.DB.Create(config).Error
 }
 
-func GetAIConfig(userID string) (*models.AIConfig, error) {
+func GetAIConfig(userID, aiConfigID string) (*models.AIConfig, error) {
 	var config *models.AIConfig
 
 	err := database.DB.
-		Where("user_id = ?", userID).
+		Preload("AICredential").
+		Where("user_id = ? AND ai_config_id = ?", userID, aiConfigID).
 		First(&config).Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
@@ -27,6 +71,17 @@ func GetAIConfig(userID string) (*models.AIConfig, error) {
 	}
 
 	return config, err
+}
+
+func GetAIConfigs(userID, aiCredentialID string) ([]models.AIConfig, error) {
+	var configs []models.AIConfig
+
+	err := database.DB.
+		Preload("AICredential").
+		Where("user_id = ? AND ai_credential_id = ?", userID, aiCredentialID).
+		Find(&configs).Error
+
+	return configs, err
 }
 
 func GetAIConfigByID(id string) (*models.AIConfig, error) {
@@ -169,4 +224,67 @@ func DeleteGradingJob(gradingJobID, teacherID string) error {
 	return database.DB.
 		Where("id = ? AND teacher_id = ?", gradingJobID, teacherID).
 		Delete(&models.GradingJob{}).Error
+}
+
+func CreatePromptTemplate(prompt *models.PromptTemplate) error {
+	return database.DB.Create(prompt).Error
+}
+
+func GetPromptTemplatesByUser(userID string) ([]models.PromptTemplate, error) {
+	var prompts []models.PromptTemplate
+
+	err := database.DB.
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&prompts).Error
+
+	return prompts, err
+}
+
+func GetPromptTemplateByID(userID, promptID string) (*models.PromptTemplate, error) {
+	var prompt models.PromptTemplate
+
+	err := database.DB.
+		Where("user_id = ? AND id = ?", userID, promptID).
+		First(&prompt).Error
+
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrPromptNotFound
+	}
+
+	return &prompt, err
+}
+
+func DeletePromptTemplateByID(userID, promptID string) error {
+	return database.DB.
+		Where("user_id = ? AND id = ?", userID, promptID).
+		Delete(&models.PromptTemplate{}).Error
+}
+
+// ResetAIGrades clears all AI-generated grades and comments for submissions
+// belonging to the given assignment, allowing them to be re-graded.
+func ResetAIGrades(assignmentID string) error {
+	// Clear AI comments first (they reference submissions)
+	if err := database.DB.
+		Where("submission_id IN (?) AND created_by_role = ?",
+			database.DB.Model(&models.Submission{}).
+				Select("id").
+				Where("assignment_id = ?", assignmentID),
+			models.RoleAI,
+		).
+		Delete(&models.Comment{}).Error; err != nil {
+		return fmt.Errorf("failed to delete AI comments: %w", err)
+	}
+
+	// Clear AI grades on submissions
+	if err := database.DB.Model(&models.Submission{}).
+		Where("assignment_id = ? AND graded_by = ?", assignmentID, "ai").
+		Updates(map[string]any{
+			"point":     nil,
+			"graded_by": nil,
+		}).Error; err != nil {
+		return fmt.Errorf("failed to reset AI grades: %w", err)
+	}
+
+	return nil
 }

@@ -42,8 +42,8 @@ type ResponseAssignment struct {
 	CloseDate        string               `json:"close_date"`
 	Attachments      []ResponseAttachment `json:"attachments"`
 	Tags             []string             `json:"tags"`
-	AIAgent          bool                 `json:"ai_agent"`
-	AssignmentPrompt string               `json:"assignment_prompt,omitempty"`
+	AIConfigID       string               `json:"ai_config_id"`
+	Prompt 			 string               `json:"prompt,omitempty"`
 	Visible          bool                 `json:"visible"`
 }
 
@@ -160,8 +160,8 @@ type ResponseAssignmentTemplates struct {
 	Point            int16                `json:"point"`
 	Attachments      []ResponseAttachment `json:"attachments"`
 	Tags             []string             `json:"tags"`
-	AIAgent          bool                 `json:"ai_agent"`
-	AssignmentPrompt string               `json:"assignment_prompt,omitempty"`
+	AIConfigID       string               `json:"ai_config_id"`
+	Prompt 			 string               `json:"prompt,omitempty"`
 }
 
 type ResponseShortAssignmentTemplates struct {
@@ -177,17 +177,26 @@ type ResponseAssignmentTemplate struct {
 	Point            int16                `json:"point"`
 	Attachments      []ResponseAttachment `json:"attachments"`
 	Tags             []string             `json:"tags"`
-	AIAgent          bool                 `json:"ai_agent"`
-	AssignmentPrompt string               `json:"assignment_prompt"`
+	AIConfigID       string               `json:"ai_config_id"`
+	Prompt 			 string               `json:"prompt,omitempty"`
 	Visible          bool                 `json:"visible"`
 }
 
+type ResponseAICredential struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Provider  string `json:"provider"`
+	BaseURL   string `json:"base_url"`
+	CreatedAt string `json:"created_at"`
+}
+
 type ResponseAIConfig struct {
-	Provider    string  `json:"provider"`
-	Model       string  `json:"model"`
-	BaseURL     string  `json:"base_url"`
-	Temperature float32 `json:"temperature"`
-	HasApiKey   bool    `json:"has_api_key"`
+	ID   			  string `json:"id"`
+	ConfigName        string  `json:"config_name"`
+	CredentialName    string  `json:"credential_name"`
+	Model       	  string  `json:"model"`
+	Temperature   	  float32 `json:"temperature"`
+	CreatedAt         string  `json:"created_at"`
 }
 
 type ResponseModel struct {
@@ -196,6 +205,7 @@ type ResponseModel struct {
 }
 
 type ResponsePrompt struct {
+	Name   string `json:"name"`
 	Prompt string `json:"prompt"`
 }
 

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	stderrors "errors"
 
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/ai"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/config"
@@ -12,6 +11,132 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/security"
 )
+
+func CreateAICredential(userID string, form *models.AICredentialForm) (*models.ResponseAICredential, error) {
+	key, err := getEncryptionKey()
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedAPIKey, err := security.Encrypt(form.APIKey, key)
+	if err != nil {
+		return nil, err
+	}
+
+	credential := &models.AICredential{
+		Name:            form.Name,
+		UserID:          userID,
+		Provider:        form.Provider,
+		BaseURL:         form.BaseURL,
+		EncryptedAPIKey: encryptedAPIKey,
+	}
+
+	err = repository.CreateAICredential(credential)
+	if err != nil {
+		return nil, err
+	}
+
+	const layout = "2006-01-02"
+
+	response := &models.ResponseAICredential{
+		ID:        credential.ID,
+		Name:      credential.Name,
+		Provider:  credential.Provider,
+		BaseURL:   credential.BaseURL,
+		CreatedAt: credential.CreatedAt.Format(layout),
+	}
+
+	return response, nil
+}
+
+func GetAICredentialsByUser(userID string) ([]models.ResponseAICredential, error) {
+	credentials, err := repository.GetAICredentials(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	const layout = "2006-01-02"
+
+	response := make([]models.ResponseAICredential, len(credentials))
+	for i, cred := range credentials {
+		response[i] = models.ResponseAICredential{
+			ID:        cred.ID,
+			Name:      cred.Name,
+			Provider:  cred.Provider,
+			BaseURL:   cred.BaseURL,
+			CreatedAt: cred.CreatedAt.Format(layout),
+		}
+	}
+
+	return response, nil
+}
+
+func UpdateAICredentialByID(userID, credentialID string, form *models.AICredentialForm) (*models.ResponseAICredential, error) {
+	credential, err := repository.GetAICredential(userID, credentialID)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := map[string]any{}
+
+	if form.Name != "" {
+		updates["name"] = form.Name
+	}
+
+	if form.Provider != "" {
+		updates["provider"] = form.Provider
+	}
+
+	if form.BaseURL != "" {
+		updates["base_url"] = form.BaseURL
+	}
+
+	if form.APIKey != "" {
+		key, err := getEncryptionKey()
+		if err != nil {
+			return nil, err
+		}
+
+		encryptedAPIKey, err := security.Encrypt(form.APIKey, key)
+		if err != nil {
+			return nil, err
+		}
+
+		updates["encrypted_api_key"] = encryptedAPIKey
+	}
+
+	if len(updates) > 0 {
+		if err := repository.UpdateAICredential(credential.ID, updates); err != nil {
+			return nil, err
+		}
+
+		credential, err = repository.GetAICredential(userID, credentialID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	const layout = "2006-01-02"
+
+	response := &models.ResponseAICredential{
+		ID:        credential.ID,
+		Name:      credential.Name,
+		Provider:  credential.Provider,
+		BaseURL:   credential.BaseURL,
+		CreatedAt: credential.CreatedAt.Format(layout),
+	}
+
+	return response, nil
+}
+
+func DeleteAICredentialByID(userID, credentialID string) error {
+	credential, err := repository.GetAICredential(userID, credentialID)
+	if err != nil {
+		return err
+	}
+
+	return repository.DeleteAICredential(credential.ID)
+}
 
 func getEncryptionKey() ([]byte, error) {
 	key := config.GetEnv("AI_SECRET_KEY")
@@ -23,37 +148,21 @@ func getEncryptionKey() ([]byte, error) {
 	return []byte(key), nil
 }
 
-func CreateAIConfig(userID string, form *models.AIConfigForm) (*models.ResponseAIConfig, error) {
-	// Check if config already exists for this user
-	_, err := repository.GetAIConfig(userID)
-	if err == nil {
-		return nil, errors.ErrAIConfigAlreadyExists
-	}
-	if !stderrors.Is(err, errors.ErrAIConfigNotFound) {
-		return nil, err
-	}
-
-	key, err := getEncryptionKey()
+func CreateAIConfig(userID, aiCredentialID string, form *models.AIConfigForm) (*models.ResponseAIConfig, error) {
+	credential, err := repository.GetAICredential(userID, aiCredentialID)
 	if err != nil {
 		return nil, err
 	}
 
-	encryptedKey, err := security.Encrypt(form.APIKey, key)
-	if err != nil {
-		return nil, err
-	}
-
-	// Set default values
 	temperature := form.Temperature
 	if temperature == 0 {
-		temperature = 1.0
+		temperature = 0.2
 	}
 
 	config := &models.AIConfig{
+		Name: 			 form.Name,
 		UserID:          userID,
-		Provider:        form.Provider,
-		EncryptedAPIKey: encryptedKey,
-		BaseURL:         form.BaseURL,
+		AICredentialID:  credential.ID,
 		Model:           form.Model,
 		Temperature:     temperature,
 	}
@@ -62,80 +171,55 @@ func CreateAIConfig(userID string, form *models.AIConfigForm) (*models.ResponseA
 	if err != nil {
 		return nil, err
 	}
-	
-	hasApiKey := false
-	if form.APIKey != "" {
-		hasApiKey = true
-	}
 
 	response := models.ResponseAIConfig{
-		Provider:       form.Provider,
-		BaseURL:        form.BaseURL,
+		ConfigName:     form.Name,
+		CredentialName:	credential.Name,
 		Model:          form.Model,
 		Temperature:    temperature,
-		HasApiKey:      hasApiKey,
 	}
 
 	return &response, nil
 }
 
-func GetAIConfig(userID string) (*models.ResponseAIConfig, error) {
-	config, err := repository.GetAIConfig(userID)
+func GetAIConfigs(userID, aiCredentialID string) ([]models.ResponseAIConfig, error) {
+	configs, err := repository.GetAIConfigs(userID, aiCredentialID)
 	if err != nil {
 		return nil, err
 	}
-	
-	hasApiKey := false
-	if config.EncryptedAPIKey != "" {
-		hasApiKey = true
-	}
 
-	response := models.ResponseAIConfig{
-		Provider:       config.Provider,
-		BaseURL:        config.BaseURL,
-		Model:          config.Model,
-		Temperature:    config.Temperature,
-		HasApiKey:      hasApiKey,
-	}
+	response := models.ConvertAIConfigsToResponse(configs)
 
-	return &response, nil
+	return response, nil
 }
 
 func UpdateAIConfig(
-	userID string,
+	userID,
+	aiConfigID string,
 	form *models.AIConfigForm,
 ) (*models.ResponseAIConfig, error) {
-	config, err := repository.GetAIConfig(userID)
+	config, err := repository.GetAIConfig(userID, aiConfigID)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = repository.GetAICredential(userID, form.AICredentialID)
 	if err != nil {
 		return nil, err
 	}
 
 	updates := map[string]any{}
 
-	if form.Provider != "" {
-		updates["provider"] = form.Provider
+	if form.Name != "" {
+		updates["name"] = form.Name
+	}
+
+	if form.AICredentialID != "" {
+		updates["ai_credential_id"] = form.AICredentialID
 	}
 
 	if form.Model != "" {
 		updates["model"] = form.Model
-	}
-
-	if form.APIKey != "" {
-		key, err := getEncryptionKey()
-		if err != nil {
-			return nil, err
-		}
-
-		encryptedKey, err := security.Encrypt(form.APIKey, key)
-		if err != nil {
-			return nil, err
-		}
-
-		updates["encrypted_api_key"] = encryptedKey
-	}
-
-	if form.BaseURL != "" {
-		updates["base_url"] = form.BaseURL
 	}
 
 	updates["temperature"] = form.Temperature
@@ -145,30 +229,23 @@ func UpdateAIConfig(
 			return nil, err
 		}
 
-		config, err = repository.GetAIConfigByID(config.ID)
+		config, err = repository.GetAIConfig(userID, aiConfigID)
 		if err != nil {
 			return nil, err
 		}
 	}
-	
-	hasApiKey := false
-	if config.EncryptedAPIKey != "" {
-		hasApiKey = true
-	}
 
 	response := models.ResponseAIConfig{
-		Provider:       config.Provider,
-		BaseURL:        config.BaseURL,
+		ConfigName:     config.Name,
+		CredentialName:	config.AICredential.Name,
 		Model:          config.Model,
 		Temperature:    config.Temperature,
-		HasApiKey:      hasApiKey,
 	}
-
 	return &response, nil
 }
 
-func DeleteAIConfig(userID string) error {
-	config, err := repository.GetAIConfig(userID)
+func DeleteAIConfig(userID, aiConfigID string) error {
+	config, err := repository.GetAIConfig(userID, aiConfigID)
 	if err != nil {
 		return err
 	}
@@ -176,9 +253,9 @@ func DeleteAIConfig(userID string) error {
 	return repository.DeleteAIConfig(config.ID)
 }
 
-func GetModels(userID string) ([]models.ResponseModel, error) {
+func GetModels(userID, aiCredentialID string) ([]models.ResponseModel, error) {
 	// Get user's AI config
-	config, err := repository.GetAIConfig(userID)
+	credential, err := repository.GetAICredential(userID, aiCredentialID)
 	if err != nil {
 		return nil, err
 	}
@@ -189,25 +266,25 @@ func GetModels(userID string) ([]models.ResponseModel, error) {
 		return nil, err
 	}
 
-	apiKey, err := security.Decrypt(config.EncryptedAPIKey, key)
+	apiKey, err := security.Decrypt(credential.EncryptedAPIKey, key)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create credential
-	credential := ai.Credential{
-		Provider: config.Provider,
+	credentialPayload := ai.Credential{
+		Provider: credential.Provider,
 		APIKey:   apiKey,
-		BaseURL:  config.BaseURL,
+		BaseURL:  credential.BaseURL,
 	}
 
 	
-	provider, err := ai.GetProvider(config.Provider)
+	provider, err := ai.GetProvider(credential.Provider)
 	if err != nil {
 		return nil, err
 	}
 	
-	modelList, err := provider.ListModels(context.Background(), credential)
+	modelList, err := provider.ListModels(context.Background(), credentialPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -240,6 +317,49 @@ func GetGradingJobs(teacherID string) (*models.GradingJobsResponse, error) {
 	}
 
 	return &models.GradingJobsResponse{Jobs: jobs}, nil
+}
+
+func CreatePromptTemplate(userID string, form *models.PromptTemplateForm) (*models.ResponsePrompt, error) {
+	prompt := &models.PromptTemplate{
+		UserID: userID,
+		Name:   form.Name,
+		Prompt: form.Prompt,
+	}
+
+	if err := repository.CreatePromptTemplate(prompt); err != nil {
+		return nil, err
+	}
+
+	return &models.ResponsePrompt{
+		Name:   prompt.Name,
+		Prompt: prompt.Prompt,
+	}, nil
+}
+
+func GetPromptTemplates(userID string) ([]models.ResponsePrompt, error) {
+	prompts, err := repository.GetPromptTemplatesByUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := make([]models.ResponsePrompt, len(prompts))
+	for i, p := range prompts {
+		response[i] = models.ResponsePrompt{
+			Name:   p.Name,
+			Prompt: p.Prompt,
+		}
+	}
+
+	return response, nil
+}
+
+func DeletePromptTemplate(userID, promptID string) error {
+	_, err := repository.GetPromptTemplateByID(userID, promptID)
+	if err != nil {
+		return err
+	}
+
+	return repository.DeletePromptTemplateByID(userID, promptID)
 }
 
 func DeleteGradingJob(gradingJobID, teacherID string) error {

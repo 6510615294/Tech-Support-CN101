@@ -4,6 +4,13 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/ai"
 )
 
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func ConvertCourseToResponse(course *Course) ResponseCourse {
 	return ResponseCourse{
 		ID:         course.ID,
@@ -83,8 +90,8 @@ func ConvertAssignmentToResponse(
 		CloseDate:        closeDate.Format(layout),
 		Attachments:      attachments,
 		Tags:             tagNames,
-		AIAgent:          a.AIAgent,
-		AssignmentPrompt: a.AssignmentPrompt,
+		AIConfigID:       derefString(a.AIConfigID),
+		Prompt: 		  derefString(a.Prompt),
 		Visible:          a.Visible,
 	}
 }
@@ -149,8 +156,8 @@ func ConvertDetailedAssignmentToResponse(
 		CloseDate:        closeDate.Format(layout),
 		Attachments:      attachments,
 		Tags:             tagNames,
-		AIAgent:          a.AIAgent,
-		AssignmentPrompt: a.AssignmentPrompt,
+		AIConfigID:       derefString(a.AIConfigID),
+		Prompt: 		  derefString(a.Prompt),
 		Visible:          a.Visible,
 	}
 
@@ -244,8 +251,8 @@ func ConvertAssignmentTemplatesToResponse(
 			Point:            template.Point,
 			Attachments:      attachments,
 			Tags:             tagNames,
-			AIAgent:          template.AIAgent,
-			AssignmentPrompt: template.AssignmentPrompt,
+			AIConfigID:       derefString(template.AIConfigID),
+			Prompt: 		  derefString(template.Prompt),
 		}
 
 		response = append(response, data)
@@ -325,8 +332,8 @@ func ConvertAssignmentTemplateToResponse(
 		Point:            template.Point,
 		Attachments:      attachments,
 		Tags:             tagNames,
-		AIAgent:          template.AIAgent,
-		AssignmentPrompt: template.AssignmentPrompt,
+		AIConfigID:       derefString(template.AIConfigID),
+		Prompt: 		  derefString(template.Prompt),
 		Visible:          true,
 	}
 
@@ -346,6 +353,26 @@ func ConvertAttachmentsToResponse(
 			FileType:  att.FileType,
 			Size:      att.Size,
 			CreatedAt: att.CreatedAt.Format(layout),
+		}
+	}
+
+	return response
+}
+
+func ConvertAIConfigsToResponse(
+	configs []AIConfig,
+) []ResponseAIConfig {
+	const layout = "2006-01-02"
+
+	response := make([]ResponseAIConfig, len(configs))
+	for i, cf := range configs {
+		response[i] = ResponseAIConfig{
+			ID:        		cf.ID,
+			ConfigName: 	cf.Name,
+			CredentialName: cf.AICredential.Name,
+			Model: 			cf.Model,
+			Temperature: 	cf.Temperature,
+			CreatedAt: 		cf.CreatedAt.Format(layout),
 		}
 	}
 

@@ -34,7 +34,9 @@ func Connect() {
 		&models.Comment{},
 		&models.AssignmentOverride{},
 		&models.AssignmentTemplate{},
+		&models.AICredential{},
 		&models.AIConfig{},
+		&models.PromptTemplate{},
 		&models.GradingJob{},
 	); err != nil {
 		log.Fatal("Failed to migrate database:", err)
