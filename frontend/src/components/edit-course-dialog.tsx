@@ -19,8 +19,6 @@ import { toast } from "sonner"
 interface Course {
   id: string
   name: string
-  schedule?: string
-  course_date?: string
   course_code: string
   day_of_week: string
   start_time: string
@@ -59,14 +57,12 @@ function parseCourseSchedule(schedule?: string) {
 }
 
 function buildInitialForm(course: Course): CourseFormState {
-  const legacy = course.day_of_week ? {} : parseCourseSchedule(course.schedule || course.course_date)
-
   return {
     name: course.name || "",
     course_code: course.course_code || "",
-    day_of_week: course.day_of_week || legacy.day_of_week || "",
-    start_time: course.start_time || legacy.start_time || "",
-    end_time: course.end_time || legacy.end_time || "",
+    day_of_week: course.day_of_week || "",
+    start_time: course.start_time || "",
+    end_time: course.end_time || "",
     room: course.room || "",
     credits: course.credits ? String(course.credits) : "",
     section: course.section || "",

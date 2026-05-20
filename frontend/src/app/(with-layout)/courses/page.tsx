@@ -27,22 +27,18 @@ import { toast } from "sonner"
 type Course = {
   id: string;
   name: string;
-  schedule?: string;
-  course_date?: string;
-  course_code?: string;
-  day_of_week?: string;
-  start_time?: string;
-  end_time?: string;
-  room?: string;
-  credits?: number;
+  course_code: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  room: string;
+  credits: number;
   section: string;
   semester: string;
   teacher: string;
 };
 
 function formatCourseSchedule(course: Course) {
-  const legacySchedule = course.schedule || course.course_date || ""
-
   const pieces = [
     course.course_code,
     course.day_of_week,
@@ -55,8 +51,6 @@ function formatCourseSchedule(course: Course) {
   if (pieces.length > 0) {
     return pieces.join(" • ")
   }
-
-  return legacySchedule || "Schedule not set"
 }
 
 export default function Page() {
