@@ -160,11 +160,11 @@ func CreateAIConfig(userID, aiCredentialID string, form *models.AIConfigForm) (*
 	}
 
 	config := &models.AIConfig{
-		Name: 			 form.Name,
-		UserID:          userID,
-		AICredentialID:  credential.ID,
-		Model:           form.Model,
-		Temperature:     temperature,
+		Name:           form.Name,
+		UserID:         userID,
+		AICredentialID: credential.ID,
+		Model:          form.Model,
+		Temperature:    temperature,
 	}
 
 	err = repository.CreateAIConfig(config)
@@ -174,7 +174,7 @@ func CreateAIConfig(userID, aiCredentialID string, form *models.AIConfigForm) (*
 
 	response := models.ResponseAIConfig{
 		ConfigName:     form.Name,
-		CredentialName:	credential.Name,
+		CredentialName: credential.Name,
 		Model:          form.Model,
 		Temperature:    temperature,
 	}
@@ -189,6 +189,27 @@ func GetAIConfigs(userID, aiCredentialID string) ([]models.ResponseAIConfig, err
 	}
 
 	response := models.ConvertAIConfigsToResponse(configs)
+
+	return response, nil
+}
+
+func GetAIConfigByID(userID, aiConfigID string) (*models.ResponseAIConfig, error) {
+	config, err := repository.GetAIConfigByID(userID, aiConfigID)
+	if err != nil {
+		return nil, err
+	}
+
+	const layout = "2006-01-02"
+
+	response := &models.ResponseAIConfig{
+		ID:             config.ID,
+		CredentialID:   config.AICredentialID,
+		ConfigName:     config.Name,
+		CredentialName: config.AICredential.Name,
+		Model:          config.Model,
+		Temperature:    config.Temperature,
+		CreatedAt:      config.CreatedAt.Format(layout),
+	}
 
 	return response, nil
 }
@@ -236,10 +257,13 @@ func UpdateAIConfig(
 	}
 
 	response := models.ResponseAIConfig{
+		ID:             config.ID,
+		CredentialID:   config.AICredentialID,
 		ConfigName:     config.Name,
-		CredentialName:	config.AICredential.Name,
+		CredentialName: config.AICredential.Name,
 		Model:          config.Model,
 		Temperature:    config.Temperature,
+		CreatedAt:      config.CreatedAt.Format("2006-01-02"),
 	}
 	return &response, nil
 }
@@ -278,17 +302,16 @@ func GetModels(userID, aiCredentialID string) ([]models.ResponseModel, error) {
 		BaseURL:  credential.BaseURL,
 	}
 
-	
 	provider, err := ai.GetProvider(credential.Provider)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	modelList, err := provider.ListModels(context.Background(), credentialPayload)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return models.ConvertAIModelsToResponse(modelList), nil
 }
 

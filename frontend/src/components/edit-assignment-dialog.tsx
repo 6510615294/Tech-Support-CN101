@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,7 +20,14 @@ import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { X, Paperclip, Upload, FolderOpen, FileText, File as FileIcon, Search, Pencil } from "lucide-react"
+import { X, Paperclip, Upload, FolderOpen, FileText, File as FileIcon, Search, Pencil, ChevronDown, ChevronRight, Bot, ArrowUpRight } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { TipTapTextEditor } from "./ui/tiptap"
 import { toast } from "sonner"
 import SmartDatetimePickerByTui from "./smart-datetime-input2"
@@ -43,8 +50,8 @@ type Assignment = {
   due_date: string
   close_date: string
   tags: string[]
-  ai_agent: boolean
-  assignment_prompt: string
+  ai_config_id: string
+  prompt: string
   visible: boolean
 }
 
@@ -61,8 +68,8 @@ type AssignmentForm = {
   start_date: Date | null
   due_date: Date | null
   close_date: Date | null
-  ai_agent: boolean
-  assignment_prompt: string
+  ai_config_id: string
+  prompt: string
   visible: boolean
 }
 
@@ -73,8 +80,8 @@ const DEFAULT_FORM: AssignmentForm = {
   start_date: null,
   due_date: null,
   close_date: null,
-  ai_agent: false,
-  assignment_prompt: "",
+  ai_config_id: "",
+  prompt: "",
   visible: true,
 }
 
@@ -90,6 +97,15 @@ export function EditAssignmentDialog({
   const [tags, setTags] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // AI setup
+  const [credentials, setCredentials] = useState<any[]>([])
+  const [configs, setConfigs] = useState<any[]>([])
+  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false)
+  const [isLoadingConfigs, setIsLoadingConfigs] = useState(false)
+  const [selectedCredentialId, setSelectedCredentialId] = useState("")
+  const [selectedConfigId, setSelectedConfigId] = useState("")
+  const [promptSectionOpen, setPromptSectionOpen] = useState(false)
 
   // Attachments
   const [selectedAttachments, setSelectedAttachments] = useState<Attachment[]>([])
@@ -119,6 +135,108 @@ export function EditAssignmentDialog({
     if (mime.includes("pdf") || mime.includes("word")) return FileText
     return FileIcon
   }
+
+  const fetchCredentials = async () => {
+    if (!user?.token) return
+    setIsLoadingCredentials(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+      if (!res.ok) throw new Error("Failed to load AI credentials")
+      const data = await res.json()
+      const next = Array.isArray(data) ? data : []
+      setCredentials(next)
+      setSelectedCredentialId((cur) => (next.length === 0 ? "" : next.some((c: any) => c.id === cur) ? cur : next[0].id))
+    } catch {
+      setCredentials([])
+      setSelectedCredentialId("")
+    } finally {
+      setIsLoadingCredentials(false)
+    }
+  }
+
+  const fetchConfigs = async (credentialId: string) => {
+    if (!user?.token || !credentialId) {
+      setConfigs([])
+      return
+    }
+    setIsLoadingConfigs(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/configs/${credentialId}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+      if (!res.ok) throw new Error("Failed to load AI configs")
+      const data = await res.json()
+      setConfigs(Array.isArray(data) ? data : [])
+    } catch {
+      setConfigs([])
+    } finally {
+      setIsLoadingConfigs(false)
+    }
+  }
+
+  const fetchConfigDetail = async (configId: string) => {
+    if (!user?.token || !configId) return
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/configs/detail/${configId}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+      if (!res.ok) throw new Error("Failed to load AI config")
+      const data = await res.json()
+      if (data?.credential_id) {
+        setSelectedCredentialId(data.credential_id)
+      }
+      if (data?.id) {
+        setSelectedConfigId(data.id)
+      }
+      if (typeof data?.id === "string") {
+        setForm((prev) => ({
+          ...prev,
+          ai_config_id: data.id,
+          prompt: (assignment as any).prompt ?? prev.prompt,
+        }))
+      }
+      if (data?.id) {
+        setPromptSectionOpen(true)
+      }
+    } catch {
+      // Keep the assignment prompt in the form even if config detail lookup fails.
+    }
+  }
+
+  useEffect(() => {
+    if (open) void fetchCredentials()
+  }, [open])
+
+  useEffect(() => {
+    if (open && (assignment as any).ai_config_id) {
+      void fetchConfigDetail((assignment as any).ai_config_id)
+    }
+  }, [open, assignment])
+
+  useEffect(() => {
+    if (!selectedCredentialId) {
+      setConfigs([])
+      setForm((prev) => ({ ...prev, ai_config_id: "", prompt: "" }))
+      return
+    }
+    void fetchConfigs(selectedCredentialId)
+  }, [selectedCredentialId])
+
+  useEffect(() => {
+    if (!selectedConfigId) return
+    setPromptSectionOpen(true)
+  }, [selectedConfigId])
+
+  useEffect(() => {
+    if (!selectedConfigId || isLoadingConfigs) return
+    const exists = configs.some((c) => c.id === selectedConfigId)
+    if (!exists) {
+      setSelectedConfigId("")
+      setForm((prev) => ({ ...prev, ai_config_id: "", prompt: "" }))
+    }
+  }, [configs, selectedConfigId, isLoadingConfigs])
 
   const fetchExistingAttachments = async () => {
     if (existingAttachments.length > 0) return
@@ -176,8 +294,9 @@ export function EditAssignmentDialog({
       e.due_date = "Due date must be after start date"
     if (form.due_date && form.close_date && form.close_date < form.due_date)
       e.close_date = "Close date must be on or after due date"
-    if (form.ai_agent && !(form.assignment_prompt ?? "").trim())
-      e.assignment_prompt = "Prompt is required when AI Agent is enabled"
+    if ((form.prompt ?? "").trim() && !form.ai_config_id) {
+      e.ai_config_id = "Select an AI config before adding a prompt"
+    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -196,8 +315,12 @@ export function EditAssignmentDialog({
       formData.append("start", form.start_date.toISOString())
       formData.append("due", form.due_date.toISOString())
       formData.append("close", form.close_date.toISOString())
-      formData.append("ai_agent", String(form.ai_agent))
-      formData.append("assignment_prompt", String(form.assignment_prompt))
+      if (form.ai_config_id) {
+        formData.append("ai_config_id", form.ai_config_id)
+      }
+      if ((form.prompt ?? "").trim()) {
+        formData.append("prompt", form.prompt)
+      }
       formData.append("visible", String(form.visible))
 
       if (tags) {
@@ -259,8 +382,8 @@ export function EditAssignmentDialog({
         start_date: assignment.start_date ? new Date(assignment.start_date) : null,
         due_date: assignment.due_date ? new Date(assignment.due_date) : null,
         close_date: assignment.close_date ? new Date(assignment.close_date) : null,
-        ai_agent: assignment.ai_agent,
-        assignment_prompt: assignment.assignment_prompt,
+        ai_config_id: (assignment as any).ai_config_id ?? "",
+        prompt: (assignment as any).prompt ?? "",
         visible: assignment.visible,
       })
       setTags(assignment.tags || [])
@@ -269,11 +392,13 @@ export function EditAssignmentDialog({
       setTagInput("")
       setErrors({})
       setAttachmentTabOpen(false)
+      setPromptSectionOpen(Boolean((assignment as any).ai_config_id || (assignment as any).prompt))
     } else {
       setErrors({})
       setSelectedAttachments([])
       setUploadedFiles([])
       setAttachmentTabOpen(false)
+      setPromptSectionOpen(false)
     }
   }
 
@@ -560,55 +685,143 @@ export function EditAssignmentDialog({
               </div>
             </div>
 
-            {/* AI Agent toggle */}
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label className="text-base">Visible to Students</Label>
-                <p className="text-sm text-muted-foreground">
-                  When off, the assignment is hidden from students until you turn this on
-                </p>
+            <div className="grid gap-3 rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-base">AI setup</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Pick a credential first, then a config, then write the prompt.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button asChild variant="outline" size="sm" className="shrink-0 gap-2">
+                    <a href="/ai/settings" target="_blank" rel="noreferrer">
+                      AI settings
+                      <ArrowUpRight className="h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 gap-2"
+                    onClick={() => setPromptSectionOpen((value) => !value)}
+                  >
+                    {promptSectionOpen ? "Hide" : "Show"}
+                    {promptSectionOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
-              <Switch
-                checked={form.visible}
-                onCheckedChange={(val) => set("visible", val)}
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label className="text-base">AI Agent</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable an AI agent to assist or evaluate submissions
-                </p>
-              </div>
-              <Switch
-                checked={form.ai_agent}
-                onCheckedChange={(val) => set("ai_agent", val)}
-              />
-            </div>
 
-            {/* AI Prompt — only shown when AI Agent is on */}
-            {form.ai_agent && (
-              <div className="grid gap-1.5">
-                <Label htmlFor="assignment_prompt">
-                  AI Prompt <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="assignment_prompt"
-                  placeholder={`อธิบายงานที่ AI ต้องทำให้ชัดเจน เช่น
-- ให้ตรวจอะไรบ้าง และต้องอ้างอิงเกณฑ์ไหน
-- ต้องตอบเป็น paragraph, bullet points, หรือทั้งคู่
-- ต้องใช้ภาษาอะไร เช่น ไทย/อังกฤษ/ผสม
-- มีเกณฑ์ให้คะแนนไหม และคะแนนเต็มเท่าไร
-- ต้องเน้นความถูกต้อง, ความครบถ้วน, หรือความสั้นกระชับ`}
-                  rows={4}
-                  value={form.assignment_prompt}
-                  onChange={(e) => set("assignment_prompt", e.target.value)}
-                />
-                {errors.assignment_prompt && (
-                  <p className="text-xs text-destructive">{errors.assignment_prompt}</p>
-                )}
-              </div>
-            )}
+              {promptSectionOpen && (
+                <>
+                  {isLoadingCredentials ? (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                      <Spinner className="h-4 w-4" />
+                      Loading AI credentials...
+                    </div>
+                  ) : credentials.length === 0 ? (
+                    <div className="rounded-md border p-3">
+                      <p className="text-sm text-muted-foreground">No AI credential profiles found. Open AI settings in a new tab to create a credential and config first.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="ai_credential_id">AI credential</Label>
+                        <Select
+                          value={selectedCredentialId}
+                          onValueChange={(value) => {
+                            setSelectedCredentialId(value)
+                            setSelectedConfigId("")
+                            setForm((prev) => ({ ...prev, ai_config_id: "", prompt: "" }))
+                          }}
+                        >
+                          <SelectTrigger id="ai_credential_id" className="w-full justify-between">
+                            <SelectValue placeholder="Select an AI credential" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {credentials.map((credential) => (
+                              <SelectItem key={credential.id} value={credential.id}>
+                                {credential.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedCredentialId && (
+                          <p className="text-xs text-muted-foreground">Provider: {credentials.find(c => c.id === selectedCredentialId)?.provider}</p>
+                        )}
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="ai_config_id">AI config</Label>
+                        {isLoadingConfigs ? (
+                          <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                            <Spinner className="h-4 w-4" />
+                            Loading AI configs...
+                          </div>
+                        ) : configs.length === 0 ? (
+                          <div className="rounded-md border p-3">
+                            <p className="text-sm text-muted-foreground">No configs found for this credential. Open AI settings to create one.</p>
+                          </div>
+                        ) : (
+                          <Select
+                            value={selectedConfigId}
+                            onValueChange={(value) => {
+                              setSelectedConfigId(value)
+                              setForm((prev) => ({ ...prev, ai_config_id: value, prompt: "" }))
+                            }}
+                          >
+                            <SelectTrigger id="ai_config_id" className="w-full justify-between">
+                              <SelectValue placeholder="Select an AI config" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {configs.map((config) => (
+                                <SelectItem key={config.id} value={config.id}>
+                                  {config.config_name} · {config.model}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {selectedConfigId && (
+                          <p className="text-xs text-muted-foreground">
+                            Using {configs.find(c => c.id === selectedConfigId)?.model} from {configs.find(c => c.id === selectedConfigId)?.credential_name}.
+                          </p>
+                        )}
+                        {errors.ai_config_id && (
+                          <p className="text-xs text-destructive">{errors.ai_config_id}</p>
+                        )}
+                      </div>
+
+                      {selectedConfigId && (
+                        <div className="grid gap-3 rounded-md border bg-muted/20 p-3">
+                          <div>
+                            <Label className="text-sm">Prompt</Label>
+                            <p className="text-xs text-muted-foreground">
+                              This prompt is sent with the selected config.
+                            </p>
+                          </div>
+
+                          <Textarea
+                            id="prompt"
+                            rows={4}
+                            value={form.prompt}
+                            onChange={(e) => set("prompt", e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
             {errors.submit && (
               <p className="text-sm text-destructive">{errors.submit}</p>

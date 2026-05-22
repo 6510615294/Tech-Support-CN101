@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"fmt"
 	stderrors "errors"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -63,7 +63,7 @@ func GetAIConfig(userID, aiConfigID string) (*models.AIConfig, error) {
 
 	err := database.DB.
 		Preload("AICredential").
-		Where("user_id = ? AND ai_config_id = ?", userID, aiConfigID).
+		Where("user_id = ? AND id = ?", userID, aiConfigID).
 		First(&config).Error
 
 	if stderrors.Is(err, gorm.ErrRecordNotFound) {
@@ -84,14 +84,19 @@ func GetAIConfigs(userID, aiCredentialID string) ([]models.AIConfig, error) {
 	return configs, err
 }
 
-func GetAIConfigByID(id string) (*models.AIConfig, error) {
-	var config *models.AIConfig
+func GetAIConfigByID(userID, aiConfigID string) (*models.AIConfig, error) {
+	var config models.AIConfig
 
 	err := database.DB.
-		Where("id = ?", id).
+		Preload("AICredential").
+		Where("user_id = ? AND id = ?", userID, aiConfigID).
 		First(&config).Error
 
-	return config, err
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.ErrAIConfigNotFound
+	}
+
+	return &config, err
 }
 
 func UpdateAIConfig(userID string, updates map[string]any) error {

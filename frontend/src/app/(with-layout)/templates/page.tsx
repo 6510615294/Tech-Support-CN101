@@ -37,7 +37,9 @@ import {
   Pencil,
   ArrowRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  ArrowUpRight,
 } from "lucide-react"
 import { BreadcrumbNav } from "@/components/breadcrumb-nav"
 import { getFileIcon } from "@/lib/file"
@@ -87,8 +89,16 @@ type AssignmentTemplate = {
   point: number
   attachments: Attachment[]
   tags: string[]
-  ai_agent: boolean
-  assignment_prompt: string
+  ai_config_id: string
+  prompt: string
+}
+
+type AIConfigSummary = {
+  id: string
+  credential_id: string
+  config_name: string
+  credential_name: string
+  model: string
 }
 
 type AssignmentForm = {
@@ -117,6 +127,8 @@ export default function TemplatesPage() {
   const [targetCourse, setTargetCourse] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<AssignmentTemplate | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [aiConfig, setAiConfig] = useState<AIConfigSummary | null>(null)
+  const [isLoadingAiConfig, setIsLoadingAiConfig] = useState(false)
   const router = useRouter()
   const [form, setForm] = useState<AssignmentForm>(DEFAULT_FORM)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -176,6 +188,31 @@ export default function TemplatesPage() {
     setTargetCourse("")
     setDialogOpen(true)
   }
+
+  useEffect(() => {
+    const fetchAiConfig = async () => {
+      if (!dialogOpen || !selected?.ai_config_id || !user?.token) {
+        setAiConfig(null)
+        return
+      }
+
+      setIsLoadingAiConfig(true)
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/configs/detail/${selected.ai_config_id}`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        })
+        if (!res.ok) throw new Error("Failed to load AI config")
+        const data = await res.json()
+        setAiConfig(data)
+      } catch {
+        setAiConfig(null)
+      } finally {
+        setIsLoadingAiConfig(false)
+      }
+    }
+
+    void fetchAiConfig()
+  }, [dialogOpen, selected, user?.token])
 
   const handleDownloadAttachment = async (attachment: Attachment) => {
     if (!user) return
@@ -255,12 +292,12 @@ export default function TemplatesPage() {
       formData.append("due", form.due_date!.toISOString())
       formData.append("close", closeDate!.toISOString())
 
-      if (selected.ai_agent !== undefined) {
-        formData.append("ai_agent", String(selected.ai_agent))
+      if (selected.ai_config_id) {
+        formData.append("ai_config_id", selected.ai_config_id)
       }
-      
-      if (selected.ai_agent) {
-        formData.append("assignment_prompt", String(selected.assignment_prompt))
+
+      if ((selected.prompt ?? "").trim()) {
+        formData.append("prompt", selected.prompt)
       }
 
       if (selected.tags) {
@@ -579,6 +616,61 @@ export default function TemplatesPage() {
                       ))}
                     </div>
                   </>
+                )}
+
+                {(selected.ai_config_id || selected.prompt) && (
+                  <div className="grid gap-3 rounded-lg border bg-background p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">AI setup</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Saved AI config and prompt from this template.
+                        </p>
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="shrink-0 gap-2">
+                        <a href="/ai/settings" target="_blank" rel="noreferrer">
+                          AI settings
+                          <ArrowUpRight className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+
+                    {isLoadingAiConfig ? (
+                      <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading AI config...
+                      </div>
+                    ) : aiConfig ? (
+                      <div className="grid gap-3">
+                        <div className="grid gap-1.5 rounded-md border bg-muted/20 p-3">
+                          <span className="text-xs text-muted-foreground">AI credential</span>
+                          <span className="text-sm font-medium">{aiConfig.credential_name}</span>
+                        </div>
+
+                        <div className="grid gap-1.5 rounded-md border bg-muted/20 p-3">
+                          <span className="text-xs text-muted-foreground">AI config</span>
+                          <span className="text-sm font-medium">{aiConfig.config_name}</span>
+                          <span className="text-xs text-muted-foreground">Model: {aiConfig.model}</span>
+                        </div>
+
+                        {selected.prompt && (
+                          <div className="grid gap-1.5 rounded-md border bg-muted/20 p-3">
+                            <span className="text-xs text-muted-foreground">Prompt</span>
+                            <div className="max-h-[180px] overflow-auto whitespace-pre-wrap rounded-md bg-background p-3 text-sm leading-6">
+                              {selected.prompt}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                        AI config not found for this template.
+                      </div>
+                    )}
+                  </div>
                 )}
                 
                 {/* Dates */}

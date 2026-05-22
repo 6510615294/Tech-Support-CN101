@@ -15,6 +15,7 @@ func RegisterAIRoutes(app fiber.Router) {
 	app.Delete("/:ai_credential_id", deleteAICredential)
 	app.Post("/configs/:ai_credential_id", createAIConfig)
 	app.Get("/configs/:ai_credential_id", getAIConfigs)
+	app.Get("/configs/detail/:ai_config_id", getAIConfig)
 	app.Patch("/configs/:ai_config_id", updateAIConfig)
 	app.Delete("/configs/:ai_config_id", deleteAIConfig)
 	app.Get("/:ai_credential_id/models", getAIModels)
@@ -159,9 +160,9 @@ func deleteAICredential(c fiber.Ctx) error {
 
 func createAIConfig(c fiber.Ctx) error {
 	log := logger.WithRequest(c)
-	
+
 	log.Info("ai_config_create_attempt")
-	
+
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	aiCredentialID := c.Params("ai_credential_id")
@@ -190,7 +191,7 @@ func createAIConfig(c fiber.Ctx) error {
 	}
 
 	log.Info("ai_config_create_success")
-	
+
 	return c.JSON(config)
 }
 
@@ -211,11 +212,40 @@ func getAIConfigs(c fiber.Ctx) error {
 	return c.JSON(config)
 }
 
+func getAIConfig(c fiber.Ctx) error {
+	log := logger.WithRequest(c)
+
+	log.Info("ai_config_detail_attempt")
+
+	userID := c.Locals("user_id").(string)
+	role := c.Locals("user_role").(string)
+	aiConfigID := c.Params("ai_config_id")
+
+	if !models.HasPermission(role, "ai") {
+		log.Error("ai_config_detail_failed",
+			"error", errors.ErrForbidden,
+		)
+		return SendError(c, errors.ErrForbidden)
+	}
+
+	config, err := service.GetAIConfigByID(userID, aiConfigID)
+	if err != nil {
+		log.Error("ai_config_detail_failed",
+			"error", err,
+		)
+		return SendError(c, err)
+	}
+
+	log.Info("ai_config_detail_success")
+
+	return c.JSON(config)
+}
+
 func updateAIConfig(c fiber.Ctx) error {
 	log := logger.WithRequest(c)
-	
+
 	log.Info("ai_config_update_attempt")
-	
+
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	aiConfigID := c.Params("ai_config_id")
@@ -244,15 +274,15 @@ func updateAIConfig(c fiber.Ctx) error {
 	}
 
 	log.Info("ai_config_update_success")
-	
+
 	return c.JSON(data)
 }
 
 func deleteAIConfig(c fiber.Ctx) error {
 	log := logger.WithRequest(c)
-	
+
 	log.Info("ai_config_delete_attempt")
-	
+
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	aiConfigID := c.Params("ai_config_id")
@@ -273,7 +303,7 @@ func deleteAIConfig(c fiber.Ctx) error {
 	}
 
 	log.Info("ai_config_delete_success")
-	
+
 	return c.JSON(fiber.Map{
 		"message": "crendential deleted",
 	})
@@ -281,9 +311,9 @@ func deleteAIConfig(c fiber.Ctx) error {
 
 func getAIModels(c fiber.Ctx) error {
 	log := logger.WithRequest(c)
-	
+
 	log.Info("ai_models_list_attempt")
-	
+
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	aiCredentialID := c.Params("ai_credential_id")
@@ -304,15 +334,15 @@ func getAIModels(c fiber.Ctx) error {
 	}
 
 	log.Info("ai_models_list_success")
-	
+
 	return c.JSON(modelList)
 }
 
 func getGradingJobs(c fiber.Ctx) error {
 	log := logger.WithRequest(c)
-	
+
 	log.Info("grading_jobs_list_attempt")
-	
+
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 
@@ -332,15 +362,15 @@ func getGradingJobs(c fiber.Ctx) error {
 	}
 
 	log.Info("grading_jobs_list_success")
-	
+
 	return c.JSON(jobs)
 }
 
 func deleteGradingJob(c fiber.Ctx) error {
 	log := logger.WithRequest(c)
-	
+
 	log.Info("grading_job_delete_attempt")
-	
+
 	userID := c.Locals("user_id").(string)
 	role := c.Locals("user_role").(string)
 	gradingJobID := c.Params("id")
@@ -363,7 +393,7 @@ func deleteGradingJob(c fiber.Ctx) error {
 	log.Info("grading_job_delete_success",
 		"grading_job_id", gradingJobID,
 	)
-	
+
 	return c.JSON(fiber.Map{
 		"message": "grading job deleted",
 	})

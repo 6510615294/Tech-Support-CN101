@@ -33,18 +33,18 @@ type ResponseAttachment struct {
 }
 
 type ResponseAssignment struct {
-	ID               string               `json:"id"`
-	Title            string               `json:"title"`
-	Description      string               `json:"description"`
-	Point            int16                `json:"point"`
-	StartDate        string               `json:"start_date"`
-	DueDate          string               `json:"due_date"`
-	CloseDate        string               `json:"close_date"`
-	Attachments      []ResponseAttachment `json:"attachments"`
-	Tags             []string             `json:"tags"`
-	AIConfigID       string               `json:"ai_config_id"`
-	Prompt 			 string               `json:"prompt,omitempty"`
-	Visible          bool                 `json:"visible"`
+	ID          string               `json:"id"`
+	Title       string               `json:"title"`
+	Description string               `json:"description"`
+	Point       int16                `json:"point"`
+	StartDate   string               `json:"start_date"`
+	DueDate     string               `json:"due_date"`
+	CloseDate   string               `json:"close_date"`
+	Attachments []ResponseAttachment `json:"attachments"`
+	Tags        []string             `json:"tags"`
+	AIConfigID  string               `json:"ai_config_id"`
+	Prompt      string               `json:"prompt,omitempty"`
+	Visible     bool                 `json:"visible"`
 }
 
 type ResponseComment struct {
@@ -154,14 +154,14 @@ type ResponseAssignmentOverride struct {
 }
 
 type ResponseAssignmentTemplates struct {
-	ID               string               `json:"id"`
-	Title            string               `json:"title"`
-	Description      string               `json:"description"`
-	Point            int16                `json:"point"`
-	Attachments      []ResponseAttachment `json:"attachments"`
-	Tags             []string             `json:"tags"`
-	AIConfigID       string               `json:"ai_config_id"`
-	Prompt 			 string               `json:"prompt,omitempty"`
+	ID          string               `json:"id"`
+	Title       string               `json:"title"`
+	Description string               `json:"description"`
+	Point       int16                `json:"point"`
+	Attachments []ResponseAttachment `json:"attachments"`
+	Tags        []string             `json:"tags"`
+	AIConfigID  string               `json:"ai_config_id"`
+	Prompt      string               `json:"prompt,omitempty"`
 }
 
 type ResponseShortAssignmentTemplates struct {
@@ -171,15 +171,15 @@ type ResponseShortAssignmentTemplates struct {
 }
 
 type ResponseAssignmentTemplate struct {
-	ID               string               `json:"id"`
-	Title            string               `json:"title"`
-	Description      string               `json:"description"`
-	Point            int16                `json:"point"`
-	Attachments      []ResponseAttachment `json:"attachments"`
-	Tags             []string             `json:"tags"`
-	AIConfigID       string               `json:"ai_config_id"`
-	Prompt 			 string               `json:"prompt,omitempty"`
-	Visible          bool                 `json:"visible"`
+	ID          string               `json:"id"`
+	Title       string               `json:"title"`
+	Description string               `json:"description"`
+	Point       int16                `json:"point"`
+	Attachments []ResponseAttachment `json:"attachments"`
+	Tags        []string             `json:"tags"`
+	AIConfigID  string               `json:"ai_config_id"`
+	Prompt      string               `json:"prompt,omitempty"`
+	Visible     bool                 `json:"visible"`
 }
 
 type ResponseAICredential struct {
@@ -191,12 +191,13 @@ type ResponseAICredential struct {
 }
 
 type ResponseAIConfig struct {
-	ID   			  string `json:"id"`
-	ConfigName        string  `json:"config_name"`
-	CredentialName    string  `json:"credential_name"`
-	Model       	  string  `json:"model"`
-	Temperature   	  float32 `json:"temperature"`
-	CreatedAt         string  `json:"created_at"`
+	ID             string  `json:"id"`
+	CredentialID   string  `json:"credential_id"`
+	ConfigName     string  `json:"config_name"`
+	CredentialName string  `json:"credential_name"`
+	Model          string  `json:"model"`
+	Temperature    float32 `json:"temperature"`
+	CreatedAt      string  `json:"created_at"`
 }
 
 type ResponseModel struct {

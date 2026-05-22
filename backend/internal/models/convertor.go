@@ -81,18 +81,18 @@ func ConvertAssignmentToResponse(
 	}
 
 	return ResponseAssignment{
-		ID:               a.ID,
-		Title:            a.Title,
-		Description:      a.Description,
-		Point:            a.Point,
-		StartDate:        a.StartDate.Format(layout),
-		DueDate:          dueDate.Format(layout),
-		CloseDate:        closeDate.Format(layout),
-		Attachments:      attachments,
-		Tags:             tagNames,
-		AIConfigID:       derefString(a.AIConfigID),
-		Prompt: 		  derefString(a.Prompt),
-		Visible:          a.Visible,
+		ID:          a.ID,
+		Title:       a.Title,
+		Description: a.Description,
+		Point:       a.Point,
+		StartDate:   a.StartDate.Format(layout),
+		DueDate:     dueDate.Format(layout),
+		CloseDate:   closeDate.Format(layout),
+		Attachments: attachments,
+		Tags:        tagNames,
+		AIConfigID:  derefString(a.AIConfigID),
+		Prompt:      derefString(a.Prompt),
+		Visible:     a.Visible,
 	}
 }
 
@@ -147,18 +147,18 @@ func ConvertDetailedAssignmentToResponse(
 	}
 
 	assignmentResponse := ResponseAssignment{
-		ID:               a.ID,
-		Title:            a.Title,
-		Description:      a.Description,
-		Point:            a.Point,
-		StartDate:        a.StartDate.Format(layout),
-		DueDate:          dueDate.Format(layout),
-		CloseDate:        closeDate.Format(layout),
-		Attachments:      attachments,
-		Tags:             tagNames,
-		AIConfigID:       derefString(a.AIConfigID),
-		Prompt: 		  derefString(a.Prompt),
-		Visible:          a.Visible,
+		ID:          a.ID,
+		Title:       a.Title,
+		Description: a.Description,
+		Point:       a.Point,
+		StartDate:   a.StartDate.Format(layout),
+		DueDate:     dueDate.Format(layout),
+		CloseDate:   closeDate.Format(layout),
+		Attachments: attachments,
+		Tags:        tagNames,
+		AIConfigID:  derefString(a.AIConfigID),
+		Prompt:      derefString(a.Prompt),
+		Visible:     a.Visible,
 	}
 
 	submissionResponses := make([]ResponseSubmission, len(*s))
@@ -245,14 +245,14 @@ func ConvertAssignmentTemplatesToResponse(
 		}
 
 		data := ResponseAssignmentTemplates{
-			ID:               template.ID,
-			Title:            template.Title,
-			Description:      template.Description,
-			Point:            template.Point,
-			Attachments:      attachments,
-			Tags:             tagNames,
-			AIConfigID:       derefString(template.AIConfigID),
-			Prompt: 		  derefString(template.Prompt),
+			ID:          template.ID,
+			Title:       template.Title,
+			Description: template.Description,
+			Point:       template.Point,
+			Attachments: attachments,
+			Tags:        tagNames,
+			AIConfigID:  derefString(template.AIConfigID),
+			Prompt:      derefString(template.Prompt),
 		}
 
 		response = append(response, data)
@@ -326,15 +326,15 @@ func ConvertAssignmentTemplateToResponse(
 	}
 
 	response := ResponseAssignmentTemplate{
-		ID:               template.ID,
-		Title:            template.Title,
-		Description:      template.Description,
-		Point:            template.Point,
-		Attachments:      attachments,
-		Tags:             tagNames,
-		AIConfigID:       derefString(template.AIConfigID),
-		Prompt: 		  derefString(template.Prompt),
-		Visible:          true,
+		ID:          template.ID,
+		Title:       template.Title,
+		Description: template.Description,
+		Point:       template.Point,
+		Attachments: attachments,
+		Tags:        tagNames,
+		AIConfigID:  derefString(template.AIConfigID),
+		Prompt:      derefString(template.Prompt),
+		Visible:     true,
 	}
 
 	return &response
@@ -367,12 +367,13 @@ func ConvertAIConfigsToResponse(
 	response := make([]ResponseAIConfig, len(configs))
 	for i, cf := range configs {
 		response[i] = ResponseAIConfig{
-			ID:        		cf.ID,
-			ConfigName: 	cf.Name,
+			ID:             cf.ID,
+			CredentialID:   cf.AICredentialID,
+			ConfigName:     cf.Name,
 			CredentialName: cf.AICredential.Name,
-			Model: 			cf.Model,
-			Temperature: 	cf.Temperature,
-			CreatedAt: 		cf.CreatedAt.Format(layout),
+			Model:          cf.Model,
+			Temperature:    cf.Temperature,
+			CreatedAt:      cf.CreatedAt.Format(layout),
 		}
 	}
 
