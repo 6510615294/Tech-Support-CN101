@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Trash2Icon } from "lucide-react"
 import { EditAssignmentDialog } from "@/components/edit-assignment-dialog";
+import { AssignmentAISetupDialog } from "@/components/assignment-ai-setup-dialog";
 import { toast } from "sonner";
 
 type Attachment = {
@@ -42,7 +43,23 @@ type Assignment = {
   close_date: string
   tags: string[]
   ai_agent: boolean
+  ai_config_id?: string
   assignment_prompt: string
+  visible: boolean
+}
+
+type EditableAssignment = {
+  id: string
+  title: string
+  description: string
+  point: number
+  attachments: Attachment[]
+  start_date: string
+  due_date: string
+  close_date: string
+  tags: string[]
+  ai_config_id: string
+  prompt: string
   visible: boolean
 }
 
@@ -62,7 +79,12 @@ export function AssignmentActions({
   const { user } = useAuth()
   const router = useRouter();
   const [isDownloadingAll, setIsDownloadingAll] = useState(false)
-  const isAIGradingDisabled = !assignment.ai_agent || !(assignment.assignment_prompt ?? "").trim()
+  const [isAISetupDialogOpen, setIsAISetupDialogOpen] = useState(false)
+  const editableAssignment: EditableAssignment = {
+    ...assignment,
+    ai_config_id: assignment.ai_config_id ?? "",
+    prompt: (assignment as { prompt?: string }).prompt ?? assignment.assignment_prompt ?? "",
+  }
 
   async function handleDownloadAllSubmissions() {
     if (!user?.token) {
@@ -134,8 +156,8 @@ export function AssignmentActions({
     }
   }
 
-  async function handleAutoGrading() {
-    if (!user) {
+  async function handleStartAutoGrading() {
+    if (!user?.token) {
       return;
     }
 
@@ -197,17 +219,11 @@ export function AssignmentActions({
           size="sm"
           variant="secondary"
           className="w-full justify-start gap-2"
-          onClick={handleAutoGrading}
-          disabled={isAIGradingDisabled}
+          onClick={() => setIsAISetupDialogOpen(true)}
         >
           <ClipboardCheck className="h-4 w-4" />
           AI Grading
         </Button>
-        {isAIGradingDisabled && (
-          <p className="text-xs text-muted-foreground">
-            Enable AI Agent and set an AI Prompt to use AI Grading.
-          </p>
-        )}
 
         <Button
           size="sm"
@@ -233,9 +249,34 @@ export function AssignmentActions({
         <Separator />
 
         <EditAssignmentDialog
-          assignment={assignment}
+          assignment={editableAssignment}
           courseId={courseId}
-          onUpdated={onAssignmentUpdated}
+          onUpdated={(updatedAssignment) => {
+            const { prompt, ...updatedFields } = updatedAssignment
+            onAssignmentUpdated({
+              ...assignment,
+              ...updatedFields,
+              ai_config_id: updatedFields.ai_config_id || undefined,
+              assignment_prompt: prompt,
+            })
+          }}
+        />
+
+        <AssignmentAISetupDialog
+          open={isAISetupDialogOpen}
+          onOpenChange={setIsAISetupDialogOpen}
+          courseId={courseId}
+          assignment={editableAssignment}
+          onSaved={(updatedAssignment) => {
+            const { assignment_prompt, ...updatedFields } = updatedAssignment
+            onAssignmentUpdated({
+              ...assignment,
+              ...updatedFields,
+              ai_config_id: updatedFields.ai_config_id || undefined,
+              assignment_prompt,
+            })
+          }}
+          onStartGrading={handleStartAutoGrading}
         />
 
         <AlertDialog>

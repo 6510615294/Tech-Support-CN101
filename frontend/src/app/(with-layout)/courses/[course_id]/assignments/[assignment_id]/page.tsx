@@ -39,6 +39,7 @@ type Assignment = {
   close_date: string
   tags: string[]
   ai_agent: boolean
+  ai_config_id?: string
   assignment_prompt: string
   visible: boolean
 }
