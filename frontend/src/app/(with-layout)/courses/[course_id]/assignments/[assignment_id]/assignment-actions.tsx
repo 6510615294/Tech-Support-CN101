@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { ClipboardCheck, BarChart3, Trash2, Download } from "lucide-react"
+import { ClipboardCheck, ClipboardList, BarChart3, Trash2, Download } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import {
   AlertDialog,
@@ -223,6 +223,16 @@ export function AssignmentActions({
         >
           <ClipboardCheck className="h-4 w-4" />
           AI Grading
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full justify-start gap-2"
+          onClick={() => router.push("/ai/jobs")}
+        >
+          <ClipboardList className="h-4 w-4" />
+          Grading Jobs
         </Button>
 
         <Button
