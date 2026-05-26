@@ -79,6 +79,17 @@ func GetCourseByID(courseID string) (*models.Course, error) {
 	return &course, nil
 }
 
+func CourseIDExists(courseID string) (bool, error) {
+	var count int64
+	err := database.DB.
+		Model(&models.Course{}).
+		Where("id = ?", courseID).
+		Limit(1).
+		Count(&count).
+		Error
+	return count > 0, err
+}
+
 func UpdateCourse(courseID string, updates map[string]any) error {
 	return database.DB.
 		Model(&models.Course{}).

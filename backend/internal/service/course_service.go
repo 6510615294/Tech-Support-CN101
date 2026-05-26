@@ -10,17 +10,37 @@ import (
 	"github.com/6510615294/Tech-Support-CN101/backend/internal/repository"
 )
 
-func generateCourseID() string {
+func generateUniqueCourseID() (string, error) {
 	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	id := make([]byte, 6)
-	for i := range id {
-		id[i] = letters[rand.Intn(len(letters))]
+	const maxAttempts = 50
+
+	for range maxAttempts {
+		id := make([]byte, 6)
+
+		for i := range id {
+			id[i] = letters[rand.Intn(len(letters))]
+		}
+
+		candidate := string(id)
+
+		exists, err := repository.CourseIDExists(candidate)
+		if err != nil {
+			return "", fmt.Errorf("failed to check course id uniqueness: %w", err)
+		}
+
+		if !exists {
+			return candidate, nil
+		}
 	}
-	return string(id)
+
+	return "", fmt.Errorf("failed to generate unique course id after %d attempts", maxAttempts)
 }
 
 func CreateCourse(userID, role string, form *models.CourseForm) (*models.ResponseCourse, error) {
-	courseID := generateCourseID()
+	courseID, err := generateUniqueCourseID()
+	if err != nil {
+		return nil, err
+	}
 
 	course := &models.Course{
 		ID:         courseID,

@@ -1,256 +1,316 @@
 "use client"
 
+import { useMemo } from "react"
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  TooltipProps
-} from "recharts";
+} from "recharts"
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 
 interface Distribution {
-  range_start: number;
-  range_end: number;
-  count: number;
+  range_start: number
+  range_end: number
+  count: number
 }
 
 interface SubmissionStatistic {
-  students: number;
-  submitted: number;
-  incomplete: number;
-  not_started: number;
-  submission_rate: number;
-  graded: number;
-  ungrade: number;
-  avg_score: number;
-  highest_score: number;
-  lowest_score: number;
-  median_score: number;
-  distribution: Distribution[];
+  students: number
+  submitted: number
+  incomplete: number
+  not_started: number
+  submission_rate: number
+  graded: number
+  ungrade: number
+  avg_score: number
+  highest_score: number
+  lowest_score: number
+  median_score: number
+  distribution: Distribution[]
 }
 
 interface SummaryChartProps {
-  statistic: SubmissionStatistic;
-  maxPoint?: number | null;
+  statistic: SubmissionStatistic
+  maxPoint?: number | null
 }
 
-function StatCard({
+function MetricCard({
   label,
   value,
-  sub,
+  description,
   accent,
 }: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  accent?: string;
+  label: string
+  value: string | number
+  description?: string
+  accent?: string
 }) {
   return (
-    <div
-      className="rounded-xl border bg-card text-card-foreground shadow-sm p-5 flex flex-col gap-1"
-      style={{ borderColor: accent ? `${accent}33` : undefined }}
-    >
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">{label}</p>
-      <p className="text-3xl font-bold tabular-nums" style={{ color: accent }}>
-        {value}
-      </p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-    </div>
-  );
+    <Card size="sm">
+      <CardContent className="flex flex-col gap-1">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <p
+          className="text-2xl font-bold tabular-nums tracking-tight"
+          style={accent ? { color: accent } : undefined}
+        >
+          {value}
+        </p>
+        {description && (
+          <p className="text-[11px] text-muted-foreground">{description}</p>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
-function ProgressRing({ value, size = 80 }: { value: number; size?: number }) {
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (value / 100) * circ;
-  return (
-    <svg width={size} height={size} className="-rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e5e7eb" strokeWidth={8} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke="#22c55e"
-        strokeWidth={8}
-        strokeDasharray={circ}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 1s ease" }}
-      />
-    </svg>
-  );
+/* ---------- Submission status donut chart ---------- */
+
+const STATUS_COLORS: Record<string, string> = {
+  Submitted: "var(--color-submitted)",
+  Incomplete: "var(--color-incomplete)",
+  "Not started": "var(--color-not_started)",
 }
 
-function SubmissionPill({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+const STATUS_CHART_CONFIG = {
+  count: { label: "Students" },
+  submitted: { label: "Submitted", color: "hsl(142, 71%, 45%)" },
+  incomplete: { label: "Incomplete", color: "hsl(38, 92%, 50%)" },
+  not_started: { label: "Not started", color: "hsl(0, 84%, 60%)" },
+} satisfies ChartConfig
+
+/* ---------- Distribution bar chart ---------- */
+
+const DISTRIBUTION_CHART_CONFIG = {
+  count: { label: "Students", color: "hsl(24, 95%, 53%)" },
+} satisfies ChartConfig
+
+export default function SummaryChart({
+  statistic,
+  maxPoint,
+}: SummaryChartProps) {
+  const toNum = (v: unknown) => {
+    if (v === null || v === undefined || v === "") return 0
+    const n = Number(v)
+    return Number.isFinite(n) ? n : 0
+  }
+
+  const avgScore = toNum(statistic.avg_score)
+  const medianScore = toNum(statistic.median_score)
+  const highestScore = toNum(statistic.highest_score)
+  const lowestScore = toNum(statistic.lowest_score)
+
+  const submissionPieData = useMemo(
+    () => [
+      { status: "Submitted", count: statistic.submitted ?? 0, fill: "var(--color-submitted)" },
+      { status: "Incomplete", count: statistic.incomplete ?? 0, fill: "var(--color-incomplete)" },
+      { status: "Not started", count: statistic.not_started ?? 0, fill: "var(--color-not_started)" },
+    ],
+    [statistic.submitted, statistic.incomplete, statistic.not_started]
+  )
+
+  const distributionBarData = useMemo(
+    () =>
+      (statistic.distribution ?? []).map((d) => ({
+        range: `${d.range_start}\u2013${d.range_end}`,
+        count: d.count,
+      })),
+    [statistic.distribution]
+  )
+
+  const maxCount = useMemo(
+    () => Math.max(...(statistic.distribution ?? []).map((d) => d.count), 0),
+    [statistic.distribution]
+  )
+
+  const pointLabel = maxPoint != null ? ` (/${maxPoint})` : ""
+
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-2 min-w-[110px]">
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-        <span className="text-sm text-muted-foreground">{label}</span>
-      </div>
-      <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-        <div
-          className="h-2 rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: color }}
+    <div className="space-y-6">
+      {/* ── Summary metric cards ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <MetricCard
+          label="Total Students"
+          value={statistic.students ?? 0}
+          accent="hsl(220, 70%, 55%)"
+        />
+        <MetricCard
+          label="Submitted"
+          value={statistic.submitted ?? 0}
+          description={`${(statistic.submission_rate ?? 0).toFixed(1)}% rate`}
+          accent="hsl(142, 71%, 45%)"
+        />
+        <MetricCard
+          label="Incomplete"
+          value={statistic.incomplete ?? 0}
+          accent="hsl(38, 92%, 50%)"
+        />
+        <MetricCard
+          label="Not Started"
+          value={statistic.not_started ?? 0}
+          accent="hsl(0, 84%, 60%)"
+        />
+        <MetricCard
+          label="Graded"
+          value={statistic.graded ?? 0}
+          description={`of ${statistic.submitted ?? 0} submitted`}
+          accent="hsl(142, 71%, 45%)"
+        />
+        <MetricCard
+          label="Ungraded"
+          value={statistic.ungrade ?? 0}
+          accent="hsl(38, 92%, 50%)"
         />
       </div>
-      <span className="text-sm font-semibold tabular-nums w-8 text-right">{count}</span>
-    </div>
-  );
-}
 
-const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="rounded-lg border bg-background shadow-md px-4 py-2 text-sm">
-        <p className="font-semibold text-foreground">{label}</p>
-        <p className="text-muted-foreground">
-          <span className="text-orange-500 font-bold">{payload[0].value}</span> students
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
-
-export default function SummaryChartSummaryChart({ statistic, maxPoint }: SummaryChartProps) {
-  const toOptionalNumber = (value: unknown) => {
-    if (value === null || value === undefined || value === "") {
-      return null
-    }
-
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : null
-  }
-
-  const avgScore = toOptionalNumber(statistic.avg_score) ?? 0
-  const medianScore = toOptionalNumber(statistic.median_score) ?? 0
-  const highestScore = toOptionalNumber(statistic.highest_score) ?? 0
-  const lowestScore = toOptionalNumber(statistic.lowest_score) ?? 0
-  const graded = statistic.graded ?? 0
-  const ungraded = statistic.ungrade ?? 0
-  const submitted = statistic.submitted ?? 0
-  const submissionRate = statistic.submission_rate ?? 0
-
-  const chartData = statistic.distribution.map((d) => ({
-    name: `${d.range_start}–${d.range_end}`,
-    count: d.count,
-  }));
-
-  const maxCount = Math.max(...statistic.distribution.map((d) => d.count));
-
-  return (
-    <div className="mt-10 px-4 pb-16 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Assignment Summary</h1>
-        <p className="text-sm text-muted-foreground">Overview of student submissions and scores</p>
-      </div>
-
-      {/* Submission Rate Hero Card */}
-      <div className="rounded-2xl border bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20 dark:border-green-900/40 p-6 flex items-center gap-6">
-        <div className="relative flex items-center justify-center">
-          <ProgressRing value={submissionRate} size={90} />
-          <span className="absolute text-lg font-bold text-green-600 dark:text-green-400">
-            {submissionRate}%
-          </span>
-        </div>
-        <div className="flex-1 space-y-3">
-          <div>
-            <p className="text-sm font-medium text-green-700 dark:text-green-400 uppercase tracking-widest">
-              Submission Rate
-            </p>
-            <p className="text-3xl font-bold text-green-800 dark:text-green-300">
-              {statistic.submitted} / {statistic.students}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">students submitted</p>
-          </div>
-          <div className="space-y-2">
-            <SubmissionPill label="Submitted" count={statistic.submitted} total={statistic.students} color="#22c55e" />
-            <SubmissionPill label="Incomplete" count={statistic.incomplete} total={statistic.students} color="#f59e0b" />
-            <SubmissionPill label="Not Started" count={statistic.not_started} total={statistic.students} color="#ef4444" />
-          </div>
-        </div>
-      </div>
-
-      {/* Score Stats Grid */}
+      {/* ── Score stats row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label={maxPoint != null ? `Average Score (/${maxPoint})` : "Average Score"} value={avgScore !== undefined ? (typeof avgScore === 'number' ? avgScore.toFixed(2) : avgScore) : '0.00'} accent="#f97316" />
-        <StatCard label={maxPoint != null ? `Median Score (/${maxPoint})` : "Median Score"} value={medianScore !== undefined ? medianScore : 0} accent="#8b5cf6" />
-        <StatCard label={maxPoint != null ? `Highest Score (/${maxPoint})` : "Highest Score"} value={highestScore !== undefined ? highestScore : 0} accent="#22c55e" sub="Top performer" />
-        <StatCard label={maxPoint != null ? `Lowest Score (/${maxPoint})` : "Lowest Score"} value={lowestScore !== undefined ? lowestScore : 0} accent="#ef4444" sub="Needs attention" />
+        <MetricCard
+          label={`Average${pointLabel}`}
+          value={avgScore.toFixed(2)}
+          accent="hsl(24, 95%, 53%)"
+        />
+        <MetricCard
+          label={`Highest${pointLabel}`}
+          value={highestScore}
+          description="Top performer"
+          accent="hsl(142, 71%, 45%)"
+        />
+        <MetricCard
+          label={`Lowest${pointLabel}`}
+          value={lowestScore}
+          description="Needs attention"
+          accent="hsl(0, 84%, 60%)"
+        />
+        <MetricCard
+          label={`Median${pointLabel}`}
+          value={medianScore}
+          accent="hsl(262, 83%, 58%)"
+        />
       </div>
 
-      {/* Grading Status */}
-      <div className="rounded-xl border bg-card p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest mb-1">Grading Progress</p>
-          <p className="text-2xl font-bold tabular-nums">
-            {graded}{" "}
-            <span className="text-base font-normal text-muted-foreground">/ {submitted} graded</span>
-          </p>
-        </div>
-        <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-            <span className="text-muted-foreground">
-              Graded: <span className="font-semibold text-foreground">{graded}</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="text-muted-foreground">
-              Pending: <span className="font-semibold text-foreground">{ungraded}</span>
-            </span>
-          </div>
-        </div>
-        <div className="w-full sm:w-48 bg-muted rounded-full h-2.5 overflow-hidden">
-          <div
-            className="h-2.5 rounded-full bg-green-500 transition-all duration-700"
-            style={{ width: `${submitted > 0 ? (graded / submitted) * 100 : 0}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Score Distribution Chart */}
-      <div className="rounded-xl border bg-card p-5 space-y-4">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Score Distribution</p>
-          <p className="text-xs text-muted-foreground">Number of students per score range</p>
-        </div>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={chartData} margin={{ top: 4, right: 8, left: -10, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 12, fill: "#9ca3af" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 12, fill: "#9ca3af" }}
-              axisLine={false}
-              tickLine={false}
-              allowDecimals={false}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f3f4f6", radius: 6 }} />
-            <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={56}>
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.count === maxCount ? "#f97316" : "#fed7aa"}
+      {/* ── Charts row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Submission status donut */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Submission Status</CardTitle>
+            <CardDescription>
+              {statistic.submitted ?? 0} of {statistic.students ?? 0} students
+              submitted
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <ChartContainer
+              config={STATUS_CHART_CONFIG}
+              className="mx-auto aspect-square w-full max-w-[260px]"
+            >
+              <PieChart>
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel nameKey="status" />}
                 />
+                <Pie
+                  data={submissionPieData}
+                  dataKey="count"
+                  nameKey="status"
+                  innerRadius="55%"
+                  outerRadius="85%"
+                  strokeWidth={2}
+                  stroke="var(--background)"
+                >
+                  {submissionPieData.map((entry) => (
+                    <Cell key={entry.status} fill={STATUS_COLORS[entry.status]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+            {/* Legend */}
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
+              {submissionPieData.map((item) => (
+                <span key={item.status} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: STATUS_COLORS[item.status] }}
+                  />
+                  {item.status}: <span className="font-semibold text-foreground">{item.count}</span>
+                </span>
               ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Score distribution bar chart */}
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Score Distribution</CardTitle>
+            <CardDescription>
+              Number of students per score range
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={DISTRIBUTION_CHART_CONFIG}
+              className="aspect-auto h-[260px] w-full"
+            >
+              <BarChart
+                data={distributionBarData}
+                margin={{ top: 4, right: 4, left: -10, bottom: 4 }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="range"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  fontSize={12}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                  fontSize={12}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={56}>
+                  {distributionBarData.map((entry) => (
+                    <Cell
+                      key={entry.range}
+                      fill={
+                        entry.count === maxCount
+                          ? "hsl(24, 95%, 53%)"
+                          : "hsl(24, 90%, 88%)"
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
     </div>
-  );
+  )
 }

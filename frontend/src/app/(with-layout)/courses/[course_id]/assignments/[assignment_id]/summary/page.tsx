@@ -1,38 +1,70 @@
 "use client"
 
-import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation"
+import React, { useEffect, useState, useMemo } from "react"
 import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/components/ui/toggle-group"
+  ColumnDef,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from "@tanstack/react-table"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Download, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import SummaryChart from "./summary-chart"
-import { DataTable } from "@/components/data-table"
-import { createColumns } from "./columns";
 import { useAuth } from "@/lib/auth-context"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import ExtendDueDateDialog from "@/components/extend-due-date-dialog"
 import { BreadcrumbNav } from "@/components/breadcrumb-nav"
-import { Download } from "lucide-react"
+
+/* ── Data interfaces ── */
 
 interface Distribution {
-  range_start: number;
-  range_end: number;
-  count: number;
+  range_start: number
+  range_end: number
+  count: number
 }
 
 interface SubmissionStatistic {
-  students: number;
-  submitted: number;
-  incomplete: number;
-  not_started: number;
-  submission_rate: number;
-  graded: number;
-  ungrade: number;
-  avg_score: number;
-  highest_score: number;
-  lowest_score: number;
-  median_score: number;
-  distribution: Distribution[];
+  students: number
+  submitted: number
+  incomplete: number
+  not_started: number
+  submission_rate: number
+  graded: number
+  ungrade: number
+  avg_score: number
+  highest_score: number
+  lowest_score: number
+  median_score: number
+  distribution: Distribution[]
 }
 
 type SubmissionList = {
@@ -46,38 +78,197 @@ type SubmissionList = {
   submission_status: string
 }
 
-type AssignmentDetail = {
-  title: string
-  point?: number
+type AssignmentDetail = { title: string; point?: number }
+type CourseDetail = { name: string }
+
+/* ── Status badge ── */
+
+function StatusBadge({ status }: { status: string }) {
+  switch (status.toLowerCase()) {
+    case "submitted":
+      return (
+        <Badge className="bg-emerald-500 hover:bg-emerald-600">
+          {status}
+        </Badge>
+      )
+
+    case "overdue":
+      return (
+        <Badge className="bg-orange-500 hover:bg-orange-600">
+          {status}
+        </Badge>
+      )
+
+    case "incomplete":
+      return (
+        <Badge className="bg-amber-500 hover:bg-amber-600 text-black">
+          {status}
+        </Badge>
+      )
+
+    case "no submitted":
+      return (
+        <Badge variant="destructive">
+          {status}
+        </Badge>
+      )
+
+    default:
+      return <Badge variant="outline">{status}</Badge>
+  }
 }
 
-type CourseDetail = {
-  name: string
+/* ── Inline columns definition (avoids external dialog state issues) ── */
+
+function useColumns(fullPoint: number | null) {
+  return useMemo<ColumnDef<SubmissionList>[]>(
+    () => [
+      {
+        accessorKey: "student_id",
+        header: "Student ID",
+        enableSorting: true,
+      },
+      {
+        accessorKey: "en_name",
+        header: "Name",
+        cell: ({ row }) =>
+          (row.getValue("en_name") as string).replace(/\b\w/g, (c) => c.toUpperCase()),
+        enableSorting: true,
+      },
+      {
+        accessorKey: "th_name",
+        header: "Thai Name",
+      },
+      {
+        accessorKey: "email",
+        header: "Email",
+      },
+      {
+        accessorKey: "submission_status",
+        header: "Status",
+        cell: ({ row }) => (
+          <div className="flex justify-center">
+            <StatusBadge status={row.getValue("submission_status") as string} />
+          </div>
+        ),
+        filterFn: (row, _id, value) => {
+          if (!value || value === "all") return true
+          return (row.getValue("submission_status") as string) === value
+        },
+      },
+      {
+        accessorKey: "point",
+        header: () => <div className="text-right">{fullPoint != null ? `Point (${fullPoint})` : "Point"}</div>,
+        cell: ({ row }) => (
+          <div className="text-right tabular-nums">{row.getValue("point")}</div>
+        ),
+        enableSorting: true,
+      },
+      {
+        accessorKey: "percentage",
+        header: "Percentage",
+        cell: ({ row }) => (
+          <div className="text-right tabular-nums">
+            {Number(row.getValue("percentage")).toFixed(2)}%
+          </div>
+        ),
+      },
+    ],
+    [fullPoint]
+  )
 }
+
+/* ── Page component ── */
 
 export default function Page() {
-  const [view, setView] = useState<"chart" | "table">("chart")
-  const [statistic, setStatistic] = useState<SubmissionStatistic | null>(null);
-  const [submissionList, setSubmissionList] = useState<SubmissionList[]>([]);
-  const [courseName, setCourseName] = useState("");
-  const [assignmentName, setAssignmentName] = useState("");
-  const [assignmentPoint, setAssignmentPoint] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { course_id, assignment_id } = useParams();
-  const { user } = useAuth();
+  const [statistic, setStatistic] = useState<SubmissionStatistic | null>(null)
+  const [submissionList, setSubmissionList] = useState<SubmissionList[]>([])
+  const [courseName, setCourseName] = useState("")
+  const [assignmentName, setAssignmentName] = useState("")
+  const [assignmentPoint, setAssignmentPoint] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { course_id, assignment_id } = useParams()
+  const { user } = useAuth()
 
-  // Create columns and dialog with proper props
-  const { columns, dialog } = createColumns({
-    courseId: course_id as string,
-    assignmentId: assignment_id as string,
-    fullPoint: assignmentPoint,
-  });
+  /* Extend due date dialog */
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState("")
+  const handleExtendDueDate = (userId: string) => {
+    setSelectedUserId(userId)
+    setDialogOpen(true)
+  }
 
+  /* Table state */
+  const baseColumns = useColumns(assignmentPoint)
+  const columns = useMemo<ColumnDef<SubmissionList>[]>(
+    () => [
+      ...baseColumns,
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => {
+          const userId = row.original.user_id
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExtendDueDate(userId)}>
+                  Extend due date
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        },
+      },
+    ],
+    [baseColumns]
+  )
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = useState({})
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [globalFilter, setGlobalFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+
+  const table = useReactTable({
+    data: submissionList,
+    columns,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      globalFilter,
+    },
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: { pageSize: 10 },
+    },
+  })
+
+  // Sync status filter to column filter
+  useEffect(() => {
+    table.getColumn("submission_status")?.setFilterValue(statusFilter === "all" ? undefined : statusFilter)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter])
+
+  /* CSV export */
   const handleExportCsv = () => {
-    if (submissionList.length === 0) {
-      return
-    }
+    if (submissionList.length === 0) return
 
     const headers = [
       "student_id",
@@ -91,8 +282,8 @@ export default function Page() {
 
     const escapeCsv = (value: string | number) => {
       const text = String(value ?? "")
-      if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
-        return `"${text.replace(/\"/g, '""')}"`
+      if (text.includes(",") || text.includes('"') || text.includes("\n")) {
+        return `"${text.replace(/"/g, '""')}"`
       }
       return text
     }
@@ -111,24 +302,18 @@ export default function Page() {
     const blob = new Blob([`\uFEFF${csvContent}`], { type: "text/csv;charset=utf-8;" })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement("a")
-    const safeAssignmentName = assignmentName
-      .trim()
-      .replace(/[\\/:*?"<>|]+/g, "_")
-      .replace(/\s+/g, "_")
-    const fileName = `${safeAssignmentName || "assignment"}_summary.csv`
-
+    const safeName = assignmentName.trim().replace(/[\\/:*?"<>|]+/g, "_").replace(/\s+/g, "_")
     link.href = url
-    link.download = fileName
+    link.download = `${safeName || "assignment"}_summary.csv`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
   }
 
+  /* Data fetching */
   const loadSummary = async () => {
-    if (!user?.token) {
-      return
-    }
+    if (!user?.token) return
 
     setLoading(true)
     setError(null)
@@ -136,24 +321,15 @@ export default function Page() {
     const [summaryRes, assignmentRes, courseRes] = await Promise.all([
       fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}/summary`,
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-          cache: "no-store",
-        }
+        { headers: { Authorization: `Bearer ${user.token}` }, cache: "no-store" }
       ),
       fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}/assignments/${assignment_id}`,
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-          cache: "no-store",
-        }
+        { headers: { Authorization: `Bearer ${user.token}` }, cache: "no-store" }
       ),
       fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/courses/${course_id}`,
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-          cache: "no-store",
-        }
+        { headers: { Authorization: `Bearer ${user.token}` }, cache: "no-store" }
       ),
     ])
 
@@ -184,10 +360,11 @@ export default function Page() {
   }
 
   useEffect(() => {
-    loadSummary();
+    loadSummary()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [course_id, assignment_id, user?.token]);
+  }, [course_id, assignment_id, user?.token])
 
+  /* Loading / error states */
   if (loading)
     return (
       <>
@@ -199,7 +376,7 @@ export default function Page() {
           </div>
         </div>
       </>
-    );
+    )
 
   if (error)
     return (
@@ -211,84 +388,183 @@ export default function Page() {
           </div>
         </div>
       </>
-    );
+    )
 
-  if (!statistic || !submissionList) return null;
+  if (!statistic || !submissionList) return null
+
+  /* Pagination helpers */
+  const pageIndex = table.getState().pagination.pageIndex
+  const pageSize = table.getState().pagination.pageSize
+  const filteredRows = table.getFilteredRowModel().rows.length
+  const rowStart = filteredRows === 0 ? 0 : pageIndex * pageSize + 1
+  const rowEnd = Math.min((pageIndex + 1) * pageSize, filteredRows)
 
   return (
     <>
       <BreadcrumbNav courseName={courseName} assignmentName={assignmentName} />
-      <div className="p-6 space-y-4">
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(value) => value && setView(value as "chart" | "table")}
-          className="w-fit rounded-xl border bg-muted/40 p-1"
-        >
-          <ToggleGroupItem
-            value="chart"
-            className="h-9 rounded-lg px-4 text-sm font-semibold transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
-          >
-            Chart
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="table"
-            className="h-9 rounded-lg px-4 text-sm font-semibold transition-all data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
-          >
-            Table
-          </ToggleGroupItem>
-        </ToggleGroup>
+      <div className="p-6 space-y-6">
+        {/* ── Page header ── */}
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">{courseName}</p>
+            <h1 className="text-2xl font-bold tracking-tight">{assignmentName || "Assignment Summary"}</h1>
+          </div>
+          <div className="flex items-center">
+            <div className="space-y-2">
+              {assignmentPoint != null && (
+                <p className="text-sm text-muted-foreground">
+                  Full points: <span className="font-semibold text-foreground">{assignmentPoint}</span>
+                </p>
+              )}
+              <Button variant="outline" size="sm" onClick={handleExportCsv}>
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
+        </div>
 
-        {view === "chart" && (
-          <div className="rounded-xl border bg-card p-4">
-            <div className="mb-3 flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleExportCsv}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
+        {/* ── Statistics ── */}
+        <SummaryChart statistic={statistic} maxPoint={assignmentPoint} />
+
+        {/* ── Submission table ── */}
+        <div className="space-y-4">
+              {/* Filters */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-lg font-semibold">Submission Table</h2>
+                <div className="flex items-center gap-3">
+                  <Input
+                    placeholder="Search by student ID or name..."
+                    value={globalFilter ?? ""}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    className="w-[280px]"
+                  />
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="Submitted">Submitted</SelectItem>
+                      <SelectItem value="Incomplete">Incomplete</SelectItem>
+                      <SelectItem value="Not started">Not started</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Data table */}
+              <div className="overflow-hidden rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            className={`
+                              ${
+                                header.column.getCanSort()
+                                  ? "cursor-pointer select-none hover:bg-muted/50"
+                                  : ""
+                              }
+                          
+                              ${
+                                header.column.id === "submission_status"
+                                  ? "text-center"
+                                  : ["point", "percentage"].includes(header.column.id)
+                                  ? "text-right"
+                                  : ""
+                              }
+                            `}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            <div
+                              className={`
+                                flex items-center gap-1
+                                ${
+                                  header.column.id === "submission_status"
+                                    ? "justify-center"
+                                    : ["point", "percentage"].includes(header.column.id)
+                                    ? "justify-end"
+                                    : ""
+                                }
+                              `}
+                            >
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                              {{
+                                asc: " \u2191",
+                                desc: " \u2193",
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <p>
+                  Showing {rowStart}-{rowEnd} of {filteredRows} student{filteredRows !== 1 ? "s" : ""}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="tabular-nums">
+                    Page {pageIndex + 1} of {table.getPageCount()}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-            <SummaryChart statistic={statistic} maxPoint={assignmentPoint} />
-          </div>
-        )}
-        {view === "table" && (
-          <div className="rounded-xl border bg-card p-4">
-            <div className="mb-3 flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleExportCsv}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-            </div>
-            <DataTable
-              columnFilter={false}
-              columns={columns}
-              data={submissionList}
-              filterProps={[
-                {
-                  column_name: "student_id",
-                  column_display: "Student ID",
-                  placeholder: "Filter by student id"
-                },
-                {
-                  column_name: "en_name",
-                  column_display: "English Name",
-                  placeholder: "Filter by english name"
-                },
-                {
-                  column_name: "th_name",
-                  column_display: "Thai Name",
-                  placeholder: "Filter by thai name"
-                },
-                {
-                  column_name: "status",
-                  column_display: "Status",
-                  placeholder: "Filter by status"
-                }
-              ]}
-            />
-          </div>
-        )}
       </div>
-      {dialog}
+      <ExtendDueDateDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        userId={selectedUserId}
+        courseId={course_id as string}
+        assignmentId={assignment_id as string}
+      />
     </>
   )
 }
