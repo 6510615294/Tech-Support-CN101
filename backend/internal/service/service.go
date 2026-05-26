@@ -45,7 +45,7 @@ func buildAssignmentSummary(
 			if submission.UpdatedAt.Before(assignment.DueDate) || submission.UpdatedAt.Equal(assignment.DueDate) {
 				status = "submitted"
 			} else {
-				status = "overduedate"
+				status = "overdue"
 			}
 
 			if submission.Point != nil {
