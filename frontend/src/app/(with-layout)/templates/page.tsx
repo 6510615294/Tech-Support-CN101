@@ -465,53 +465,63 @@ export default function TemplatesPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((tpl) => (
               <Card key={tpl.id} className="flex flex-col hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base leading-snug">{tpl.title}</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm leading-tight">{tpl.title}</CardTitle>
                   <CardAction>
                     <Badge variant="secondary" className="shrink-0 gap-1 text-xs">
-                      <Star className="h-3.5 w-3.5" />
+                      <Star className="h-3 w-3" />
                       {tpl.point} pts
                     </Badge>
                   </CardAction>
                 </CardHeader>
 
-                <CardContent className="flex-1 pb-3 space-y-3">
-                  {/* Tags */}
-                  {tpl.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {tpl.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                <CardContent className="flex-1 pb-2 space-y-2">
+                  <div className="space-y-1 min-h-[2.25rem]">
+                    <span className="text-xs text-muted-foreground">Tags</span>
+                    {tpl.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {tpl.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                        {tpl.tags.length > 3 && (
+                          <Badge variant="secondary" className="text-xs text-muted-foreground">
+                            +{tpl.tags.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No tags</p>
+                    )}
+                  </div>
 
-                  {/* Meta */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span className="flex flex-col gap-1">
-                      {tpl.attachments.map((attachment) => (
-                        <button
-                          key={attachment.id}
-                          type="button"
-                          className="flex items-center gap-2 rounded-md border px-3 py-1 text-sm hover:bg-muted transition-colors"
-                          onClick={() => handleDownloadAttachment(attachment)}
-                          title={`Download ${attachment.file_name}`}
-                        >
-                          {getFileIcon(attachment.file_type, 4)}
-                          {attachment.file_name}
-                        </button>
-                      ))}
-                    </span>
+                  <div className="space-y-1 min-h-[2rem]">
+                    <span className="text-xs text-muted-foreground">AI setup</span>
+                    {tpl.ai_config_id || tpl.prompt ? (
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="gap-1 text-xs flex items-center">
+                          <Bot className="h-3 w-3" />
+                          <span className="ml-1">Configured</span>
+                        </Badge>
+                        {tpl.prompt && (
+                          <Badge variant="outline" className="text-xs">
+                            Prompt
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No AI setup</p>
+                    )}
                   </div>
 
                 </CardContent>
 
-                <CardFooter className="border-t pt-3 flex items-center gap-1">
+                <CardFooter className="border-t pt-2 flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -519,24 +529,24 @@ export default function TemplatesPage() {
                     }}
                     title="Edit"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={() => setDeleteTarget(tpl)}
                     title="Delete"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                   <Button
-                    className="ml-auto gap-1.5 h-8"
+                    className="ml-auto gap-1 h-7"
                     size="sm"
                     onClick={() => handleUse(tpl)}
                   >
-                    Use Template
-                    <ArrowRight className="h-3.5 w-3.5" />
+                    Use
+                    <ArrowRight className="h-3 w-3" />
                   </Button>
                 </CardFooter>
               </Card>
