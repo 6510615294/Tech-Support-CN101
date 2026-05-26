@@ -56,12 +56,14 @@ import {
     ChevronsUpDown,
     Globe,
     Info,
+    Key,
     Loader2,
     Pencil,
     RefreshCw,
     RotateCcw,
     Save,
     Settings,
+    Settings2,
     Sparkles,
     TriangleAlert,
     Trash2,
@@ -1114,87 +1116,104 @@ export default function SettingsPage() {
                                                     const isSelected = selectedCredentialId === credential.id
 
                                                     return (
-                                                        <Card
+                                                        <div
                                                             key={credential.id}
                                                             className={cn(
-                                                                "mx-auto w-full max-w-xl overflow-hidden transition-all",
+                                                                "flex items-center gap-3 rounded-lg border p-3 transition-all",
                                                                 isSelected
                                                                     ? "border-primary/60 bg-primary/5 shadow-sm"
-                                                                    : "border-border"
+                                                                    : "border-border hover:bg-muted/50"
                                                             )}
                                                         >
-                                                            <CardContent className="space-y-4 p-4">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleSelectCredential(credential.id)}
-                                                                    className="flex w-full items-start justify-between gap-4 text-left"
-                                                                >
-                                                                    <div className="space-y-1.5">
-                                                                        <div className="flex flex-wrap items-center gap-2">
-                                                                            <h3 className="text-sm font-semibold">
-                                                                                {credential.name}
-                                                                            </h3>
-                                                                            {isSelected && (
-                                                                                <Badge className="text-[10px] uppercase tracking-wide">
-                                                                                    Active
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
+                                                            {/* Icon block */}
+                                                            <div
+                                                                className={cn(
+                                                                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                                                                    isSelected
+                                                                        ? "bg-primary/15 text-primary"
+                                                                        : "bg-muted text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                <Key className="h-4 w-4" />
+                                                            </div>
 
-                                                                    <Badge variant="outline" className="shrink-0 capitalize text-xs">
-                                                                        {credential.provider}
-                                                                    </Badge>
-                                                                </button>
-
-                                                                <div className="flex flex-wrap justify-end gap-2">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() => startEditCredential(credential)}
-                                                                    >
-                                                                        <Pencil className="mr-2 h-3.5 w-3.5" />
-                                                                        Edit
-                                                                    </Button>
-
-                                                                    <AlertDialog>
-                                                                        <AlertDialogTrigger asChild>
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="outline"
-                                                                                size="sm"
-                                                                                className="text-destructive hover:text-destructive"
-                                                                            >
-                                                                                <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                                                                Delete
-                                                                            </Button>
-                                                                        </AlertDialogTrigger>
-                                                                        <AlertDialogContent>
-                                                                            <AlertDialogHeader>
-                                                                                <AlertDialogTitle>
-                                                                                    Delete credential profile?
-                                                                                </AlertDialogTitle>
-                                                                                <AlertDialogDescription>
-                                                                                    This removes the saved API key and any model
-                                                                                    profiles attached to this credential.
-                                                                                </AlertDialogDescription>
-                                                                            </AlertDialogHeader>
-                                                                            <AlertDialogFooter>
-                                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                                <AlertDialogAction
-                                                                                    onClick={() => handleDeleteCredential(credential.id)}
-                                                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                                                    disabled={deletingCredentialId === credential.id}
-                                                                                >
-                                                                                    {deletingCredentialId === credential.id ? "Deleting…" : "Delete"}
-                                                                                </AlertDialogAction>
-                                                                            </AlertDialogFooter>
-                                                                        </AlertDialogContent>
-                                                                    </AlertDialog>
+                                                            {/* Text block */}
+                                                            <button
+                                                                type="button"
+                                                                className="min-w-0 flex-1 text-left"
+                                                                onClick={() => handleSelectCredential(credential.id)}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <h3 className="truncate text-sm font-semibold">
+                                                                        {credential.name}
+                                                                    </h3>
+                                                                    {isSelected ? (
+                                                                        <Badge className="shrink-0 text-[10px] uppercase tracking-wide">
+                                                                            Active
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        <Badge variant="secondary" className="shrink-0 text-[10px] uppercase tracking-wide">
+                                                                            Inactive
+                                                                        </Badge>
+                                                                    )}
                                                                 </div>
-                                                            </CardContent>
-                                                        </Card>
+                                                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                                                    {providerMeta.label}
+                                                                    {credential.created_at && (
+                                                                        <> · Added {new Date(credential.created_at).toLocaleDateString()}</>
+                                                                    )}
+                                                                </p>
+                                                            </button>
+
+                                                            {/* Action buttons */}
+                                                            <div className="flex shrink-0 items-center gap-1">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="h-8 w-8"
+                                                                    onClick={() => startEditCredential(credential)}
+                                                                    aria-label="Edit"
+                                                                >
+                                                                    <Pencil className="h-3.5 w-3.5" />
+                                                                </Button>
+
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                            aria-label="Delete"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>
+                                                                                Delete credential profile?
+                                                                            </AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                This removes the saved API key and any model
+                                                                                profiles attached to this credential.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => handleDeleteCredential(credential.id)}
+                                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                                disabled={deletingCredentialId === credential.id}
+                                                                            >
+                                                                                {deletingCredentialId === credential.id ? "Deleting…" : "Delete"}
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </div>
+                                                        </div>
                                                     )
                                                 })
                                             )}
@@ -1559,86 +1578,87 @@ export default function SettingsPage() {
                                                 ) : (
                                                     <div className="space-y-3">
                                                         {configs.map((config) => (
-                                                            <Card
+                                                            <div
                                                                 key={config.id}
                                                                 className={cn(
-                                                                    "overflow-hidden transition-all",
+                                                                    "flex items-center gap-3 rounded-lg border p-3 transition-all",
                                                                     editingConfigId === config.id
                                                                         ? "border-primary/60 bg-primary/5 shadow-sm"
-                                                                        : "border-border"
+                                                                        : "border-border hover:bg-muted/50"
                                                                 )}
                                                             >
-                                                                <CardContent className="space-y-4 p-4">
-                                                                    <div className="flex items-start justify-between gap-4">
-                                                                        <div className="space-y-1.5">
-                                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                                <h3 className="text-sm font-semibold">
-                                                                                    {config.config_name}
-                                                                                </h3>
-                                                                                {editingConfigId === config.id && (
-                                                                                    <Badge className="text-[10px] uppercase tracking-wide">
-                                                                                        Editing
-                                                                                    </Badge>
-                                                                                )}
-                                                                            </div>
-                                                                            <p className="text-xs text-muted-foreground">
-                                                                                {config.model}
-                                                                            </p>
-                                                                            <p className="text-xs text-muted-foreground">
-                                                                                Temperature {config.temperature.toFixed(1)}
-                                                                            </p>
-                                                                        </div>
-                                                                        <Badge variant="outline" className="text-xs">
-                                                                            {config.credential_name}
-                                                                        </Badge>
+                                                                {/* Icon block */}
+                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400">
+                                                                    <Settings2 className="h-4 w-4" />
+                                                                </div>
+
+                                                                {/* Text block */}
+                                                                <div className="min-w-0 flex-1">
+                                                                    <h3 className="truncate text-sm font-semibold">
+                                                                        {config.config_name}
+                                                                    </h3>
+                                                                    <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">
+                                                                            {config.model}
+                                                                        </code>
+                                                                        <span>·</span>
+                                                                        <span>Temp {config.temperature.toFixed(1)}</span>
                                                                     </div>
+                                                                </div>
 
-                                                                    <div className="flex flex-wrap justify-end gap-2">
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            onClick={() => startEditConfig(config)}
-                                                                        >
-                                                                            <Pencil className="mr-2 h-3.5 w-3.5" />
-                                                                            Edit
-                                                                        </Button>
+                                                                {/* Credential tag */}
+                                                                <Badge variant="outline" className="shrink-0 gap-1.5 text-xs">
+                                                                    <Key className="h-3 w-3" />
+                                                                    {config.credential_name}
+                                                                </Badge>
 
-                                                                        <AlertDialog>
-                                                                            <AlertDialogTrigger asChild>
-                                                                                <Button
-                                                                                    type="button"
-                                                                                    variant="outline"
-                                                                                    size="sm"
-                                                                                    className="text-destructive hover:text-destructive"
+                                                                {/* Action buttons */}
+                                                                <div className="flex shrink-0 items-center gap-1">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8"
+                                                                        onClick={() => startEditConfig(config)}
+                                                                        aria-label="Edit"
+                                                                    >
+                                                                        <Pencil className="h-3.5 w-3.5" />
+                                                                    </Button>
+
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                                                                aria-label="Delete"
+                                                                            >
+                                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                            </Button>
+                                                                        </AlertDialogTrigger>
+                                                                        <AlertDialogContent>
+                                                                            <AlertDialogHeader>
+                                                                                <AlertDialogTitle>Delete model profile?</AlertDialogTitle>
+                                                                                <AlertDialogDescription>
+                                                                                    This removes only the saved model settings.
+                                                                                    The credential profile stays intact.
+                                                                                </AlertDialogDescription>
+                                                                            </AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                <AlertDialogAction
+                                                                                    onClick={() => handleDeleteConfig(config.id)}
+                                                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                                    disabled={deletingConfigId === config.id}
                                                                                 >
-                                                                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                                                                    Delete
-                                                                                </Button>
-                                                                            </AlertDialogTrigger>
-                                                                            <AlertDialogContent>
-                                                                                <AlertDialogHeader>
-                                                                                    <AlertDialogTitle>Delete model profile?</AlertDialogTitle>
-                                                                                    <AlertDialogDescription>
-                                                                                        This removes only the saved model settings.
-                                                                                        The credential profile stays intact.
-                                                                                    </AlertDialogDescription>
-                                                                                </AlertDialogHeader>
-                                                                                <AlertDialogFooter>
-                                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                                    <AlertDialogAction
-                                                                                        onClick={() => handleDeleteConfig(config.id)}
-                                                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                                                        disabled={deletingConfigId === config.id}
-                                                                                    >
-                                                                                        {deletingConfigId === config.id ? "Deleting…" : "Delete"}
-                                                                                    </AlertDialogAction>
-                                                                                </AlertDialogFooter>
-                                                                            </AlertDialogContent>
-                                                                        </AlertDialog>
-                                                                    </div>
-                                                                </CardContent>
-                                                            </Card>
+                                                                                    {deletingConfigId === config.id ? "Deleting…" : "Delete"}
+                                                                                </AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </AlertDialogContent>
+                                                                    </AlertDialog>
+                                                                </div>
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 )}
