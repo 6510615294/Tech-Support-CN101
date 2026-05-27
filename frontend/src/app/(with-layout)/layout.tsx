@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -14,6 +14,10 @@ export default function CoursesLayout({
 }) {
   const { user, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const isStudent = user?.role === "student"
+  const isCoursesPath = pathname === "/courses" || pathname.startsWith("/courses/")
+  const isRestrictedPath = isStudent && !isCoursesPath
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -21,7 +25,13 @@ export default function CoursesLayout({
     }
   }, [user, isLoading, router])
 
-  if (isLoading || !user) {
+  useEffect(() => {
+    if (!isLoading && user && isStudent && !isCoursesPath) {
+      router.replace("/courses")
+    }
+  }, [isCoursesPath, isLoading, isStudent, pathname, router, user])
+
+  if (isLoading || !user || isRestrictedPath) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <div className="text-center">
