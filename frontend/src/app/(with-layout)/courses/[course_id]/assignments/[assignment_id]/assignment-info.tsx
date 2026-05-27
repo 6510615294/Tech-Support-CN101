@@ -29,9 +29,28 @@ type AssignmentStatus = "closed" | "upcoming" | "overdue" | "active"
 
 interface AssignmentInfoProps {
   assignment: Assignment
+  studentSubmission?: Submission | null
 }
 
-export function AssignmentInfo({ assignment }: AssignmentInfoProps) {
+type Submission = {
+  id: string
+  submitter: string
+  answer: string
+  point: number
+  graded_by: string
+  attachment_id: string
+  file_name: string
+  comments: Comment[]
+}
+
+type Comment = {
+  id: string
+  comment: string
+  commentator: string
+  visible: boolean
+}
+
+export function AssignmentInfo({ assignment, studentSubmission }: AssignmentInfoProps) {
   const { user } = useAuth()
 
   const formatDate = (dateString: string) => {
@@ -119,7 +138,26 @@ export function AssignmentInfo({ assignment }: AssignmentInfoProps) {
           </div>
           <div className="flex flex-col items-end gap-2">
             {getStatusBadge()}
-            <span className="text-lg font-semibold">{assignment.point} pts</span>
+            {studentSubmission && studentSubmission.graded_by ? (
+              <div className="flex items-baseline gap-1">
+                <span
+                  className={`text-lg font-semibold ${
+                    assignment.point > 0
+                      ? studentSubmission.point / assignment.point >= 0.8
+                        ? "text-green-500"
+                        : studentSubmission.point / assignment.point >= 0.5
+                          ? "text-yellow-500"
+                          : "text-red-500"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {studentSubmission.point}
+                </span>
+                <span className="text-sm text-muted-foreground">/ {assignment.point} pts</span>
+              </div>
+            ) : (
+              <span className="text-lg font-semibold">{assignment.point} pts</span>
+            )}
           </div>
         </div>
       </CardHeader>

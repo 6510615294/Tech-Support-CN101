@@ -452,7 +452,7 @@ export default function AssignmentDetailPage() {
           {/* Left Section */}
           <div className={`flex flex-col gap-4 ${isStudent ? "lg:col-span-3" : "lg:col-span-2"}`}>
             {/* 1. Assignment Info */}
-            <AssignmentInfo assignment={assignment} />
+            <AssignmentInfo assignment={assignment} studentSubmission={isStudent ? selectedSubmission : null} />
 
             {/* 2. Answer Box */}
             {isStudent ? (
