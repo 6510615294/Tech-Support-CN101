@@ -256,7 +256,10 @@ export default function CourseDetailPage() {
           <div className="space-y-6">
             {/* Course Header */}
             <div>
-              <h1 className="text-2xl font-bold">{course.name}</h1>
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-6 w-6 text-primary" />
+                <h1 className="text-2xl font-bold">{course.name}</h1>
+              </div>
               <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-center gap-2">
                   <GraduationCap className="h-4 w-4 shrink-0" />
