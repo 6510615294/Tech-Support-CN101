@@ -13,8 +13,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
 
@@ -115,16 +122,16 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
           Add Course
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Course</DialogTitle>
           <DialogDescription>
             Fill in the details below to add a new course.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-2">
-          <Field>
-            <FieldLabel htmlFor="name">Course Name</FieldLabel>
+        <form onSubmit={handleSubmit} className="grid gap-5 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="name">Course Name</Label>
             <Input
               id="name"
               name="name"
@@ -132,9 +139,10 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
               value={form.name}
               onChange={handleChange}
             />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="course_code">Course Code</FieldLabel>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="course_code">Course Code</Label>
             <Input
               id="course_code"
               name="course_code"
@@ -142,32 +150,35 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
               value={form.course_code}
               onChange={handleChange}
             />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="day_of_week">Day of Week</FieldLabel>
-              <select
-                id="day_of_week"
-                name="day_of_week"
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="day_of_week">Day of Week</Label>
+              <Select
                 value={form.day_of_week}
-                onChange={(e) => {
-                  setForm((prev) => ({ ...prev, day_of_week: e.target.value }))
+                onValueChange={(value) => {
+                  setForm((prev) => ({ ...prev, day_of_week: value }))
                   setError("")
                 }}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">Select a day</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
-              </select>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="credits">Credits</FieldLabel>
+                <SelectTrigger id="day_of_week" className="w-full">
+                  <SelectValue placeholder="Select a day" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Monday">Monday</SelectItem>
+                  <SelectItem value="Tuesday">Tuesday</SelectItem>
+                  <SelectItem value="Wednesday">Wednesday</SelectItem>
+                  <SelectItem value="Thursday">Thursday</SelectItem>
+                  <SelectItem value="Friday">Friday</SelectItem>
+                  <SelectItem value="Saturday">Saturday</SelectItem>
+                  <SelectItem value="Sunday">Sunday</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="credits">Credits</Label>
               <Input
                 id="credits"
                 name="credits"
@@ -176,11 +187,12 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
                 value={form.credits}
                 onChange={handleChange}
               />
-            </Field>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="start_time">Start Time</FieldLabel>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="start_time">Start Time</Label>
               <Input
                 id="start_time"
                 name="start_time"
@@ -188,9 +200,10 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
                 value={form.start_time}
                 onChange={handleChange}
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="end_time">End Time</FieldLabel>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="end_time">End Time</Label>
               <Input
                 id="end_time"
                 name="end_time"
@@ -198,10 +211,11 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
                 value={form.end_time}
                 onChange={handleChange}
               />
-            </Field>
+            </div>
           </div>
-          <Field>
-            <FieldLabel htmlFor="room">Room (Optional)</FieldLabel>
+
+          <div className="grid gap-2">
+            <Label htmlFor="room">Room (Optional)</Label>
             <Input
               id="room"
               name="room"
@@ -209,10 +223,11 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
               value={form.room}
               onChange={handleChange}
             />
-          </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel htmlFor="section">Section</FieldLabel>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="section">Section</Label>
               <Input
                 id="section"
                 name="section"
@@ -220,9 +235,10 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
                 value={form.section}
                 onChange={handleChange}
               />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="semester">Semester</FieldLabel>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="semester">Semester</Label>
               <Input
                 id="semester"
                 name="semester"
@@ -230,7 +246,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
                 value={form.semester}
                 onChange={handleChange}
               />
-            </Field>
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="mt-2">
