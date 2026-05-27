@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
+import { TimePicker24h } from "@/components/time-picker-24h"
 import {
   Select,
   SelectContent,
@@ -53,6 +54,20 @@ const EMPTY_FORM = {
   credits: "",
   section: "",
   semester: "",
+}
+
+function RequiredLabel({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string
+  children: string
+}) {
+  return (
+    <Label htmlFor={htmlFor}>
+      {children} <span className="text-destructive">*</span>
+    </Label>
+  )
 }
 
 export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
@@ -131,7 +146,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-5 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Course Name</Label>
+            <RequiredLabel htmlFor="name">Course Name</RequiredLabel>
             <Input
               id="name"
               name="name"
@@ -142,7 +157,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="course_code">Course Code</Label>
+            <RequiredLabel htmlFor="course_code">Course Code</RequiredLabel>
             <Input
               id="course_code"
               name="course_code"
@@ -154,7 +169,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="day_of_week">Day of Week</Label>
+              <RequiredLabel htmlFor="day_of_week">Day of Week</RequiredLabel>
               <Select
                 value={form.day_of_week}
                 onValueChange={(value) => {
@@ -178,7 +193,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="credits">Credits</Label>
+              <RequiredLabel htmlFor="credits">Credits</RequiredLabel>
               <Input
                 id="credits"
                 name="credits"
@@ -192,30 +207,32 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="start_time">Start Time</Label>
-              <Input
-                id="start_time"
-                name="start_time"
-                type="time"
+              <RequiredLabel htmlFor="start_time">Start Time</RequiredLabel>
+              <TimePicker24h
                 value={form.start_time}
-                onChange={handleChange}
+                onChange={(value) => {
+                  setForm((prev) => ({ ...prev, start_time: value }))
+                  setError("")
+                }}
+                placeholder="09:30"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="end_time">End Time</Label>
-              <Input
-                id="end_time"
-                name="end_time"
-                type="time"
+              <RequiredLabel htmlFor="end_time">End Time</RequiredLabel>
+              <TimePicker24h
                 value={form.end_time}
-                onChange={handleChange}
+                onChange={(value) => {
+                  setForm((prev) => ({ ...prev, end_time: value }))
+                  setError("")
+                }}
+                placeholder="12:30"
               />
             </div>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="room">Room (Optional)</Label>
+            <Label htmlFor="room">Room</Label>
             <Input
               id="room"
               name="room"
@@ -227,7 +244,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="section">Section</Label>
+              <RequiredLabel htmlFor="section">Section</RequiredLabel>
               <Input
                 id="section"
                 name="section"
@@ -238,7 +255,7 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="semester">Semester</Label>
+              <RequiredLabel htmlFor="semester">Semester</RequiredLabel>
               <Input
                 id="semester"
                 name="semester"

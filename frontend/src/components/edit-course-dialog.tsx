@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
+import { TimePicker24h } from "@/components/time-picker-24h"
 import { toast } from "sonner"
 
 interface Course {
@@ -40,6 +41,20 @@ type CourseFormState = {
   credits: string
   section: string
   semester: string
+}
+
+function RequiredLabel({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string
+  children: string
+}) {
+  return (
+    <FieldLabel htmlFor={htmlFor}>
+      {children} <span className="text-destructive">*</span>
+    </FieldLabel>
+  )
 }
 
 function parseCourseSchedule(schedule?: string) {
@@ -174,7 +189,7 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-2">
           <Field>
-            <FieldLabel htmlFor="edit-name">Course Name</FieldLabel>
+            <RequiredLabel htmlFor="edit-name">Course Name</RequiredLabel>
             <Input
               id="edit-name"
               name="name"
@@ -184,7 +199,7 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="edit-course_code">Course Code</FieldLabel>
+            <RequiredLabel htmlFor="edit-course_code">Course Code</RequiredLabel>
             <Input
               id="edit-course_code"
               name="course_code"
@@ -195,7 +210,7 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field>
-              <FieldLabel htmlFor="edit-day_of_week">Day of Week</FieldLabel>
+              <RequiredLabel htmlFor="edit-day_of_week">Day of Week</RequiredLabel>
               <select
                 id="edit-day_of_week"
                 name="day_of_week"
@@ -217,7 +232,7 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
               </select>
             </Field>
             <Field>
-              <FieldLabel htmlFor="edit-credits">Credits</FieldLabel>
+              <RequiredLabel htmlFor="edit-credits">Credits</RequiredLabel>
               <Input
                 id="edit-credits"
                 name="credits"
@@ -230,28 +245,30 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Field>
-              <FieldLabel htmlFor="edit-start_time">Start Time</FieldLabel>
-              <Input
-                id="edit-start_time"
-                name="start_time"
-                type="time"
+              <RequiredLabel htmlFor="edit-start_time">Start Time</RequiredLabel>
+              <TimePicker24h
                 value={form.start_time}
-                onChange={handleChange}
+                onChange={(value) => {
+                  setForm((prev) => ({ ...prev, start_time: value }))
+                  setError("")
+                }}
+                placeholder="09:30"
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="edit-end_time">End Time</FieldLabel>
-              <Input
-                id="edit-end_time"
-                name="end_time"
-                type="time"
+              <RequiredLabel htmlFor="edit-end_time">End Time</RequiredLabel>
+              <TimePicker24h
                 value={form.end_time}
-                onChange={handleChange}
+                onChange={(value) => {
+                  setForm((prev) => ({ ...prev, end_time: value }))
+                  setError("")
+                }}
+                placeholder="12:30"
               />
             </Field>
           </div>
           <Field>
-            <FieldLabel htmlFor="edit-room">Room (Optional)</FieldLabel>
+            <FieldLabel htmlFor="edit-room">Room</FieldLabel>
             <Input
               id="edit-room"
               name="room"
@@ -262,7 +279,7 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field>
-              <FieldLabel htmlFor="edit-section">Section</FieldLabel>
+              <RequiredLabel htmlFor="edit-section">Section</RequiredLabel>
               <Input
                 id="edit-section"
                 name="section"
@@ -272,7 +289,7 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="edit-semester">Semester</FieldLabel>
+              <RequiredLabel htmlFor="edit-semester">Semester</RequiredLabel>
               <Input
                 id="edit-semester"
                 name="semester"
