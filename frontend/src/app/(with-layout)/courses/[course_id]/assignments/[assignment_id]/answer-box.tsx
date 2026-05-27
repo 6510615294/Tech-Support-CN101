@@ -3,20 +3,19 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Code, Play, Upload, FileText, X, NotebookText } from "lucide-react"
+import { Code, Upload, FileText, X, NotebookText } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAuth } from "@/lib/auth-context"
 
 interface AnswerBoxProps {
   attachmentId?: string
   fileName?: string
   isStudent: boolean
   hasSubmission: boolean
+  isClosed: boolean
   onSubmit?: (file?: File | null) => void
   answerContent: string
   isContentLoading: boolean
@@ -28,6 +27,7 @@ export function AnswerBox({
   fileName,
   isStudent,
   hasSubmission,
+  isClosed,
   onSubmit,
   answerContent,
   isContentLoading,
@@ -38,25 +38,31 @@ export function AnswerBox({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [shouldRemoveFile, setShouldRemoveFile] = useState(false)
-  const { user } = useAuth()
+  const [fileError, setFileError] = useState<string | null>(null)
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
   useEffect(() => {
     setCode(answerContent)
   }, [answerContent])
 
-  const handleCodeChange = (newCode: string) => {
-    setCode(newCode)
-  }
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setSelectedFile(file)
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`File size (${(file.size / 1024 / 1024).toFixed(2)} MB) exceeds the 5 MB limit.`)
+        setSelectedFile(null)
+      } else {
+        setFileError(null)
+        setSelectedFile(file)
+        setShouldRemoveFile(false)
+      }
     }
   }
 
   const handleRemoveFile = () => {
     setSelectedFile(null)
+    setFileError(null)
   }
 
   const handleSubmit = async () => {
@@ -79,6 +85,29 @@ export function AnswerBox({
 
   // Student view - no submission yet
   if (isStudent && !hasSubmission) {
+    if (isClosed) {
+      return (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              Submit Answer
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Empty className="py-16">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <NotebookText />
+                </EmptyMedia>
+                <EmptyTitle>Assignment Closed</EmptyTitle>
+                <EmptyDescription>This assignment is no longer accepting submissions.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </CardContent>
+        </Card>
+      )
+    }
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -112,41 +141,13 @@ export function AnswerBox({
               </div>
             )}
           </div>
+          {fileError && (
+            <p className="text-sm text-destructive">{fileError}</p>
+          )}
           <Button onClick={handleSubmit} disabled={!selectedFile || isSubmitting} className="w-full">
             {isSubmitting ? <Spinner className="mr-2" /> : <Upload className="mr-2 h-4 w-4" />}
             Submit
           </Button>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (contentError) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Code className="h-4 w-4" />
-              Answer
-            </span>
-            <div
-              className="flex items-center gap-1 text-sm font-normal"
-            >
-              --
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Empty className="py-16">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <NotebookText/>
-              </EmptyMedia>
-              <EmptyTitle>Failed to load submission</EmptyTitle>
-              <EmptyDescription>{contentError || "Submission not found"}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
         </CardContent>
       </Card>
     )
@@ -164,7 +165,7 @@ export function AnswerBox({
             </span>
             <div className="flex items-center gap-2">
               <Badge variant="outline">Submitted</Badge>
-              {!isEditing && (
+              {!isEditing && !isClosed && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -223,10 +224,13 @@ export function AnswerBox({
                   </div>
                 )}
               </div>
+              {fileError && (
+                <p className="text-sm text-destructive">{fileError}</p>
+              )}
               <div className="flex gap-2">
                 <Button
                   onClick={handleSubmit}
-                  disabled={isSubmitting || (!selectedFile && !shouldRemoveFile)}
+                  disabled={isSubmitting || (!selectedFile && !shouldRemoveFile) || !!fileError}
                   className="flex-1"
                 >
                   {isSubmitting ? <Spinner className="mr-2" /> : <Upload className="mr-2 h-4 w-4" />}
@@ -250,6 +254,7 @@ export function AnswerBox({
                     setIsEditing(false)
                     setSelectedFile(null)
                     setShouldRemoveFile(false)
+                    setFileError(null)
                   }}
                 >
                   Cancel
@@ -265,7 +270,12 @@ export function AnswerBox({
                   {fileName}
                 </div>
               )}
-              {isContentLoading ? (
+              {contentError ? (
+                <div className="rounded-md bg-muted/50 border p-4">
+                  <p className="text-sm text-muted-foreground">Could not preview file content.</p>
+                  <p className="text-xs text-muted-foreground mt-1">{contentError}</p>
+                </div>
+              ) : isContentLoading ? (
                 <div>
                   <Skeleton className="h-64" />
                 </div>
@@ -278,6 +288,38 @@ export function AnswerBox({
               )}
             </>
           )}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Non-student view - content error
+  if (contentError) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              Answer
+            </span>
+            <div
+              className="flex items-center gap-1 text-sm font-normal"
+            >
+              --
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Empty className="py-16">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <NotebookText/>
+              </EmptyMedia>
+              <EmptyTitle>Failed to load submission</EmptyTitle>
+              <EmptyDescription>{contentError || "Submission not found"}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         </CardContent>
       </Card>
     )

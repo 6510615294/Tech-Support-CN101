@@ -84,6 +84,7 @@ export default function AssignmentDetailPage() {
   const [isContentLoading, setIsContentLoading] = useState(false)
   const [contentError, setContentError] = useState<string | null>(null)
   const [isGradingPanelCollapsed, setIsGradingPanelCollapsed] = useState(false)
+  const [contentRefreshKey, setContentRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!user?.token) {
@@ -207,7 +208,7 @@ export default function AssignmentDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [user, course_id, assignment_id, selectedSubmission?.id])
+  }, [user, course_id, assignment_id, selectedSubmission?.id, contentRefreshKey])
 
   const handleSubmitGrade = async (
     grade: number,
@@ -352,6 +353,7 @@ export default function AssignmentDetailPage() {
 
       // Set as selected submission
       setSelectedSubmission(newSubmission)
+      setContentRefreshKey((k) => k + 1)
     } catch (err) {
       console.error("Submission error:", err)
       throw err // Re-throw so the AnswerBox component can handle the error
@@ -360,6 +362,8 @@ export default function AssignmentDetailPage() {
 
   // Student has valid submission only if attachment exists
   const studentHasSubmission = isStudent && selectedSubmission && selectedSubmission.attachment_id
+
+  const isAssignmentClosed = assignment ? new Date() > new Date(assignment.close_date) : false
 
   if (isLoading) {
     return (
@@ -463,6 +467,7 @@ export default function AssignmentDetailPage() {
                     fileName={selectedSubmission?.file_name}
                     isStudent={true}
                     hasSubmission={!!studentHasSubmission}
+                    isClosed={isAssignmentClosed}
                     onSubmit={handleSubmit}
                     answerContent={submissionContent}
                     isContentLoading={isContentLoading}
@@ -481,6 +486,7 @@ export default function AssignmentDetailPage() {
                 fileName={selectedSubmission.file_name}
                 isStudent={false}
                 hasSubmission={true}
+                isClosed={false}
                 answerContent={submissionContent}
                 isContentLoading={isContentLoading}
                 contentError={contentError}
