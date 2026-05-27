@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 
@@ -10,6 +11,7 @@ type JobStatus = "pending" | "processing" | "completed" | "failed";
 
 interface Job {
   id: string;
+  course_id: string;
   assignment_id: string;
   assignment_title: string;
   status: JobStatus;
@@ -53,6 +55,7 @@ import {
   Clock,
   Loader2,
   ClipboardList,
+  CornerUpLeft,
   Timer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -149,17 +152,21 @@ function MetaItem({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function JobCard({ 
-  job, 
-  onDelete, 
-  deleting 
-}: { 
-  job: Job; 
-  onDelete: (id: string) => void; 
+function JobCard({
+  job,
+  onDelete,
+  deleting
+}: {
+  job: Job;
+  onDelete: (id: string) => void;
   deleting: string | null;
 }) {
+  const router = useRouter();
   const cfg = STATUS[job.status] ?? STATUS.pending;
   const canDelete = job.status === "completed" || job.status === "failed";
+  const assignmentHref = job.course_id && job.assignment_id
+    ? `/courses/${job.course_id}/assignments/${job.assignment_id}`
+    : null;
 
   return (
     <Card
@@ -233,6 +240,23 @@ function JobCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              if (assignmentHref) {
+                router.push(assignmentHref)
+              }
+            }}
+            disabled={!assignmentHref}
+          >
+            <CornerUpLeft className="h-4 w-4" />
+            Back to assignment
+          </Button>
+        </div>
+
         {/* Progress */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
@@ -359,9 +383,9 @@ export default function GradingJobsPage() {
 
   const statCards = [
     { key: "processing" as const, label: "Processing", cls: "text-sky-400", border: "border-sky-500/20" },
-    { key: "pending" as const,    label: "Pending",    cls: "text-amber-400", border: "border-amber-500/20" },
-    { key: "completed" as const,  label: "Completed",  cls: "text-emerald-400", border: "border-emerald-500/20" },
-    { key: "failed" as const,     label: "Failed",     cls: "text-rose-400", border: "border-rose-500/20" },
+    { key: "pending" as const, label: "Pending", cls: "text-amber-400", border: "border-amber-500/20" },
+    { key: "completed" as const, label: "Completed", cls: "text-emerald-400", border: "border-emerald-500/20" },
+    { key: "failed" as const, label: "Failed", cls: "text-rose-400", border: "border-rose-500/20" },
   ];
 
   return (
@@ -370,131 +394,131 @@ export default function GradingJobsPage() {
       <div className="flex-1 p-6 md:p-10">
         <div className="max-w-3xl mx-auto space-y-8">
 
-        {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
-                <ClipboardList className="h-4 w-4 text-primary" />
+          {/* ── Header ── */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">Grading Jobs</h1>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">Grading Jobs</h1>
-            </div>
-            <div className="flex items-center gap-3 pl-12">
-              {lastUpdated && (
-                <span className="font-mono text-xs text-muted-foreground/50">
-                  Updated{" "}
-                  {lastUpdated?.toLocaleTimeString("en-GB", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
-              )}
-              <div className="flex items-center gap-1.5 text-muted-foreground/40">
-                <Timer className="h-3 w-3" />
-                <span className="font-mono text-[11px]">
-                  refresh in {countdown}s
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  onClick={() => fetchJobs(true)}
-                  disabled={refreshing}
-                >
-                  <RefreshCw
-                    className={cn("h-4 w-4", refreshing && "animate-spin")}
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Refresh now</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* ── Stat cards ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {statCards.map(({ key, label, cls, border }) => (
-            <Card
-              key={key}
-              className={cn(
-                "bg-card/40 backdrop-blur border-border/50 cursor-pointer transition-colors hover:bg-card/60",
-                (counts as Record<string, number>)[key] > 0 && border
-              )}
-              onClick={() => setFilter(key)}
-            >
-              <CardContent className="p-4">
-                <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">
-                  {label}
-                </p>
-                <p className={cn("text-2xl font-bold tabular-nums", cls)}>
-                  {(counts as Record<string, number>)[key]}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* ── Filter tabs ── */}
-        <Tabs value={filter} onValueChange={(v: string) => setFilter(v as "all" | JobStatus)}>
-          <TabsList className="bg-muted/40 border border-border/50 h-9 flex-wrap">
-            {["all", "pending", "processing", "completed", "failed"].map((f) => (
-              <TabsTrigger
-                key={f}
-                value={f}
-                className="font-mono text-[11px] uppercase tracking-wider data-[state=active]:bg-background"
-              >
-                {f}
-                {(counts as Record<string, number>)[f] > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="ml-1.5 h-4 px-1.5 font-mono text-[10px]"
-                  >
-                    {(counts as Record<string, number>)[f]}
-                  </Badge>
+              <div className="flex items-center gap-3 pl-12">
+                {lastUpdated && (
+                  <span className="font-mono text-xs text-muted-foreground/50">
+                    Updated{" "}
+                    {lastUpdated?.toLocaleTimeString("en-GB", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
+                  </span>
                 )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+                <div className="flex items-center gap-1.5 text-muted-foreground/40">
+                  <Timer className="h-3 w-3" />
+                  <span className="font-mono text-[11px]">
+                    refresh in {countdown}s
+                  </span>
+                </div>
+              </div>
+            </div>
 
-        {/* ── Content ── */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin opacity-40" />
-            <p className="font-mono text-sm">Loading jobs…</p>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => fetchJobs(true)}
+                    disabled={refreshing}
+                  >
+                    <RefreshCw
+                      className={cn("h-4 w-4", refreshing && "animate-spin")}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh now</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        ) : error ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>Failed to fetch jobs: {error}</AlertDescription>
-          </Alert>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
-            <ClipboardList className="h-10 w-10 opacity-20" />
-            <p className="font-mono text-sm">
-              No {filter !== "all" ? filter : ""} jobs found
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {filtered.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                onDelete={handleDelete}
-                deleting={deleting}
-              />
+
+          {/* ── Stat cards ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {statCards.map(({ key, label, cls, border }) => (
+              <Card
+                key={key}
+                className={cn(
+                  "bg-card/40 backdrop-blur border-border/50 cursor-pointer transition-colors hover:bg-card/60",
+                  (counts as Record<string, number>)[key] > 0 && border
+                )}
+                onClick={() => setFilter(key)}
+              >
+                <CardContent className="p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">
+                    {label}
+                  </p>
+                  <p className={cn("text-2xl font-bold tabular-nums", cls)}>
+                    {(counts as Record<string, number>)[key]}
+                  </p>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        )}
+
+          {/* ── Filter tabs ── */}
+          <Tabs value={filter} onValueChange={(v: string) => setFilter(v as "all" | JobStatus)}>
+            <TabsList className="bg-muted/40 border border-border/50 h-9 flex-wrap">
+              {["all", "pending", "processing", "completed", "failed"].map((f) => (
+                <TabsTrigger
+                  key={f}
+                  value={f}
+                  className="font-mono text-[11px] uppercase tracking-wider data-[state=active]:bg-background"
+                >
+                  {f}
+                  {(counts as Record<string, number>)[f] > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-1.5 h-4 px-1.5 font-mono text-[10px]"
+                    >
+                      {(counts as Record<string, number>)[f]}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          {/* ── Content ── */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin opacity-40" />
+              <p className="font-mono text-sm">Loading jobs…</p>
+            </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>Failed to fetch jobs: {error}</AlertDescription>
+            </Alert>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
+              <ClipboardList className="h-10 w-10 opacity-20" />
+              <p className="font-mono text-sm">
+                No {filter !== "all" ? filter : ""} jobs found
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {filtered.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onDelete={handleDelete}
+                  deleting={deleting}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
