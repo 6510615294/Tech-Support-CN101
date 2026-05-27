@@ -170,7 +170,6 @@ export function AssignmentActions({
       });
 
       if (!res.ok) {
-        console.error("Failed to delete course");
         toast.error("Failed to start AI grading", {
           description: "Please try again.",
         });
@@ -181,7 +180,6 @@ export function AssignmentActions({
         description: "The grading job has been added to the queue.",
       });
     } catch (err) {
-      console.error("Error deleting course", err);
       toast.error("Something went wrong", {
         description: "Unable to start AI grading.",
       });

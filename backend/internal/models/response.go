@@ -229,6 +229,7 @@ type ResponseAttachmentDetail struct {
 
 type GradingJobResponse struct {
 	ID                   string     `json:"id"`
+	CourseID             string     `json:"course_id"`
 	AssignmentID         string     `json:"assignment_id"`
 	AssignmentTitle      string     `json:"assignment_title"`
 	Status               string     `json:"status"`

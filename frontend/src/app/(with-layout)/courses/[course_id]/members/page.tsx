@@ -237,7 +237,10 @@ export default function Page() {
       <div className="flex-1 space-y-8 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Members</h1>
+            <div className="flex items-center gap-2">
+              <Users className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-bold">Members</h1>
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {!isLoading && `${filteredMembers.length} members shown`}
             </p>

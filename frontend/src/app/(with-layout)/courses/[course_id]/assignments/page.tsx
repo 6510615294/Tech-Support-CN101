@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   AlertCircle,
+  BookOpen,
   Calendar,
   CalendarClock,
   CalendarOff,
@@ -20,6 +21,7 @@ import {
   Download,
   FileText,
   GraduationCap,
+  MapPin,
   Search,
   Tag
 } from "lucide-react"
@@ -51,6 +53,27 @@ interface Assignment {
 }
 
 type AssignmentStatus = "closed" | "upcoming" | "overdue" | "active"
+
+function formatCourseSchedule(course: Course) {
+  const time = course.start_time && course.end_time
+    ? `${course.start_time} - ${course.end_time}`
+    : course.start_time || course.end_time || "-"
+
+  if (course.day_of_week) {
+    return `${course.day_of_week} ${time}`
+  }
+
+  return time
+}
+
+function formatTeacherName(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+}
 
 export default function CourseDetailPage() {
   const { course_id } = useParams()
@@ -233,20 +256,30 @@ export default function CourseDetailPage() {
           <div className="space-y-6">
             {/* Course Header */}
             <div>
-              <h1 className="text-2xl font-bold">{course.name}</h1>
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <GraduationCap className="h-4 w-4" />
-                  <span className="capitalize">{course.teacher}</span>
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-6 w-6 text-primary" />
+                <h1 className="text-2xl font-bold">{course.name}</h1>
+              </div>
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 shrink-0" />
+                  <span>{formatTeacherName(course.teacher)}</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {course.day_of_week ? `${course.day_of_week} ` : ""}
-                    {course.start_time ? `${course.start_time}` : ""}
-                    {course.end_time ? ` - ${course.end_time}` : ""}
-                    {course.room ? ` ${course.room}` : ""}
-                  </span>
+                {course.course_code && (
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 shrink-0" />
+                    <span className="font-medium uppercase tracking-wide text-foreground/90">
+                      {course.course_code}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 shrink-0" />
+                  <span>{formatCourseSchedule(course)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 shrink-0" />
+                  <span>{course.room ? `Room ${course.room}` : "Room -"}</span>
                 </div>
                 <Badge variant="outline">Section {course.section}</Badge>
                 <Badge variant="secondary">{course.semester}</Badge>

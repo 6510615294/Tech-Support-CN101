@@ -325,6 +325,7 @@ func GetGradingJobs(teacherID string) (*models.GradingJobsResponse, error) {
 	for i, job := range gradingJobs {
 		jobs[i] = models.GradingJobResponse{
 			ID:                   job.ID,
+			CourseID:             job.Assignment.CourseID,
 			AssignmentID:         job.AssignmentID,
 			AssignmentTitle:      job.Assignment.Title,
 			Status:               job.Status,
