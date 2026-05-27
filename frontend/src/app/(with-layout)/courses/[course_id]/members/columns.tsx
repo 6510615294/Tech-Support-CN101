@@ -43,9 +43,15 @@ export const getColumns = (
   currentUsername?: string,
   options?: {
     showStatus?: boolean,
+    canEditStatus?: boolean,
+    canEditRole?: boolean,
+    canRemoveMember?: boolean,
   },
 ): ColumnDef<CourseMember>[] => {
   const showStatus = options?.showStatus ?? true
+  const canEditStatus = options?.canEditStatus ?? true
+  const canEditRole = options?.canEditRole ?? true
+  const canRemoveMember = options?.canRemoveMember ?? true
 
   const columns: ColumnDef<CourseMember>[] = [
 
@@ -109,6 +115,14 @@ export const getColumns = (
         const isCurrentUser = !!currentUsername && row.original.username === currentUsername
         const isSelfTeacher = isCurrentUser && role === "teacher"
 
+        if (!canEditRole) {
+          return (
+            <Badge className={`${statusStyles[role] ?? "bg-gray-300"} capitalize`}>
+              {role == "ta" ? "TA" : role}
+            </Badge>
+          )
+        }
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -148,22 +162,6 @@ export const getColumns = (
         )
       }
     },
-    {
-      id: "actions",
-      header: "Remove",
-      cell: ({ row }) => {
-        const userId = row.original.user_id
-
-        return (
-          <Button
-            variant={"ghost"}
-            onClick={() => handleDeleteMember(userId)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )
-      },
-    },
   ];
 
   if (showStatus) {
@@ -173,6 +171,14 @@ export const getColumns = (
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         const userId = row.original.user_id
+
+        if (!canEditStatus) {
+          return (
+            <Badge className={`${statusStyles[status] ?? "bg-gray-300"} capitalize`}>
+              {status}
+            </Badge>
+          )
+        }
 
         return (
           <DropdownMenu>
@@ -219,6 +225,25 @@ export const getColumns = (
           </DropdownMenu>
         )
       }
+    })
+  }
+
+  if (canRemoveMember) {
+    columns.push({
+      id: "actions",
+      header: "Remove",
+      cell: ({ row }) => {
+        const userId = row.original.user_id
+
+        return (
+          <Button
+            variant={"ghost"}
+            onClick={() => handleDeleteMember(userId)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )
+      },
     })
   }
 
