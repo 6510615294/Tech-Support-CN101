@@ -305,7 +305,8 @@ export default function Page() {
                       handleChangeStatus,
                       handleChangeRole,
                       handleDeleteMember,
-                      user?.username
+                      user?.username,
+                      { showStatus: false }
                     )}
                     data={staffMembers}
                     filterProps={[
@@ -362,7 +363,8 @@ export default function Page() {
                       handleChangeStatus,
                       handleChangeRole,
                       handleDeleteMember,
-                      user?.username
+                      user?.username,
+                      { showStatus: true }
                     )}
                     data={studentMembers}
                     filterProps={[

@@ -41,9 +41,14 @@ export const getColumns = (
   handleChangeRole: (userId: string, status: string) => void,
   handleDeleteMember: (userId: string) => void,
   currentUsername?: string,
+  options?: {
+    showStatus?: boolean,
+  },
 ): ColumnDef<CourseMember>[] => {
+  const showStatus = options?.showStatus ?? true
 
-  return [
+  const columns: ColumnDef<CourseMember>[] = [
+
     {
       accessorKey: "username",
       header: ({ column }) => {
@@ -94,59 +99,6 @@ export const getColumns = (
     {
       accessorKey: "email",
       header: "Email",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as string
-        const userId = row.original.user_id
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Badge
-                className={`${statusStyles[status] ?? "bg-gray-300"} capitalize`}
-              >
-                {status}
-              </Badge>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeStatus(userId, "active")}
-                disabled={status === "active"}
-              >
-                Active
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeStatus(userId, "inactive")}
-                disabled={status === "inactive"}
-              >
-                Inactive
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeStatus(userId, "withdraw")}
-                disabled={status === "withdraw"}
-              >
-                Withdraw
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeStatus(userId, "drop")}
-                disabled={status === "drop"}
-              >
-                Drop
-              </DropdownMenuItem>
-
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      }
     },
     {
       accessorKey: "role",
@@ -213,4 +165,62 @@ export const getColumns = (
       },
     },
   ];
+
+  if (showStatus) {
+    columns.splice(4, 0, {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string
+        const userId = row.original.user_id
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Badge
+                className={`${statusStyles[status] ?? "bg-gray-300"} capitalize`}
+              >
+                {status}
+              </Badge>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeStatus(userId, "active")}
+                disabled={status === "active"}
+              >
+                Active
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeStatus(userId, "inactive")}
+                disabled={status === "inactive"}
+              >
+                Inactive
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeStatus(userId, "withdraw")}
+                disabled={status === "withdraw"}
+              >
+                Withdraw
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeStatus(userId, "drop")}
+                disabled={status === "drop"}
+              >
+                Drop
+              </DropdownMenuItem>
+
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
+    })
+  }
+
+  return columns
 }
