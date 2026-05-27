@@ -348,7 +348,7 @@ func AutoGradingAssignment(userID, courseID, assignmentID string) error {
 		return err
 	}
 
-	if assignment.AIConfig == nil {
+	if assignment.AIConfigID == nil {
 		return errors.ErrAIConfigNotFound
 	}
 

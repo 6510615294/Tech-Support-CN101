@@ -91,6 +91,8 @@ export function CreateCourseDialog({ onCreated }: CreateCourseDialogProps) {
         body: JSON.stringify(payload),
       })
 
+      console.log(payload)
+
       if (!res.ok) throw new Error("Failed to create course")
 
       const data = await res.json()

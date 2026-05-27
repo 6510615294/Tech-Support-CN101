@@ -153,7 +153,6 @@ export function SubmissionList({ submissions, selectedId, onSelect, maxPoints, i
                           <IconComponent
                             className={`h-4 w-4 shrink-0 ${status.color}`}
                             aria-label={status.label}
-                            title={status.label}
                           />
                         </>
                       )

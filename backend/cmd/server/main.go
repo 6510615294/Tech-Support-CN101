@@ -30,7 +30,9 @@ func main() {
 	queue.Init(redisAddr, redisPassword)
 
 	// 3. Initialize Fiber App
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 60 * 1024 * 1024, // 60 MB total request body
+	})
 
 	// 4. Register Middlewares
 	app.Use(cors.New())
