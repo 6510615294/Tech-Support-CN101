@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Field, FieldLabel } from "@/components/ui/field"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { TimePicker24h } from "@/components/time-picker-24h"
 import { toast } from "sonner"
@@ -211,25 +218,26 @@ export function EditCourseDialog({ course, open, onOpenChange, onUpdated }: Edit
           <div className="grid grid-cols-2 gap-4">
             <Field>
               <RequiredLabel htmlFor="edit-day_of_week">Day of Week</RequiredLabel>
-              <select
-                id="edit-day_of_week"
-                name="day_of_week"
+              <Select
                 value={form.day_of_week}
-                onChange={(e) => {
-                  setForm((prev) => ({ ...prev, day_of_week: e.target.value }))
+                onValueChange={(value) => {
+                  setForm((prev) => ({ ...prev, day_of_week: value }))
                   setError("")
                 }}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">Select a day</option>
-                <option value="Monday">Monday</option>
-                <option value="Tuesday">Tuesday</option>
-                <option value="Wednesday">Wednesday</option>
-                <option value="Thursday">Thursday</option>
-                <option value="Friday">Friday</option>
-                <option value="Saturday">Saturday</option>
-                <option value="Sunday">Sunday</option>
-              </select>
+                <SelectTrigger id="edit-day_of_week" className="w-full">
+                  <SelectValue placeholder="Select a day" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Monday">Monday</SelectItem>
+                  <SelectItem value="Tuesday">Tuesday</SelectItem>
+                  <SelectItem value="Wednesday">Wednesday</SelectItem>
+                  <SelectItem value="Thursday">Thursday</SelectItem>
+                  <SelectItem value="Friday">Friday</SelectItem>
+                  <SelectItem value="Saturday">Saturday</SelectItem>
+                  <SelectItem value="Sunday">Sunday</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
             <Field>
               <RequiredLabel htmlFor="edit-credits">Credits</RequiredLabel>

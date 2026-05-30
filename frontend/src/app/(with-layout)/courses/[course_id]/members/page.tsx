@@ -62,6 +62,7 @@ export default function Page() {
   const [deleteTarget, setDeleteTarget] = useState<CourseMember | null>(null)
   const { course_id } = useParams();
   const { user } = useAuth()
+  const canManageMembers = user?.role === "teacher"
 
   useEffect(() => {
     const loadMember = async () => {
@@ -245,14 +246,16 @@ export default function Page() {
               {!isLoading && `${filteredMembers.length} members shown`}
             </p>
           </div>
-          <EnrollDialog
-            courseId={course_id as string}
-            onEnrolled={() => {
-              toast.warning("Please refresh page", {
-                description: "Refresh page to see new members infomations"
-              })
-            }}
-          />
+          {canManageMembers && (
+            <EnrollDialog
+              courseId={course_id as string}
+              onEnrolled={() => {
+                toast.warning("Please refresh page", {
+                  description: "Refresh page to see new members infomations"
+                })
+              }}
+            />
+          )}
         </div>
 
         {!isLoading && !error && (
@@ -305,7 +308,12 @@ export default function Page() {
                       handleChangeStatus,
                       handleChangeRole,
                       handleDeleteMember,
-                      user?.username
+                      user?.username,
+                      {
+                        showStatus: false,
+                        canEditRole: canManageMembers,
+                        canRemoveMember: canManageMembers,
+                      }
                     )}
                     data={staffMembers}
                     filterProps={[
@@ -362,7 +370,13 @@ export default function Page() {
                       handleChangeStatus,
                       handleChangeRole,
                       handleDeleteMember,
-                      user?.username
+                      user?.username,
+                      {
+                        showStatus: true,
+                        canEditStatus: canManageMembers,
+                        canEditRole: canManageMembers,
+                        canRemoveMember: canManageMembers,
+                      }
                     )}
                     data={studentMembers}
                     filterProps={[

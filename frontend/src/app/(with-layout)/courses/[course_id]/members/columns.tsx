@@ -41,9 +41,20 @@ export const getColumns = (
   handleChangeRole: (userId: string, status: string) => void,
   handleDeleteMember: (userId: string) => void,
   currentUsername?: string,
+  options?: {
+    showStatus?: boolean,
+    canEditStatus?: boolean,
+    canEditRole?: boolean,
+    canRemoveMember?: boolean,
+  },
 ): ColumnDef<CourseMember>[] => {
+  const showStatus = options?.showStatus ?? true
+  const canEditStatus = options?.canEditStatus ?? true
+  const canEditRole = options?.canEditRole ?? true
+  const canRemoveMember = options?.canRemoveMember ?? true
 
-  return [
+  const columns: ColumnDef<CourseMember>[] = [
+
     {
       accessorKey: "username",
       header: ({ column }) => {
@@ -96,11 +107,78 @@ export const getColumns = (
       header: "Email",
     },
     {
+      accessorKey: "role",
+      header: "Role",
+      cell: ({ row }) => {
+        const role = row.getValue("role") as string
+        const userId = row.original.user_id
+        const isCurrentUser = !!currentUsername && row.original.username === currentUsername
+        const isSelfTeacher = isCurrentUser && role === "teacher"
+
+        if (!canEditRole) {
+          return (
+            <Badge className={`${statusStyles[role] ?? "bg-gray-300"} capitalize`}>
+              {role == "ta" ? "TA" : role}
+            </Badge>
+          )
+        }
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Badge
+                className={`${statusStyles[role] ?? "bg-gray-300"} capitalize`}
+              >
+                {role == "ta" ? "TA" : role}
+              </Badge>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeRole(userId, "student")}
+                disabled={role === "student" || isSelfTeacher}
+              >
+                Student
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeRole(userId, "ta")}
+                disabled={role === "ta" || isSelfTeacher}
+              >
+                TA
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onClick={() => handleChangeRole(userId, "teacher")}
+                disabled={role === "teacher"}
+              >
+                Teacher
+              </DropdownMenuItem>
+
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      }
+    },
+  ];
+
+  if (showStatus) {
+    columns.splice(4, 0, {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         const userId = row.original.user_id
+
+        if (!canEditStatus) {
+          return (
+            <Badge className={`${statusStyles[status] ?? "bg-gray-300"} capitalize`}>
+              {status}
+            </Badge>
+          )
+        }
 
         return (
           <DropdownMenu>
@@ -147,56 +225,11 @@ export const getColumns = (
           </DropdownMenu>
         )
       }
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => {
-        const role = row.getValue("role") as string
-        const userId = row.original.user_id
-        const isCurrentUser = !!currentUsername && row.original.username === currentUsername
-        const isSelfTeacher = isCurrentUser && role === "teacher"
+    })
+  }
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Badge
-                className={`${statusStyles[role] ?? "bg-gray-300"} capitalize`}
-              >
-                {role == "ta" ? "TA" : role}
-              </Badge>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeRole(userId, "student")}
-                disabled={role === "student" || isSelfTeacher}
-              >
-                Student
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeRole(userId, "ta")}
-                disabled={role === "ta" || isSelfTeacher}
-              >
-                TA
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                onClick={() => handleChangeRole(userId, "teacher")}
-                disabled={role === "teacher"}
-              >
-                Teacher
-              </DropdownMenuItem>
-
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      }
-    },
-    {
+  if (canRemoveMember) {
+    columns.push({
       id: "actions",
       header: "Remove",
       cell: ({ row }) => {
@@ -211,6 +244,8 @@ export const getColumns = (
           </Button>
         )
       },
-    },
-  ];
+    })
+  }
+
+  return columns
 }

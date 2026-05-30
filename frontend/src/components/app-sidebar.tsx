@@ -55,6 +55,10 @@ export function AppSidebar() {
     },
   ]
 
+  const visibleNavItems = user?.role === "student"
+    ? navItems.filter((item) => item.href === "/courses")
+    : navItems
+
   const isItemActive = (title: string, href: string) => {
     if (title === "Courses") {
       return pathname === href || pathname.startsWith("/courses/")
@@ -76,7 +80,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
