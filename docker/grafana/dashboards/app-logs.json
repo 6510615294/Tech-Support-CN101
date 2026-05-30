@@ -69,7 +69,6 @@
       },
       "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 }
     },
-
     {
       "type": "timeseries",
       "title": "📈 API Request Rate (req/sec)",
